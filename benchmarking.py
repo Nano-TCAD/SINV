@@ -5,13 +5,14 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import generateMatrices as genMat
-import vizualiseMatrices as vizMat
+import matricesUtils as matUtils
+import vizuUtils     as vizUtils
 import verifyResults as verif
 
 import algorithms.fullInversion as inv
-import algorithms.rgf as rgf
-import algorithms.rgf2sided as rgf2sided
+import algorithms.rgf           as rgf
+import algorithms.rgf2sided     as rgf2sided
+import algorithms.hybridParRec  as hpr
 
 import numpy as np
 import time
@@ -42,9 +43,9 @@ if __name__ == "__main__":
 
 
     # Retarded Green's function initial matrix
-    A = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
-    A = genMat.makeSymmetric(A)
-    A_csc = genMat.denseToCSC(A)
+    A = matUtils.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
+    A = matUtils.makeSymmetric(A)
+    A_csc = matUtils.denseToCSC(A)
 
     # Retarded Green's function references solutions (Full inversions)
     GreenRetarded_refsol_np, greenRetardedBenchtiming["np"]   = inv.numpyInversion(A)
@@ -57,17 +58,17 @@ if __name__ == "__main__":
         # Extract the blocks from the retarded Green's function reference solution
         GreenRetarded_refsol_block_diag\
         , GreenRetarded_refsol_block_upper\
-        , GreenRetarded_refsol_block_lower = genMat.denseToBlocksTriDiagStorage(GreenRetarded_refsol_np, blocksize)
+        , GreenRetarded_refsol_block_lower = matUtils.denseToBlocksTriDiagStorage(GreenRetarded_refsol_np, blocksize)
 
-    A_block_diag, A_block_upper, A_block_lower = genMat.denseToBlocksTriDiagStorage(A, blocksize)
+    A_block_diag, A_block_upper, A_block_lower = matUtils.denseToBlocksTriDiagStorage(A, blocksize)
 
 
 
     # Lesser Green's function initial matrix
     GreenAdvanced_refsol_np = np.conjugate(np.transpose(GreenRetarded_refsol_np)) 
 
-    SigmaLesser = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
-    SigmaLesser = genMat.makeSymmetric(SigmaLesser)
+    SigmaLesser = matUtils.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
+    SigmaLesser = matUtils.makeSymmetric(SigmaLesser)
 
     # Lesser Green's function references solutions (Full inversions)
     # 1. Dense matrix
@@ -81,8 +82,8 @@ if __name__ == "__main__":
     greenLesserBenchtiming["np"] += timing
 
     # 2. CSC matrix
-    GreenAdvanced_refsol_csc = genMat.denseToCSC(GreenAdvanced_refsol_np)
-    SigmaLesser_csc = genMat.denseToCSC(SigmaLesser)
+    GreenAdvanced_refsol_csc = matUtils.denseToCSC(GreenAdvanced_refsol_np)
+    SigmaLesser_csc = matUtils.denseToCSC(SigmaLesser)
 
     tic = time.perf_counter()
     B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         # Extract the blocks from the retarded Green's function reference solution
         GreenAdvanced_refsol_block_diag\
         , GreenAdvanced_refsol_block_upper\
-        , GreenAdvanced_refsol_block_lower = genMat.denseToBlocksTriDiagStorage(GreenLesser_refsol_np, blocksize)
+        , GreenAdvanced_refsol_block_lower = matUtils.denseToBlocksTriDiagStorage(GreenLesser_refsol_np, blocksize)
 
 
 
@@ -145,21 +146,47 @@ if __name__ == "__main__":
                                                                           GreenRetarded_rgf2sided_lower)) 
 
 
-        vizMat.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        """ matUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                             GreenRetarded_refsol_block_upper, 
                                             GreenRetarded_refsol_block_lower,
                                             GreenRetarded_rgf2sided_diag, 
                                             GreenRetarded_rgf2sided_upper, 
-                                            GreenRetarded_rgf2sided_lower, "RGF 2-sided solution")
+                                            GreenRetarded_rgf2sided_lower, "RGF 2-sided solution") """
 
 
 
+    comm.barrier()
+    # ---------------------------------------------------------------------------------------------
+    # 3. Hybrid parallel recurence 
+    # ---------------------------------------------------------------------------------------------
+
+    G_hpr = hpr.schurInvert(A)
+
+    G_hpr_diag = np.zeros((size, size), dtype=np.complex128)
+    G_hpr_upper = np.zeros((size, size), dtype=np.complex128)
+    G_hpr_lower = np.zeros((size, size), dtype=np.complex128)
+
+    G_hpr_diag\
+    , G_hpr_upper\
+    , G_hpr_lower = matUtils.denseToBlocksTriDiagStorage(G_hpr, blocksize)
+
+    if rank == 0:
+        """ vizUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+                                              GreenRetarded_refsol_block_upper, 
+                                              GreenRetarded_refsol_block_lower,
+                                              G_hpr_diag, 
+                                              G_hpr_upper, 
+                                              G_hpr_lower, "HPR solution") """
+        
+        G_hpr = hpr.hpr_full(A)
+        
+        
     
 
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
     #if rank == 0:
-        #vizMat.showBenchmark(greenRetardedBenchtiming, greenLesserBenchtiming, size/blocksize, blocksize)
+        #matUtils.showBenchmark(greenRetardedBenchtiming, greenLesserBenchtiming, size/blocksize, blocksize)
 
 

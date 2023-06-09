@@ -45,7 +45,6 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
 
     # Communicate the left connected block and receive the right connected block
     comm.send(g_diag_leftprocess[nblocks-1, ], dest=1, tag=0)
-    comm.barrier()
     g_diag_leftprocess[nblocks, ] = comm.recv(source=1, tag=0)
 
     # Connection from both sides of the full G
@@ -93,7 +92,6 @@ def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc
                                                  - A_bloc_upper_rightprocess[i, ] @ g_diag_rightprocess[i+1, ] @ A_bloc_lower_rightprocess[i, ])
 
     # Communicate the right connected block and receive the left connected block
-    comm.barrier()
     g_diag_rightprocess[0, ] = comm.recv(source=0, tag=0)
     comm.send(g_diag_rightprocess[1, ], dest=0, tag=0)
 
@@ -140,8 +138,6 @@ def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         G_diag_blocks[0:nblocks_2, ]\
         , G_upper_blocks[0:nblocks_2, ]\
         , G_lower_blocks[0:nblocks_2, ] = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
-        
-        comm.barrier()
 
         G_diag_blocks[nblocks_2:, ]  = comm.recv(source=1, tag=0)
         G_upper_blocks[nblocks_2:, ] = comm.recv(source=1, tag=1)
@@ -155,8 +151,6 @@ def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         comm.send(G_diag_blocks[nblocks_2:, ], dest=0, tag=0)
         comm.send(G_upper_blocks[nblocks_2:, ], dest=0, tag=1)
         comm.send(G_lower_blocks[nblocks_2:, ], dest=0, tag=2)
-
-        comm.barrier()
     
     comm.barrier()
     toc = time.perf_counter() # -----------------------------

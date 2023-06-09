@@ -179,14 +179,26 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
         
+    comm.barrier()
+    # .2
+    G_hpr_diag\
+        , G_hpr_upper\
+        , G_hpr_lower = hpr.hpr(A_block_diag, A_block_upper, A_block_lower)
+    
+    if rank == 0:
+        print("HPR: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_hpr_diag, 
+                                                                          G_hpr_upper, 
+                                                                          G_hpr_lower))
 
-
-        """ vizUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        vizUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                               GreenRetarded_refsol_block_upper, 
                                               GreenRetarded_refsol_block_lower,
                                               G_hpr_diag, 
                                               G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution") """
+                                              G_hpr_lower, "HPR solution")
         
         
 
@@ -203,8 +215,8 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-    if rank == 0:
-        vizUtils.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
+    #if rank == 0:
+        #vizUtils.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
 
         #vizUtils.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
 

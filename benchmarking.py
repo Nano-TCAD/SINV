@@ -28,7 +28,7 @@ if __name__ == "__main__":
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    greenRetardedBenchtiming = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
+    greenRetardedBenchtiming = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0, "hpr_serial": 0}
     greenLesserBenchtiming   = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
 
     # Problem parameters
@@ -157,20 +157,30 @@ if __name__ == "__main__":
 
     comm.barrier()
     # ---------------------------------------------------------------------------------------------
-    # 3. Hybrid parallel recurence 
+    # 3. HPR (Hybrid Parallel Recurence) 
     # ---------------------------------------------------------------------------------------------
 
-    G_hpr = hpr.schurInvert(A)
-
-    G_hpr_diag = np.zeros((size, size), dtype=np.complex128)
-    G_hpr_upper = np.zeros((size, size), dtype=np.complex128)
-    G_hpr_lower = np.zeros((size, size), dtype=np.complex128)
-
-    G_hpr_diag\
-    , G_hpr_upper\
-    , G_hpr_lower = matUtils.denseToBlocksTriDiagStorage(G_hpr, blocksize)
-
+    # .1 Serial HPR
     if rank == 0:
+        G_hpr_serial, greenRetardedBenchtiming["hpr_serial"] = hpr.hpr_serial(A, blocksize)
+
+        G_hpr_serial_diag = np.zeros((size, size), dtype=np.complex128)
+        G_hpr_serial_upper = np.zeros((size, size), dtype=np.complex128)
+        G_hpr_serial_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_hpr_serial_diag\
+        , G_hpr_serial_upper\
+        , G_hpr_serial_lower = matUtils.denseToBlocksTriDiagStorage(G_hpr_serial, blocksize)
+
+        print("HPR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_hpr_serial_diag, 
+                                                                          G_hpr_serial_upper, 
+                                                                          G_hpr_serial_lower))
+        
+
+
         """ vizUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                               GreenRetarded_refsol_block_upper, 
                                               GreenRetarded_refsol_block_lower,
@@ -178,7 +188,14 @@ if __name__ == "__main__":
                                               G_hpr_upper, 
                                               G_hpr_lower, "HPR solution") """
         
-        G_hpr = hpr.hpr_full(A)
+        
+
+        """ vizUtils.compareDenseMatrixFromBlocks(A_block_diag, 
+                                              A_block_upper, 
+                                              A_block_lower, 
+                                              G_hpr_diag, 
+                                              G_hpr_upper, 
+                                              G_hpr_lower, "HPR solution") """
         
         
     
@@ -186,7 +203,9 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-    #if rank == 0:
-        #matUtils.showBenchmark(greenRetardedBenchtiming, greenLesserBenchtiming, size/blocksize, blocksize)
+    if rank == 0:
+        vizUtils.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
+
+        #vizUtils.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
 
 

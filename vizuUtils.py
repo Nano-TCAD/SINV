@@ -96,29 +96,28 @@ def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_l
 
     plt.subplot(1, 2, 1)
     plt.title('Reference solution')
-    plt.imshow(abs(A_ref), cmap='hot', interpolation='nearest')
+
+    plt.imshow(abs(A_ref), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
 
     plt.subplot(1, 2, 2)
     plt.title(legend)
-    plt.imshow(abs(A), cmap='hot', interpolation='nearest')
+    plt.imshow(abs(A), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
 
     plt.show()
 
 
 
-def showBenchmark(greenRetardedBenchtiming, greenLesserBenchtiming, nBlocks, blockSize):
-    plt.subplot(1, 2, 1)
-    plt.bar(range(len(greenRetardedBenchtiming)), list(greenRetardedBenchtiming.values()), align='center')
-    plt.xticks(range(len(greenRetardedBenchtiming)), list(greenRetardedBenchtiming.keys()))
-    plt.title("Retarded Green's function benchmark")
+def showBenchmark(dictBenchtiming, nBlocks, blockSize, label=""):
+    """
+        Show a bar plot of the benchmark.
+    """
+
+    plt.bar(range(len(dictBenchtiming)), list(dictBenchtiming.values()), align='center')
+
+    plt.xticks(range(len(dictBenchtiming)), list(dictBenchtiming.keys()))
     plt.ylabel("Time (s)")
 
-    plt.subplot(1, 2, 2)
-    plt.bar(range(len(greenLesserBenchtiming)), list(greenLesserBenchtiming.values()), align='center')
-    plt.xticks(range(len(greenLesserBenchtiming)), list(greenLesserBenchtiming.keys()))
-    plt.title("Lesser Green's function benchmark")
-    plt.ylabel("Time (s)")
-
+    plt.title(label + " benchmark")
     plt.suptitle(f"matrixSize={(int)(nBlocks*blockSize)}, nBlocks={(int)(nBlocks)}, blockSize={blockSize}")
 
     plt.show()

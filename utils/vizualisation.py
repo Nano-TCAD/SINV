@@ -5,8 +5,9 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-from matplotlib import pyplot as plt
 import numpy as np
+
+from matplotlib import pyplot as plt
 
 
 
@@ -103,17 +104,3 @@ def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_l
     plt.show()
 
 
-def showBenchmark(dictBenchtiming, nBlocks, blockSize, label=""):
-    """
-        Show a bar plot of the benchmark.
-    """
-
-    plt.bar(range(len(dictBenchtiming)), list(dictBenchtiming.values()), align='center')
-
-    plt.xticks(range(len(dictBenchtiming)), list(dictBenchtiming.keys()))
-    plt.ylabel("Time (s)")
-
-    plt.title(label + " benchmark")
-    plt.suptitle(f"matrixSize={(int)(nBlocks*blockSize)}, nBlocks={(int)(nBlocks)}, blockSize={blockSize}")
-
-    plt.show()

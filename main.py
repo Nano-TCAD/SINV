@@ -9,6 +9,7 @@ import utils.generateMatrices    as genMat
 import utils.convertMatrices     as convMat
 import utils.transformMatrices   as transMat
 import utils.vizualisation       as vizu
+import utils.benchmarking        as bench
 
 import algorithms.fullInversion as inv
 import algorithms.rgf           as rgf
@@ -31,12 +32,25 @@ if __name__ == "__main__":
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    greenRetardedBenchtiming = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0, "hpr_serial": 0}
-    greenLesserBenchtiming   = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
+
+    # Benchmarking parameters
+    n_runs = 1
+
+    np_greenRetarded_timings         = bench.BenchTiming("Retarded Green's function", "numpy", n_runs)
+    csc_greenRetarded_timings        = bench.BenchTiming("Retarded Green's function", "scipyCSC", n_runs)
+    rgf_greenRetarded_timings        = bench.BenchTiming("Retarded Green's function", "rgf", n_runs)
+    rgf2sided_greenRetarded_timings  = bench.BenchTiming("Retarded Green's function", "rgf2sided", n_runs)
+    hpr_serial_greenRetarded_timings = bench.BenchTiming("Retarded Green's function", "hpr_serial", n_runs)
+
+    np_greenLesser_timings           = bench.BenchTiming("Lesser Green's function", "numpy", n_runs)
+    csc_greenLesser_timings          = bench.BenchTiming("Lesser Green's function", "scipyCSC", n_runs)
+    rgf_greenLesser_timings          = bench.BenchTiming("Lesser Green's function", "rgf", n_runs)
+    rgf2sided_greenLesser_timings    = bench.BenchTiming("Lesser Green's function", "rgf2sided", n_runs)
+
 
     # Problem parameters
-    size = 12
-    blocksize = 2
+    size = 120
+    blocksize = 10
     density = blocksize**2/size**2
     bandwidth = np.ceil(blocksize/2)
 
@@ -45,14 +59,19 @@ if __name__ == "__main__":
 
 
 
+    # ---------------------------------------------------------------------------------------------
+    # 0. Retarded Green's function references solutions (Full inversions)
+    # ---------------------------------------------------------------------------------------------
     # Retarded Green's function initial matrix
     A = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
     A = transMat.transformToSymmetric(A)
     A_csc = convMat.convertDenseToCSC(A)
 
     # Retarded Green's function references solutions (Full inversions)
-    GreenRetarded_refsol_np, greenRetardedBenchtiming["np"]   = inv.numpyInversion(A)
-    GreenRetarded_refsol_csc, greenRetardedBenchtiming["csc"] = inv.scipyCSCInversion(A_csc)
+    for i in range(n_runs):
+        GreenRetarded_refsol_np, np_greenRetarded_timings.timingRuns[i]   = inv.numpyInversion(A)
+        GreenRetarded_refsol_csc, csc_greenRetarded_timings.timingRuns[i] = inv.scipyCSCInversion(A_csc)
+
 
     if not verif.verifResults(GreenRetarded_refsol_np, GreenRetarded_refsol_csc):
         print("Error: Green retarded references solutions are different.")
@@ -67,35 +86,39 @@ if __name__ == "__main__":
 
 
 
+    # ---------------------------------------------------------------------------------------------
+    # 0. Lesser Green's function references solutions (Full inversions)
+    # ---------------------------------------------------------------------------------------------
     # Lesser Green's function initial matrix
     GreenAdvanced_refsol_np = np.conjugate(np.transpose(GreenRetarded_refsol_np)) 
 
     SigmaLesser = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
     SigmaLesser = transMat.transformToSymmetric(SigmaLesser)
 
-    # Lesser Green's function references solutions (Full inversions)
     # 1. Dense matrix
-    tic = time.perf_counter()
-    B = A @ SigmaLesser @ GreenAdvanced_refsol_np
-    toc = time.perf_counter()
+    for i in range(n_runs):
+        tic = time.perf_counter()
+        B = A @ SigmaLesser @ GreenAdvanced_refsol_np
+        toc = time.perf_counter()
 
-    timing = toc - tic
+        timing = toc - tic
 
-    GreenLesser_refsol_np, greenLesserBenchtiming["np"]   = inv.numpyInversion(B)
-    greenLesserBenchtiming["np"] += timing
+        GreenLesser_refsol_np, np_greenLesser_timings.timingRuns[i] = inv.numpyInversion(B)
+        np_greenLesser_timings.timingRuns[i] += timing
 
     # 2. CSC matrix
     GreenAdvanced_refsol_csc = convMat.convertDenseToCSC(GreenAdvanced_refsol_np)
     SigmaLesser_csc = convMat.convertDenseToCSC(SigmaLesser)
 
-    tic = time.perf_counter()
-    B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
-    toc = time.perf_counter()
+    for i in range(n_runs):
+        tic = time.perf_counter()
+        B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
+        toc = time.perf_counter()
 
-    timing = toc - tic
+        timing = toc - tic
 
-    GreenLesser_refsol_csc, greenLesserBenchtiming["csc"] = inv.scipyCSCInversion(B_csc)
-    greenLesserBenchtiming["csc"] += timing
+        GreenLesser_refsol_csc, csc_greenLesser_timings.timingRuns[i] = inv.scipyCSCInversion(B_csc)
+        csc_greenLesser_timings.timingRuns[i] += timing
 
     if not verif.verifResults(GreenLesser_refsol_np, GreenLesser_refsol_csc):
         print("Error: Green lesser references solutions are different.")
@@ -108,17 +131,17 @@ if __name__ == "__main__":
 
 
 
-
     comm.barrier()
     # ---------------------------------------------------------------------------------------------
     # 1. RGF  
     # ---------------------------------------------------------------------------------------------
 
     if rank == 0: # Single process algorithm
-        GreenRetarded_rgf_diag\
-        , GreenRetarded_rgf_upper\
-        , GreenRetarded_rgf_lower\
-        , greenRetardedBenchtiming["rgf"] = rgf.rgf_Gr(A_block_diag, A_block_upper, A_block_lower)
+        for i in range(n_runs):
+            GreenRetarded_rgf_diag\
+            , GreenRetarded_rgf_upper\
+            , GreenRetarded_rgf_lower\
+            , rgf_greenRetarded_timings.timingRuns[i] = rgf.rgf_Gr(A_block_diag, A_block_upper, A_block_lower)
 
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                  GreenRetarded_refsol_block_upper, 
@@ -135,10 +158,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # mpiexec -n 2 python benchmarking.py
 
-    GreenRetarded_rgf2sided_diag\
-    , GreenRetarded_rgf2sided_upper\
-    , GreenRetarded_rgf2sided_lower\
-    , greenRetardedBenchtiming["rgf2sided"] = rgf2sided.rgf2sided_Gr(A_block_diag, A_block_upper, A_block_lower)
+    for i in range(n_runs):
+        GreenRetarded_rgf2sided_diag\
+        , GreenRetarded_rgf2sided_upper\
+        , GreenRetarded_rgf2sided_lower\
+        , rgf2sided_greenRetarded_timings.timingRuns[i] = rgf2sided.rgf2sided_Gr(A_block_diag, A_block_upper, A_block_lower)
+        comm.barrier()
 
     if rank == 0: # Results agregated on 1st process and compared to reference solution
         print("RGF 2-sided: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
@@ -165,7 +190,8 @@ if __name__ == "__main__":
 
     # .1 Serial HPR
     if rank == 0:
-        G_hpr_serial, greenRetardedBenchtiming["hpr_serial"] = hpr.hpr_serial(A, blocksize)
+        for i in range(n_runs):
+            G_hpr_serial, hpr_serial_greenRetarded_timings.timingRuns[i] = hpr.hpr_serial(A, blocksize)
 
         G_hpr_serial_diag = np.zeros((size, size), dtype=np.complex128)
         G_hpr_serial_upper = np.zeros((size, size), dtype=np.complex128)
@@ -176,41 +202,13 @@ if __name__ == "__main__":
         , G_hpr_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_hpr_serial, blocksize)
 
         print("HPR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                          GreenRetarded_refsol_block_upper, 
-                                                                          GreenRetarded_refsol_block_lower, 
-                                                                          G_hpr_serial_diag, 
-                                                                          G_hpr_serial_upper, 
-                                                                          G_hpr_serial_lower))
+                                                                         GreenRetarded_refsol_block_upper, 
+                                                                         GreenRetarded_refsol_block_lower, 
+                                                                         G_hpr_serial_diag, 
+                                                                         G_hpr_serial_upper, 
+                                                                         G_hpr_serial_lower))
         
     comm.barrier()
-    # .2
-    G_hpr_diag\
-        , G_hpr_upper\
-        , G_hpr_lower = hpr.hpr(A_block_diag, A_block_upper, A_block_lower)
-    
-    if rank == 0:
-        print("HPR: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                          GreenRetarded_refsol_block_upper, 
-                                                                          GreenRetarded_refsol_block_lower, 
-                                                                          G_hpr_diag, 
-                                                                          G_hpr_upper, 
-                                                                          G_hpr_lower))
-
-        """ vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                              GreenRetarded_refsol_block_upper, 
-                                              GreenRetarded_refsol_block_lower,
-                                              G_hpr_diag, 
-                                              G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution") """
-        
-        
-
-        """ vizu.compareDenseMatrixFromBlocks(A_block_diag, 
-                                              A_block_upper, 
-                                              A_block_lower, 
-                                              G_hpr_diag, 
-                                              G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution") """
         
         
     
@@ -218,9 +216,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-    #if rank == 0:
-        vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
+    if rank == 0:
+        fullBenchmark = [np_greenRetarded_timings, csc_greenRetarded_timings, rgf_greenRetarded_timings, rgf2sided_greenRetarded_timings, hpr_serial_greenRetarded_timings]
+        bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
 
-        #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
+        #fullBenchmark = [np_greenLesser_timings, csc_greenLesser_timings, rgf_greenLesser_timings, rgf2sided_greenLesser_timings]
+        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
+
 
 

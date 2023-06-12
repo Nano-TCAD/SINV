@@ -34,9 +34,6 @@ def generateDenseMatrix(size, isComplex=False, seed=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    if rank == 0:
-        print("Generating dense matrix of size: ", size)
-
     return generateRandomNumpyMat(size, seed, isComplex)
 
 
@@ -48,9 +45,6 @@ def generateSparseMatrix(size, density, isComplex=False, seed=None):
     """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-
-    if rank == 0:
-        print("Generating sparse matrix of size: ", size, " and density: ", density)
 
     A = generateRandomNumpyMat(size, seed, isComplex)
 
@@ -68,9 +62,6 @@ def generateBandedDiagonalMatrix(size, bandwidth, isComplex=False, seed=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    if rank == 0:
-        print("Generating banded diagonal matrix of size: ", size, " and bandwidth: ", bandwidth)
-    
     A = generateRandomNumpyMat(size, seed, isComplex)
     
     for i in range(size):

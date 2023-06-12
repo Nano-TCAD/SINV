@@ -13,8 +13,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import numpy as np
 import time
 
-from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import inv
 from mpi4py import MPI
 
 
@@ -66,7 +64,6 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
     return G_diag_blocks_leftprocess, G_upper_blocks_leftprocess, G_lower_blocks_leftprocess
 
 
-
 def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc_lower_rightprocess):
     """
         Right process of the 2-sided RGF algorithm.
@@ -112,7 +109,6 @@ def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc
 
 
     return G_diag_blocks_rightprocess, G_upper_blocks_rightprocess, G_lower_blocks_rightprocess
-
 
 
 def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):

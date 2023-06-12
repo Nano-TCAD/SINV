@@ -19,7 +19,6 @@ def vizualiseDenseMatrixFlat(mat, legend=""):
     plt.show()
 
 
-
 def vizualiseCSCMatrixFlat(mat, legend=""):
     """
         Visualise a CSC matrix in a 2D plot. Third dimension is represented by color.
@@ -28,7 +27,6 @@ def vizualiseCSCMatrixFlat(mat, legend=""):
     plt.title('CSC matrix hotmat: '+ legend)
     plt.imshow(abs(mat.toarray()), cmap='hot', interpolation='nearest')
     plt.show()
-
 
 
 def vizualiseDenseMatrixFromBlocks(A_bloc_diag, A_bloc_upper, A_bloc_lower, legend="", wastedStorage=False):
@@ -61,7 +59,6 @@ def vizualiseDenseMatrixFromBlocks(A_bloc_diag, A_bloc_upper, A_bloc_lower, lege
     plt.title('Block matrix hotmat: '+ legend)
     plt.imshow(abs(A), cmap='hot', interpolation='nearest')
     plt.show()
-
 
 
 def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_lower,
@@ -104,7 +101,6 @@ def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_l
     plt.imshow(abs(A), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
 
     plt.show()
-
 
 
 def showBenchmark(dictBenchtiming, nBlocks, blockSize, label=""):

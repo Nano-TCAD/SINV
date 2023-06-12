@@ -7,7 +7,9 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import vizuUtils as vizUtils
+import utils.vizualisation       as vizUtils
+import utils.permutationMatrices as permMat
+import utils.generateMatrices    as genMat
 
 import numpy as np
 import scipy.linalg as la
@@ -52,6 +54,7 @@ def schurInvert(A):
     G[size2:, size2:] = G22
 
     return G
+
 
 
 
@@ -140,6 +143,7 @@ def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
 
 
+
 def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     comm = MPI.COMM_WORLD
 
@@ -158,7 +162,19 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
 
+    P = permMat.generatePermutationMatrix(6)
+    vizUtils.vizualiseDenseMatrixFlat(P, "P")
+
+    """ A = genMat.generateBandedDiagonalMatrix(6, 1)
+    vizUtils.vizualiseDenseMatrixFlat(A, "A")
+
+    PAP = P @ A @ P.T
+
+    vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP") """
+
+
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
 
 
 def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
@@ -183,7 +199,6 @@ def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
-
 
 
 
@@ -255,6 +270,9 @@ def hpr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
 
 
 

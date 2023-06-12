@@ -8,8 +8,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import inv
 import time
 
 

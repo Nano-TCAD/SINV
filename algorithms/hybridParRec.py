@@ -162,8 +162,8 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
 
-    P = permMat.generatePermutationMatrix(6)
-    vizUtils.vizualiseDenseMatrixFlat(P, "P")
+    """ P = permMat.generatePermutationMatrix(6)
+    vizUtils.vizualiseDenseMatrixFlat(P, "P") """
 
     """ A = genMat.generateBandedDiagonalMatrix(6, 1)
     vizUtils.vizualiseDenseMatrixFlat(A, "A")

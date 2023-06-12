@@ -219,7 +219,7 @@ if __name__ == "__main__":
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
     #if rank == 0:
-        #vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
+        vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
 
         #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
 

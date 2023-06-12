@@ -118,7 +118,7 @@ if __name__ == "__main__":
         GreenRetarded_rgf_diag\
         , GreenRetarded_rgf_upper\
         , GreenRetarded_rgf_lower\
-        , greenRetardedBenchtiming["rgf"] = rgf.rgf_Gr(A_block_diag, A_block_upper, A_block_lower)
+        , greenRetardedBenchtiming["rgf"] = rgf.rgf_rightToLeft_Gr(A_block_diag, A_block_upper, A_block_lower)
 
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                  GreenRetarded_refsol_block_upper, 

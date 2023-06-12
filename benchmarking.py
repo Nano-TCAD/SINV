@@ -5,14 +5,17 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import matricesUtils as matUtils
-import vizuUtils     as vizUtils
-import verifyResults as verif
+import utils.generateMatrices    as genMat
+import utils.convertMatrices     as convMat
+import utils.transformMatrices   as transMat
+import utils.vizualisation       as vizu
 
 import algorithms.fullInversion as inv
 import algorithms.rgf           as rgf
 import algorithms.rgf2sided     as rgf2sided
 import algorithms.hybridParRec  as hpr
+
+import verifyResults as verif
 
 import numpy as np
 import time
@@ -43,9 +46,9 @@ if __name__ == "__main__":
 
 
     # Retarded Green's function initial matrix
-    A = matUtils.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
-    A = matUtils.makeSymmetric(A)
-    A_csc = matUtils.denseToCSC(A)
+    A = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
+    A = transMat.transformToSymmetric(A)
+    A_csc = convMat.convertDenseToCSC(A)
 
     # Retarded Green's function references solutions (Full inversions)
     GreenRetarded_refsol_np, greenRetardedBenchtiming["np"]   = inv.numpyInversion(A)
@@ -58,17 +61,17 @@ if __name__ == "__main__":
         # Extract the blocks from the retarded Green's function reference solution
         GreenRetarded_refsol_block_diag\
         , GreenRetarded_refsol_block_upper\
-        , GreenRetarded_refsol_block_lower = matUtils.denseToBlocksTriDiagStorage(GreenRetarded_refsol_np, blocksize)
+        , GreenRetarded_refsol_block_lower = convMat.convertDenseToBlocksTriDiagStorage(GreenRetarded_refsol_np, blocksize)
 
-    A_block_diag, A_block_upper, A_block_lower = matUtils.denseToBlocksTriDiagStorage(A, blocksize)
+    A_block_diag, A_block_upper, A_block_lower = convMat.convertDenseToBlocksTriDiagStorage(A, blocksize)
 
 
 
     # Lesser Green's function initial matrix
     GreenAdvanced_refsol_np = np.conjugate(np.transpose(GreenRetarded_refsol_np)) 
 
-    SigmaLesser = matUtils.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
-    SigmaLesser = matUtils.makeSymmetric(SigmaLesser)
+    SigmaLesser = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
+    SigmaLesser = transMat.transformToSymmetric(SigmaLesser)
 
     # Lesser Green's function references solutions (Full inversions)
     # 1. Dense matrix
@@ -82,8 +85,8 @@ if __name__ == "__main__":
     greenLesserBenchtiming["np"] += timing
 
     # 2. CSC matrix
-    GreenAdvanced_refsol_csc = matUtils.denseToCSC(GreenAdvanced_refsol_np)
-    SigmaLesser_csc = matUtils.denseToCSC(SigmaLesser)
+    GreenAdvanced_refsol_csc = convMat.convertDenseToCSC(GreenAdvanced_refsol_np)
+    SigmaLesser_csc = convMat.convertDenseToCSC(SigmaLesser)
 
     tic = time.perf_counter()
     B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
@@ -101,7 +104,7 @@ if __name__ == "__main__":
         # Extract the blocks from the retarded Green's function reference solution
         GreenAdvanced_refsol_block_diag\
         , GreenAdvanced_refsol_block_upper\
-        , GreenAdvanced_refsol_block_lower = matUtils.denseToBlocksTriDiagStorage(GreenLesser_refsol_np, blocksize)
+        , GreenAdvanced_refsol_block_lower = convMat.convertDenseToBlocksTriDiagStorage(GreenLesser_refsol_np, blocksize)
 
 
 
@@ -170,7 +173,7 @@ if __name__ == "__main__":
 
         G_hpr_serial_diag\
         , G_hpr_serial_upper\
-        , G_hpr_serial_lower = matUtils.denseToBlocksTriDiagStorage(G_hpr_serial, blocksize)
+        , G_hpr_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_hpr_serial, blocksize)
 
         print("HPR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                           GreenRetarded_refsol_block_upper, 
@@ -179,9 +182,21 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
         
+    comm.barrier()
+    # .2
+    G_hpr_diag\
+        , G_hpr_upper\
+        , G_hpr_lower = hpr.hpr(A_block_diag, A_block_upper, A_block_lower)
+    
+    if rank == 0:
+        print("HPR: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_hpr_diag, 
+                                                                          G_hpr_upper, 
+                                                                          G_hpr_lower))
 
-
-        """ vizUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        """ vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                               GreenRetarded_refsol_block_upper, 
                                               GreenRetarded_refsol_block_lower,
                                               G_hpr_diag, 
@@ -190,7 +205,7 @@ if __name__ == "__main__":
         
         
 
-        """ vizUtils.compareDenseMatrixFromBlocks(A_block_diag, 
+        """ vizu.compareDenseMatrixFromBlocks(A_block_diag, 
                                               A_block_upper, 
                                               A_block_lower, 
                                               G_hpr_diag, 
@@ -203,9 +218,9 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-    if rank == 0:
-        vizUtils.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
+    #if rank == 0:
+        #vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
 
-        #vizUtils.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
+        #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
 
 

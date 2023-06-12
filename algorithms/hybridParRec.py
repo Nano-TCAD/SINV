@@ -7,11 +7,16 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
+import utils.vizualisation       as vizUtils
+import utils.permutationMatrices as permMat
+import utils.generateMatrices    as genMat
+
 import numpy as np
 import scipy.linalg as la
 import time
 
-import vizuUtils as vizUtils
+from mpi4py import MPI
+
 
 
 
@@ -52,10 +57,12 @@ def schurInvert(A):
 
 
 
+
 def hpr_serial(A, blockSize):
     # Implementation of the serial algorithm presented in section 3. of the paper
     # - The algorithm is equivalent to an RGF but with explicit LU decomposition
     # - TODO: Convert to block storage version (dense for now)
+    # - TODO: Move around the additional inversion of D in the BWD recurence
 
     size    = A.shape[0]
     nBlocks = size//blockSize
@@ -108,6 +115,166 @@ def hpr_serial(A, blockSize):
     timing = toc-tic
 
     return G, timing
+
+
+
+
+
+def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+    comm = MPI.COMM_WORLD
+
+    nblocks   = A_bloc_diag.shape[0]
+    blockSize = A_bloc_diag.shape[1]
+
+    G_diag_blocks  = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
+    # FOR DEBUG
+    for i in range(nblocks):
+        G_diag_blocks[i]  = np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_upper_blocks[i] = 0.825*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        if i < nblocks-1:
+            G_lower_blocks[i] = 0.825*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+
+
+
+
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
+def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+    comm = MPI.COMM_WORLD
+
+    nblocks   = A_bloc_diag.shape[0]
+    blockSize = A_bloc_diag.shape[1]
+
+    G_diag_blocks  = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
+    # FOR DEBUG
+    for i in range(nblocks):
+        G_diag_blocks[i]  = 0.66*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_upper_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+
+
+
+    P = permMat.generatePermutationMatrix(6)
+    vizUtils.vizualiseDenseMatrixFlat(P, "P")
+
+    """ A = genMat.generateBandedDiagonalMatrix(6, 1)
+    vizUtils.vizualiseDenseMatrixFlat(A, "A")
+
+    PAP = P @ A @ P.T
+
+    vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP") """
+
+
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
+def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+    comm = MPI.COMM_WORLD
+
+    nblocks   = A_bloc_diag.shape[0]
+    blockSize = A_bloc_diag.shape[1]
+
+    G_diag_blocks  = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
+    # FOR DEBUG
+    for i in range(nblocks):
+        G_diag_blocks[i]  = 0.33*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        if i < nblocks-1:
+            G_upper_blocks[i] = 0.165*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_lower_blocks[i] = 0.165*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+
+
+
+
+
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
+def hpr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+    """
+        Implementation of the parallel algorithm presented in section 5. of the paper
+    """
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    highest_rank = comm_size - 1
+
+    """ print("rank: ", comm_rank)
+    print("size: ", comm_size)
+    print("highest_rank: ", highest_rank) """
+
+    nblocks   = A_bloc_diag.shape[0]
+    blockSize = A_bloc_diag.shape[1]
+
+    G_diag_blocks  = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
+
+    if comm_rank == 0:
+        startingBlock = 0 # 0-2
+        endingBlock   = nblocks//comm_size
+
+        G_diag_blocks[startingBlock:endingBlock]\
+        , G_upper_blocks[startingBlock:endingBlock]\
+        , G_lower_blocks[startingBlock:endingBlock-1] = hpr_ulcorner_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock:endingBlock-1])
+
+        # Gather the results from the other processes
+        G_diag_blocks[endingBlock:2*(nblocks//comm_size)]      = comm.recv(source=1, tag=0)
+        G_upper_blocks[endingBlock:2*(nblocks//comm_size)]     = comm.recv(source=1, tag=1)
+        G_lower_blocks[endingBlock-1:2*(nblocks//comm_size)-1] = comm.recv(source=1, tag=2)
+
+        G_diag_blocks[2*(nblocks//comm_size):nblocks]      = comm.recv(source=2, tag=0)
+        G_upper_blocks[2*(nblocks//comm_size):nblocks-1]   = comm.recv(source=2, tag=1)
+        G_lower_blocks[2*(nblocks//comm_size)-1:nblocks-1] = comm.recv(source=2, tag=2)
+
+    elif comm_rank == 1:
+        startingBlock = nblocks//comm_size # 2-4
+        endingBlock   = 2*(nblocks//comm_size)
+
+        G_diag_blocks[startingBlock:endingBlock]\
+        , G_upper_blocks[startingBlock:endingBlock]\
+        , G_lower_blocks[startingBlock-1:endingBlock-1] = hpr_central_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock-1:endingBlock-1])
+
+        # Send the results to the gathering process: (rank 0)
+        comm.send(G_diag_blocks[startingBlock:endingBlock],      dest=0, tag=0)
+        comm.send(G_upper_blocks[startingBlock:endingBlock],     dest=0, tag=1)
+        comm.send(G_lower_blocks[startingBlock-1:endingBlock-1], dest=0, tag=2)
+
+    else:
+        startingBlock = comm_rank*(nblocks//comm_size) # 4-6
+        endingBlock   = nblocks
+
+        G_diag_blocks[startingBlock:endingBlock]\
+        , G_upper_blocks[startingBlock:endingBlock-1]\
+        , G_lower_blocks[startingBlock-1:endingBlock-1] = hpr_lrcorner_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock:endingBlock])
+
+        # Send the results to the gathering process: (rank 0)
+        comm.send(G_diag_blocks[startingBlock:endingBlock],      dest=0, tag=0)
+        comm.send(G_upper_blocks[startingBlock:endingBlock-1],   dest=0, tag=1)
+        comm.send(G_lower_blocks[startingBlock-1:endingBlock-1], dest=0, tag=2)
+
+
+
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
+
+
 
 
 

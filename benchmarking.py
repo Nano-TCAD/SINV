@@ -196,12 +196,12 @@ if __name__ == "__main__":
                                                                           G_hpr_upper, 
                                                                           G_hpr_lower))
 
-        """ vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                               GreenRetarded_refsol_block_upper, 
                                               GreenRetarded_refsol_block_lower,
                                               G_hpr_diag, 
                                               G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution") """
+                                              G_hpr_lower, "HPR solution")
         
         
 

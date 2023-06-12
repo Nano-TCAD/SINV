@@ -58,7 +58,6 @@ def schurInvert(A):
 
 
 
-
 def hpr_serial(A, blockSize):
     # Implementation of the serial algorithm presented in section 3. of the paper
     # - The algorithm is equivalent to an RGF but with explicit LU decomposition
@@ -121,6 +120,13 @@ def hpr_serial(A, blockSize):
 
 
 
+
+
+
+
+
+
+
 def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     comm = MPI.COMM_WORLD
 
@@ -138,7 +144,13 @@ def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         if i < nblocks-1:
             G_lower_blocks[i] = 0.825*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
+    L = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    U = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    S = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
+    L = A_bloc_lower[0, ] @ np.linalg.inv(A_bloc_diag[0, ])
+    U = np.linalg.inv(A_bloc_diag[0, ]) @ A_bloc_upper[0, ]
+    S = A_bloc_diag[1, ] - L @ A_bloc_upper[0, ]
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
@@ -156,10 +168,10 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
     # FOR DEBUG
-    """ for i in range(nblocks):
+    for i in range(nblocks):
         G_diag_blocks[i]  = 0.66*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         G_upper_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype) """
+        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
     P = permMat.generateBlockPermutationMatrix(nblocks, blockSize)
     A = convMat.convertBlocksBandedToDense(A_bloc_diag, A_bloc_upper, A_bloc_lower)

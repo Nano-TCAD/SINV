@@ -8,7 +8,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import numpy as np
 
 from scipy.sparse import csc_matrix
-from mpi4py       import MPI
 
 
 
@@ -31,11 +30,6 @@ def generateDenseMatrix(size, isComplex=False, seed=None):
     """
         Generate a dense matrix of shape: (size x size) filled with random numbers.
     """
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-
-    if rank == 0:
-        print("Generating dense matrix of size: ", size)
 
     return generateRandomNumpyMat(size, seed, isComplex)
 
@@ -46,11 +40,6 @@ def generateSparseMatrix(size, density, isComplex=False, seed=None):
         Generate a sparse matrix of shape: (size x size), density of non-zero elements: density,
         filled with random numbers.
     """
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-
-    if rank == 0:
-        print("Generating sparse matrix of size: ", size, " and density: ", density)
 
     A = generateRandomNumpyMat(size, seed, isComplex)
 
@@ -65,12 +54,7 @@ def generateBandedDiagonalMatrix(size, bandwidth, isComplex=False, seed=None):
         Generate a banded diagonal matrix of shape: (size x size), bandwidth: bandwidth,
         filled with random numbers.
     """
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
 
-    if rank == 0:
-        print("Generating banded diagonal matrix of size: ", size, " and bandwidth: ", bandwidth)
-    
     A = generateRandomNumpyMat(size, seed, isComplex)
     
     for i in range(size):

@@ -34,18 +34,10 @@ if __name__ == "__main__":
 
 
     # Benchmarking parameters
-    n_runs = 1
+    n_runs = 3
 
-    np_greenRetarded_timings         = bench.BenchTiming("Retarded Green's function", "numpy", n_runs)
-    csc_greenRetarded_timings        = bench.BenchTiming("Retarded Green's function", "scipyCSC", n_runs)
-    rgf_greenRetarded_timings        = bench.BenchTiming("Retarded Green's function", "rgf", n_runs)
-    rgf2sided_greenRetarded_timings  = bench.BenchTiming("Retarded Green's function", "rgf2sided", n_runs)
-    hpr_serial_greenRetarded_timings = bench.BenchTiming("Retarded Green's function", "hpr_serial", n_runs)
-
-    np_greenLesser_timings           = bench.BenchTiming("Lesser Green's function", "numpy", n_runs)
-    csc_greenLesser_timings          = bench.BenchTiming("Lesser Green's function", "scipyCSC", n_runs)
-    rgf_greenLesser_timings          = bench.BenchTiming("Lesser Green's function", "rgf", n_runs)
-    rgf2sided_greenLesser_timings    = bench.BenchTiming("Lesser Green's function", "rgf2sided", n_runs)
+    greenRetardedBenchmark = bench.Benchmark("Retarded Green's function computation", n_runs)
+    greenLesserBenchmark   = bench.Benchmark("Lesser Green's function computation", n_runs)
 
 
     # Problem parameters
@@ -68,9 +60,24 @@ if __name__ == "__main__":
     A_csc = convMat.convertDenseToCSC(A)
 
     # Retarded Green's function references solutions (Full inversions)
+    numpy_runs : list = [None for i in range(n_runs)]
     for i in range(n_runs):
-        GreenRetarded_refsol_np, np_greenRetarded_timings.timingRuns[i]   = inv.numpyInversion(A)
-        GreenRetarded_refsol_csc, csc_greenRetarded_timings.timingRuns[i] = inv.scipyCSCInversion(A_csc)
+        GreenRetarded_refsol_np, numpy_runs[i] = inv.numpyInversion(A)
+
+    greenRetardedBenchmark.addMethodBenchmark("numpy", numpy_runs)
+
+
+    scipy_runs : list = [None for i in range(n_runs)]
+    for i in range(n_runs):   
+        GreenRetarded_refsol_csc, scipy_runs[i] = inv.scipyCSCInversion(A_csc)
+
+    greenRetardedBenchmark.addMethodBenchmark("scipy", scipy_runs)
+
+    print(greenRetardedBenchmark.getMethodMean("numpy"))
+    #print(greenRetardedBenchmark.getMethodStdDeviation("numpy"))
+
+
+
 
 
     if not verif.verifResults(GreenRetarded_refsol_np, GreenRetarded_refsol_csc):
@@ -86,7 +93,49 @@ if __name__ == "__main__":
 
 
 
-    # ---------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    """ # ---------------------------------------------------------------------------------------------
     # 0. Lesser Green's function references solutions (Full inversions)
     # ---------------------------------------------------------------------------------------------
     # Lesser Green's function initial matrix
@@ -141,7 +190,7 @@ if __name__ == "__main__":
             GreenRetarded_rgf_diag\
             , GreenRetarded_rgf_upper\
             , GreenRetarded_rgf_lower\
-            , rgf_greenRetarded_timings.timingRuns[i] = rgf.rgf_Gr(A_block_diag, A_block_upper, A_block_lower)
+            , rgf_greenRetarded_timings.timingRuns[i] = rgf.rgf_leftToRight_Gr(A_block_diag, A_block_upper, A_block_lower)
 
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                  GreenRetarded_refsol_block_upper, 
@@ -174,12 +223,12 @@ if __name__ == "__main__":
                                                                           GreenRetarded_rgf2sided_lower)) 
 
 
-        """ matUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                            GreenRetarded_refsol_block_upper, 
-                                            GreenRetarded_refsol_block_lower,
-                                            GreenRetarded_rgf2sided_diag, 
-                                            GreenRetarded_rgf2sided_upper, 
-                                            GreenRetarded_rgf2sided_lower, "RGF 2-sided solution") """
+        #matUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        #                                    GreenRetarded_refsol_block_upper, 
+        #                                    GreenRetarded_refsol_block_lower,
+        #                                    GreenRetarded_rgf2sided_diag, 
+        #                                    GreenRetarded_rgf2sided_upper, 
+        #                                    GreenRetarded_rgf2sided_lower, "RGF 2-sided solution")
 
 
 
@@ -216,12 +265,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-    if rank == 0:
-        fullBenchmark = [np_greenRetarded_timings, csc_greenRetarded_timings, rgf_greenRetarded_timings, rgf2sided_greenRetarded_timings, hpr_serial_greenRetarded_timings]
-        bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
+   #if rank == 0:
+        #fullBenchmark = [np_greenRetarded_timings, csc_greenRetarded_timings, rgf_greenRetarded_timings, rgf2sided_greenRetarded_timings, hpr_serial_greenRetarded_timings]
+        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
 
         #fullBenchmark = [np_greenLesser_timings, csc_greenLesser_timings, rgf_greenLesser_timings, rgf2sided_greenLesser_timings]
-        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
+        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize) """
 
 
 

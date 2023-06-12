@@ -16,6 +16,8 @@ def rgf_leftToRight_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     """
         RGF algorithm performing block-tridiagonal inversion of the given matrix.
     """
+    timings : dict[str, float] = {}
+
     nblocks = A_bloc_diag.shape[0]
     blockSize = A_bloc_diag.shape[1]
 
@@ -36,7 +38,9 @@ def rgf_leftToRight_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     # From left to right
     for i in range(1, nblocks):
         g_diag_blocks[i, ] = np.linalg.inv(A_bloc_diag[i, ] - A_bloc_lower[i-1, ] @ g_diag_blocks[i-1, ] @ A_bloc_upper[i-1, ])
-
+    toc = time.perf_counter() # -----------------------------
+    timings["fwd pass"] = toc - tic
+    tic = time.perf_counter() # -----------------------------
     # 3. Initialisation of last element of G
     G_diag_blocks[-1, ] = g_diag_blocks[-1, ]
 
@@ -47,11 +51,9 @@ def rgf_leftToRight_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         G_upper_blocks[i, ] = -g_diag_blocks[i, ] @ A_bloc_upper[i, ] @ G_diag_blocks[i+1, ]
         G_lower_blocks[i, ] =  G_upper_blocks[i, ].T
     toc = time.perf_counter() # -----------------------------
+    timings["bwd pass"] = toc - tic
 
-
-    timing = toc - tic
-
-    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timing
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timings
 
 
 
@@ -59,6 +61,8 @@ def rgf_rightToLeft_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     """
         RGF algorithm performing block-tridiagonal inversion of the given matrix.
     """
+    timings : dict[str, float] = {}
+
     nblocks = A_bloc_diag.shape[0]
     blockSize = A_bloc_diag.shape[1]
 
@@ -78,7 +82,9 @@ def rgf_rightToLeft_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     # From right to left
     for i in range(nblocks-2, -1, -1):
         g_diag_blocks[i, ] = np.linalg.inv(A_bloc_diag[i, ] - A_bloc_upper[i, ] @ g_diag_blocks[i+1, ] @ A_bloc_lower[i, ])
-
+    toc = time.perf_counter() # -----------------------------
+    timings["fwd pass"] = toc - tic
+    tic = time.perf_counter() # -----------------------------
     # 3. Initialisation of last element of G
     G_diag_blocks[0, ] = g_diag_blocks[0, ]
 
@@ -88,9 +94,7 @@ def rgf_rightToLeft_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         G_lower_blocks[i-1, ] = -g_diag_blocks[i, ] @ A_bloc_lower[i-1, ] @ G_diag_blocks[i-1, ]
         G_upper_blocks[i-1, ] =  G_lower_blocks[i-1, ].T
     toc = time.perf_counter() # -----------------------------
+    timings["bwd pass"] = toc - tic
 
-
-    timing = toc - tic
-
-    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timing
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timings
 

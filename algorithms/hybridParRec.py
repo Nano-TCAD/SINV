@@ -63,6 +63,7 @@ def hpr_serial(A, blockSize):
     # - The algorithm is equivalent to an RGF but with explicit LU decomposition
     # - TODO: Convert to block storage version (dense for now)
     # - TODO: Move around the additional inversion of D in the BWD recurence
+    timings : dict[str, float] = {}
 
     size    = A.shape[0]
     nBlocks = size//blockSize
@@ -90,7 +91,10 @@ def hpr_serial(A, blockSize):
         D[b_ip1:b_ip2, b_ip1:b_ip2] = A[b_ip1:b_ip2, b_ip1:b_ip2] - A[b_ip1:b_ip2, b_i:b_ip1] @ D_inv_i @ A[b_i:b_ip1, b_ip1:b_ip2]
         L[b_ip1:b_ip2, b_i:b_ip1]   = A[b_ip1:b_ip2, b_i:b_ip1] @ D_inv_i
         U[b_i:b_ip1, b_ip1:b_ip2]   = D_inv_i @ A[b_i:b_ip1, b_ip1:b_ip2]
+    toc = time.time() # -----------------------------
+    timings["fwd pass"] = toc-tic
 
+    tic = time.time() # -----------------------------
     # Initialisation of backward recurence
     b_nm1 = (nBlocks-2)*blockSize
     b_n   = (nBlocks-1)*blockSize
@@ -110,11 +114,10 @@ def hpr_serial(A, blockSize):
         G[b_i:b_ip1, b_im1:b_i] = -G[b_i:b_ip1, b_i:b_ip1] @ L[b_i:b_ip1, b_im1:b_i]
         G[b_im1:b_i, b_i:b_ip1] = -U[b_im1:b_i, b_i:b_ip1] @ G[b_i:b_ip1, b_i:b_ip1]
     toc = time.time() # -----------------------------
+    timings["bwd pass"] = toc-tic
 
-    
-    timing = toc-tic
+    return G, timings
 
-    return G, timing
 
 
 

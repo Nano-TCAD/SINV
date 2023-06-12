@@ -10,6 +10,61 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+class Benchmark:
+    # Public methods and attributes
+    simulationName : str
+    n_runs         : int
+
+    def __init__(self, simulationName : str, n_runs : int):
+        self.simulationName = simulationName
+        self.n_runs         = n_runs
+
+    def addMethodBenchmark(self, methodName : str, timings : list):
+        """
+            Add a benchmark for a method.
+        """
+        self.__methodsTimings[methodName] = timings
+
+    def getMeans(self):
+        methodsMeans   : dict = {}
+
+        return methodsMeans
+    
+    def getStdDeviations(self):
+        methodsStdDevs : dict = {}
+
+        return methodsStdDevs
+
+
+    # Private methods and attributes
+    __methodsTimings : dict = {}
+
+    def getMethodMean(self, methodName : str):
+        methodMeans : dict = {}
+
+        
+
+        for i in range(self.__methodsTimings[methodName]):
+
+
+        for key, value in self.__methodsTimings[methodName].items():
+            methodMeans[key] = np.mean(value)
+
+        print(f"methodMeans={methodMeans}")
+
+        nAlgsParts = len(self.__methodsTimings[methodName])
+
+        print(f"nAlgsParts={nAlgsParts}")
+        print(self.__methodsTimings[methodName])
+
+        return 0
+    
+    def getMethodStdDeviation(self, methodName : str):
+        return np.std(self.__methodsTimings[methodName])
+
+
+
+
 
 class BenchTiming:
     def __init__(self, simulationName, methodName, nRuns):

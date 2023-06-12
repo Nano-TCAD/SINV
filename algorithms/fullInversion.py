@@ -17,13 +17,16 @@ def numpyInversion(A):
     """
         Invert a matrix using numpy dense matrix: numpy.linalg.inv
     """
-    tic = time.perf_counter()
+    timings : dict[str, float] = {}
+
+    tic = time.perf_counter() # -----------------------------
     A_inv = np.linalg.inv(A)
-    toc = time.perf_counter()
+    toc = time.perf_counter() # -----------------------------
+    timings["inversion"] = toc - tic
 
-    timing = toc - tic
+    timings["test"] = 0.0005
 
-    return A_inv, timing
+    return A_inv, timings
 
 
 
@@ -31,10 +34,11 @@ def scipyCSCInversion(A):
     """
         Invert a matrix using scipy CSC matrix: scipy.sparse.linalg.inv
     """
-    tic = time.perf_counter()
+    timings : dict[str, float] = {}
+
+    tic = time.perf_counter() # -----------------------------
     A_inv = inv(A)
-    toc = time.perf_counter()
+    toc = time.perf_counter() # -----------------------------
+    timings["inversion"] = toc - tic
 
-    timing = toc - tic
-
-    return A_inv, timing
+    return A_inv, timings

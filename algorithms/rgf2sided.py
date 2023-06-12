@@ -22,6 +22,8 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
         Left process of the 2-sided RGF algorithm.
             - Array traversal is done from left to right
     """
+    timings : dict[str, float] = {}
+
     comm = MPI.COMM_WORLD
 
     nblocks   = A_bloc_diag_leftprocess.shape[0]
@@ -32,7 +34,7 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
     G_upper_blocks_leftprocess = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_upper_leftprocess.dtype)
     G_lower_blocks_leftprocess = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower_leftprocess.dtype)
 
-
+    tic = time.perf_counter() # -----------------------------
     # Initialisation of g
     g_diag_leftprocess[0, ] = np.linalg.inv(A_bloc_diag_leftprocess[0, ])
 
@@ -40,11 +42,17 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
     for i in range(1, nblocks):
         g_diag_leftprocess[i, ] = np.linalg.inv(A_bloc_diag_leftprocess[i, ]\
                                                 - A_bloc_lower_leftprocess[i-1, ] @ g_diag_leftprocess[i-1, ] @ A_bloc_upper_leftprocess[i-1, ])
+    toc = time.perf_counter() # -----------------------------
+    timings["fwd pass"] = toc - tic
 
+    tic = time.perf_counter() # -----------------------------
     # Communicate the left connected block and receive the right connected block
     comm.send(g_diag_leftprocess[nblocks-1, ], dest=1, tag=0)
     g_diag_leftprocess[nblocks, ] = comm.recv(source=1, tag=0)
+    toc = time.perf_counter() # -----------------------------
+    timings["comm"] = toc - tic
 
+    tic = time.perf_counter() # -----------------------------
     # Connection from both sides of the full G
     G_diag_blocks_leftprocess[nblocks-1, ] = np.linalg.inv(A_bloc_diag_leftprocess[nblocks-1, ]\
                                                          - A_bloc_lower_leftprocess[nblocks-2, ] @ g_diag_leftprocess[nblocks-2, ] @ A_bloc_upper_leftprocess[nblocks-2, ]\
@@ -59,9 +67,10 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
         G_diag_blocks_leftprocess[i, ]  = g_diag_leftprocess[i, ] @ (np.identity(blockSize) + A_bloc_upper_leftprocess[i, ] @ G_diag_blocks_leftprocess[i+1, ] @ A_bloc_lower_leftprocess[i, ] @ g_diag_leftprocess[i, ])
         G_upper_blocks_leftprocess[i, ] = -g_diag_leftprocess[i, ] @ A_bloc_upper_leftprocess[i, ] @ G_diag_blocks_leftprocess[i+1, ]
         G_lower_blocks_leftprocess[i, ] =  G_upper_blocks_leftprocess[i, ].T
+    toc = time.perf_counter() # -----------------------------
+    timings["bwd pass"] = toc - tic
 
-
-    return G_diag_blocks_leftprocess, G_upper_blocks_leftprocess, G_lower_blocks_leftprocess
+    return G_diag_blocks_leftprocess, G_upper_blocks_leftprocess, G_lower_blocks_leftprocess, timings
 
 
 def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc_lower_rightprocess):
@@ -117,6 +126,8 @@ def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
             - Using MPI for multiprocessing
             - Rank 0 will agregate the final result
     """
+    timings : dict[str, float] = {}
+
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
@@ -128,16 +139,19 @@ def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
     G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
-
-    tic = time.perf_counter() # -----------------------------
+    
     if rank == 0:
         G_diag_blocks[0:nblocks_2, ]\
         , G_upper_blocks[0:nblocks_2, ]\
-        , G_lower_blocks[0:nblocks_2, ] = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
+        , G_lower_blocks[0:nblocks_2, ]\
+        , timings = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
 
+        tic = time.perf_counter() # -----------------------------
         G_diag_blocks[nblocks_2:, ]  = comm.recv(source=1, tag=0)
         G_upper_blocks[nblocks_2:, ] = comm.recv(source=1, tag=1)
         G_lower_blocks[nblocks_2:, ] = comm.recv(source=1, tag=2)
+        toc = time.perf_counter() # -----------------------------
+        timings["comm"] += toc - tic
 
     elif rank == 1:
         G_diag_blocks[nblocks_2:, ]\
@@ -149,10 +163,6 @@ def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         comm.send(G_lower_blocks[nblocks_2:, ], dest=0, tag=2)
     
     comm.barrier()
-    toc = time.perf_counter() # -----------------------------
 
-
-    timing = toc - tic
-
-    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timing
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks, timings
 

@@ -31,3 +31,26 @@ def generatePermutationMatrix(matSize):
             bascule = True
 
     return P
+
+
+def generateBlockPermutationMatrix(nBlocks, blockSize):
+
+    P = np.zeros((nBlocks*blockSize, nBlocks*blockSize), dtype=np.int32)
+    I = np.eye(blockSize, dtype=np.int32)
+
+    offsetRight = nBlocks-1
+    offsetLeft  = 0
+    bascule     = True
+
+    for i in range(nBlocks-1, -1, -1):
+        if bascule:
+            P[i*blockSize:(i+1)*blockSize, offsetRight*blockSize:(offsetRight+1)*blockSize] = I
+            offsetRight -= 1
+            bascule = False
+        else:
+            P[i*blockSize:(i+1)*blockSize, offsetLeft*blockSize:(offsetLeft+1)*blockSize] = I
+            offsetLeft  += 1
+            bascule = True
+
+    return P
+

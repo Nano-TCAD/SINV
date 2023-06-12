@@ -10,6 +10,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import utils.vizualisation       as vizUtils
 import utils.permutationMatrices as permMat
 import utils.generateMatrices    as genMat
+import utils.convertMatrices     as convMat
 
 import numpy as np
 import scipy.linalg as la
@@ -155,22 +156,17 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
     # FOR DEBUG
-    for i in range(nblocks):
+    """ for i in range(nblocks):
         G_diag_blocks[i]  = 0.66*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         G_upper_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype) """
 
-
-
-    P = permMat.generatePermutationMatrix(6)
-    vizUtils.vizualiseDenseMatrixFlat(P, "P")
-
-    """ A = genMat.generateBandedDiagonalMatrix(6, 1)
-    vizUtils.vizualiseDenseMatrixFlat(A, "A")
+    P = permMat.generateBlockPermutationMatrix(nblocks, blockSize)
+    A = convMat.convertBlocksBandedToDense(A_bloc_diag, A_bloc_upper, A_bloc_lower)
 
     PAP = P @ A @ P.T
 
-    vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP") """
+    #vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP")
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks

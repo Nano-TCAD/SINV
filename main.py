@@ -35,7 +35,7 @@ if __name__ == "__main__":
     greenLesserBenchtiming   = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
 
     # Problem parameters
-    size = 16
+    size = 20
     blocksize = 2
     density = blocksize**2/size**2
     bandwidth = np.ceil(blocksize/2)

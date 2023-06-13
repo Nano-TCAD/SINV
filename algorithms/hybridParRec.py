@@ -33,9 +33,11 @@ def schurInvert(A):
     Us = np.zeros((size2, size2), dtype=A.dtype)
     Sc = np.zeros((size2, size2), dtype=A.dtype)
 
-    Ls = A[size2:, :size2] @ np.linalg.inv(A[:size2, :size2])
-    Us = np.linalg.inv(A[:size2, :size2]) @ A[:size2, size2:]
-    Sc = A[size2:, size2:] - A[size2:, :size2] @ np.linalg.inv(A[:size2, :size2]) @ A[:size2, size2:]
+    inv_A11 = np.linalg.inv(A[:size2, :size2])
+
+    Ls = A[size2:, :size2] @ inv_A11
+    Us = inv_A11 @ A[:size2, size2:]
+    Sc = A[size2:, size2:] - A[size2:, :size2] @ inv_A11 @ A[:size2, size2:]
 
     G = np.zeros((size, size), dtype=A.dtype)
 
@@ -44,10 +46,12 @@ def schurInvert(A):
     G21 = np.zeros((size2, size2), dtype=A.dtype)
     G22 = np.zeros((size2, size2), dtype=A.dtype)
 
-    G11 = np.linalg.inv(A[:size2, :size2]) + Us @ np.linalg.inv(Sc) @ Ls
-    G12 = -Us @ np.linalg.inv(Sc)
-    G21 = -np.linalg.inv(Sc) @ Ls
-    G22 = np.linalg.inv(Sc)
+    inv_Sc = np.linalg.inv(Sc)
+
+    G11 = inv_A11 + Us @ inv_Sc @ Ls
+    G12 = -Us @ inv_Sc
+    G21 = -inv_Sc @ Ls
+    G22 = inv_Sc
 
     G[:size2, :size2] = G11
     G[:size2, size2:] = G12
@@ -133,9 +137,10 @@ def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     nblocks   = A_bloc_diag.shape[0]
     blockSize = A_bloc_diag.shape[1]
 
-    G_diag_blocks  = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
-    G_upper_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_diag_blocks  = np.zeros((nblocks,   blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks,   blockSize, blockSize), dtype=A_bloc_upper.dtype)
     G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
 
     # FOR DEBUG
     for i in range(nblocks):
@@ -144,13 +149,20 @@ def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         if i < nblocks-1:
             G_lower_blocks[i] = 0.9*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
-    L = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
-    U = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
-    S = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
-    L = A_bloc_lower[0, ] @ np.linalg.inv(A_bloc_diag[0, ])
-    U = np.linalg.inv(A_bloc_diag[0, ]) @ A_bloc_upper[0, ]
+    # Schur bloc decomposition
+    L = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    U = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    S = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+
+    inv_DLU = np.linalg.inv(A_bloc_diag[0, ])
+
+    L = A_bloc_lower[0, ] @ inv_DLU
+    U = inv_DLU @ A_bloc_upper[0, ]
     S = A_bloc_diag[1, ] - L @ A_bloc_upper[0, ]
+
+    inv_S = np.linalg.inv(S)
+
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
@@ -167,20 +179,43 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_upper_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_upper.dtype)
     G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
+
     # FOR DEBUG
     for i in range(nblocks):
         G_diag_blocks[i]  = 0.66*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         G_upper_blocks[i] = 0.56*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         G_lower_blocks[i] = 0.56*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
+
+    # Block Permutation phase
     P = permMat.generateBlockPermutationMatrix(nblocks, blockSize)
     A = convMat.convertBlocksBandedToDense(A_bloc_diag, A_bloc_upper, A_bloc_lower)
 
     PAP = P @ A @ P.T
 
-    vizUtils.vizualiseDenseMatrixFlat(P, "P")
-    vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP")
+    #vizUtils.vizualiseDenseMatrixFlat(P, "P")
+    #vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP") 
 
+
+    # Schur bloc decomposition
+    dim_schur = 2*blockSize
+    dim_decomposition = nblocks*blockSize - dim_schur
+
+    L = np.zeros((dim_schur,         dim_decomposition), dtype=A_bloc_diag.dtype)
+    U = np.zeros((dim_decomposition, dim_schur),         dtype=A_bloc_diag.dtype)
+    S = np.zeros((dim_schur,         dim_schur),         dtype=A_bloc_diag.dtype)
+
+    inv_DLU = np.linalg.inv(PAP[:dim_decomposition, :dim_decomposition])
+
+    L = PAP[dim_decomposition:, :dim_decomposition] @ inv_DLU
+    U = inv_DLU @ PAP[:dim_decomposition, dim_decomposition:]
+    S = PAP[dim_decomposition:, dim_decomposition:] - L @ PAP[:dim_decomposition, dim_decomposition:]
+
+    inv_S = np.linalg.inv(S)
+
+    """ vizUtils.vizualiseDenseMatrixFlat(L, "L") 
+    vizUtils.vizualiseDenseMatrixFlat(U, "U") 
+    vizUtils.vizualiseDenseMatrixFlat(S, "S") """
 
 
 
@@ -198,6 +233,7 @@ def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
     G_lower_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
+
     # FOR DEBUG
     for i in range(nblocks):
         G_diag_blocks[i]  = 0.33*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
@@ -206,6 +242,18 @@ def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         G_lower_blocks[i] = 0.23*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
 
+    # Schur bloc decomposition
+    L = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    U = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    S = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+
+    inv_DLU = np.linalg.inv(A_bloc_diag[0, ])
+
+    L = A_bloc_lower[1, ] @ inv_DLU
+    U = inv_DLU @ A_bloc_upper[0, ]
+    S = A_bloc_diag[1, ] - L @ A_bloc_upper[0, ]
+
+    inv_S = np.linalg.inv(S)
 
 
 
@@ -277,7 +325,7 @@ def hpr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
         G_diag_blocks[startingBlock:endingBlock]\
         , G_upper_blocks[startingBlock:endingBlock-1]\
-        , G_lower_blocks[startingBlock-1:endingBlock-1] = hpr_lrcorner_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock:endingBlock])
+        , G_lower_blocks[startingBlock-1:endingBlock-1] = hpr_lrcorner_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock-1:endingBlock])
 
         # Send the results to the gathering process: (rank 0)
         comm.send(G_diag_blocks[startingBlock:endingBlock],      dest=0, tag=0)

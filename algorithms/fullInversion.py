@@ -24,8 +24,6 @@ def numpyInversion(A):
     toc = time.perf_counter() # -----------------------------
     timings["inversion"] = toc - tic
 
-    timings["test"] = 0.0005
-
     return A_inv, timings
 
 

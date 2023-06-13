@@ -34,10 +34,17 @@ if __name__ == "__main__":
 
 
     # Benchmarking parameters
-    n_runs = 3
+    np_greenRetarded_timings  : dict = {}
+    csc_greenRetarded_timings : dict = {}
+    rgf_greenRetarded_timings : dict = {}
+    rgf2sided_greenRetarded_timings  : dict = {}
+    hpr_serial_greenRetarded_timings : dict = {}
 
-    greenRetardedBenchmark = bench.Benchmark("Retarded Green's function computation", n_runs)
-    greenLesserBenchmark   = bench.Benchmark("Lesser Green's function computation", n_runs)
+    np_greenLesser_timings  : dict = {}
+    csc_greenLesser_timings : dict = {}
+    rgf_greenLesser_timings : dict = {}
+    rgf2sided_greenLesser_timings : dict = {}
+    hpr_serial_greenLesser_timings : dict = {}
 
 
     # Problem parameters
@@ -59,25 +66,10 @@ if __name__ == "__main__":
     A = transMat.transformToSymmetric(A)
     A_csc = convMat.convertDenseToCSC(A)
 
+
     # Retarded Green's function references solutions (Full inversions)
-    numpy_runs : list = [None for i in range(n_runs)]
-    for i in range(n_runs):
-        GreenRetarded_refsol_np, numpy_runs[i] = inv.numpyInversion(A)
-
-    greenRetardedBenchmark.addMethodBenchmark("numpy", numpy_runs)
-
-
-    scipy_runs : list = [None for i in range(n_runs)]
-    for i in range(n_runs):   
-        GreenRetarded_refsol_csc, scipy_runs[i] = inv.scipyCSCInversion(A_csc)
-
-    greenRetardedBenchmark.addMethodBenchmark("scipy", scipy_runs)
-
-    print(greenRetardedBenchmark.getMethodMean("numpy"))
-    #print(greenRetardedBenchmark.getMethodStdDeviation("numpy"))
-
-
-
+    GreenRetarded_refsol_np, np_greenRetarded_timings   = inv.numpyInversion(A)
+    GreenRetarded_refsol_csc, csc_greenRetarded_timings = inv.scipyCSCInversion(A_csc)
 
 
     if not verif.verifResults(GreenRetarded_refsol_np, GreenRetarded_refsol_csc):
@@ -93,49 +85,7 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    """ # ---------------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------------------------
     # 0. Lesser Green's function references solutions (Full inversions)
     # ---------------------------------------------------------------------------------------------
     # Lesser Green's function initial matrix
@@ -144,30 +94,31 @@ if __name__ == "__main__":
     SigmaLesser = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
     SigmaLesser = transMat.transformToSymmetric(SigmaLesser)
 
+
     # 1. Dense matrix
-    for i in range(n_runs):
-        tic = time.perf_counter()
-        B = A @ SigmaLesser @ GreenAdvanced_refsol_np
-        toc = time.perf_counter()
+    tic = time.perf_counter()
+    B = A @ SigmaLesser @ GreenAdvanced_refsol_np
+    toc = time.perf_counter()
 
-        timing = toc - tic
+    np_greenLesser_timings["matmult"] = toc - tic
 
-        GreenLesser_refsol_np, np_greenLesser_timings.timingRuns[i] = inv.numpyInversion(B)
-        np_greenLesser_timings.timingRuns[i] += timing
+    GreenLesser_refsol_np, np_greenLesser_timings = inv.numpyInversion(B)
+    
+
 
     # 2. CSC matrix
     GreenAdvanced_refsol_csc = convMat.convertDenseToCSC(GreenAdvanced_refsol_np)
     SigmaLesser_csc = convMat.convertDenseToCSC(SigmaLesser)
 
-    for i in range(n_runs):
-        tic = time.perf_counter()
-        B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
-        toc = time.perf_counter()
+    tic = time.perf_counter()
+    B_csc = A_csc @ SigmaLesser_csc @ GreenAdvanced_refsol_csc
+    toc = time.perf_counter()
 
-        timing = toc - tic
+    csc_greenLesser_timings["matmult"] = toc - tic
 
-        GreenLesser_refsol_csc, csc_greenLesser_timings.timingRuns[i] = inv.scipyCSCInversion(B_csc)
-        csc_greenLesser_timings.timingRuns[i] += timing
+    GreenLesser_refsol_csc, csc_greenLesser_timings = inv.scipyCSCInversion(B_csc)
+    
+
 
     if not verif.verifResults(GreenLesser_refsol_np, GreenLesser_refsol_csc):
         print("Error: Green lesser references solutions are different.")
@@ -186,11 +137,11 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
 
     if rank == 0: # Single process algorithm
-        for i in range(n_runs):
-            GreenRetarded_rgf_diag\
-            , GreenRetarded_rgf_upper\
-            , GreenRetarded_rgf_lower\
-            , rgf_greenRetarded_timings.timingRuns[i] = rgf.rgf_leftToRight_Gr(A_block_diag, A_block_upper, A_block_lower)
+        
+        GreenRetarded_rgf_diag\
+        , GreenRetarded_rgf_upper\
+        , GreenRetarded_rgf_lower\
+        , rgf_greenRetarded_timings = rgf.rgf_leftToRight_Gr(A_block_diag, A_block_upper, A_block_lower)
 
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                  GreenRetarded_refsol_block_upper, 
@@ -207,12 +158,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
     # mpiexec -n 2 python benchmarking.py
 
-    for i in range(n_runs):
-        GreenRetarded_rgf2sided_diag\
-        , GreenRetarded_rgf2sided_upper\
-        , GreenRetarded_rgf2sided_lower\
-        , rgf2sided_greenRetarded_timings.timingRuns[i] = rgf2sided.rgf2sided_Gr(A_block_diag, A_block_upper, A_block_lower)
-        comm.barrier()
+    
+    GreenRetarded_rgf2sided_diag\
+    , GreenRetarded_rgf2sided_upper\
+    , GreenRetarded_rgf2sided_lower\
+    , rgf2sided_greenRetarded_timings = rgf2sided.rgf2sided_Gr(A_block_diag, A_block_upper, A_block_lower)
+
 
     if rank == 0: # Results agregated on 1st process and compared to reference solution
         print("RGF 2-sided: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
@@ -239,8 +190,7 @@ if __name__ == "__main__":
 
     # .1 Serial HPR
     if rank == 0:
-        for i in range(n_runs):
-            G_hpr_serial, hpr_serial_greenRetarded_timings.timingRuns[i] = hpr.hpr_serial(A, blocksize)
+        G_hpr_serial, hpr_serial_greenRetarded_timings = hpr.hpr_serial(A, blocksize)
 
         G_hpr_serial_diag = np.zeros((size, size), dtype=np.complex128)
         G_hpr_serial_upper = np.zeros((size, size), dtype=np.complex128)
@@ -258,19 +208,15 @@ if __name__ == "__main__":
                                                                          G_hpr_serial_lower))
         
     comm.barrier()
-        
-        
-    
-
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------
-   #if rank == 0:
-        #fullBenchmark = [np_greenRetarded_timings, csc_greenRetarded_timings, rgf_greenRetarded_timings, rgf2sided_greenRetarded_timings, hpr_serial_greenRetarded_timings]
-        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize)
+    if rank == 0:
+        fullBenchmark = [np_greenRetarded_timings, csc_greenRetarded_timings, rgf_greenRetarded_timings, rgf2sided_greenRetarded_timings, hpr_serial_greenRetarded_timings]
+        bench.showBenchmark(fullBenchmark, size/blocksize, blocksize, "Retarded Green's function")
 
-        #fullBenchmark = [np_greenLesser_timings, csc_greenLesser_timings, rgf_greenLesser_timings, rgf2sided_greenLesser_timings]
-        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize) """
+        #fullBenchmark = [np_greenLesser_timings, csc_greenLesser_timings, rgf_greenLesser_timings, rgf2sided_greenLesser_timings, hpr_serial_greenLesser_timings]
+        #bench.showBenchmark(fullBenchmark, size/blocksize, blocksize, "Lesser Green's function")
 
 
 

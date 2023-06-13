@@ -140,9 +140,9 @@ def hpr_ulcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     # FOR DEBUG
     for i in range(nblocks):
         G_diag_blocks[i]  = np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_upper_blocks[i] = 0.825*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_upper_blocks[i] = 0.9*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         if i < nblocks-1:
-            G_lower_blocks[i] = 0.825*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+            G_lower_blocks[i] = 0.9*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
     L = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
     U = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
@@ -170,15 +170,18 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     # FOR DEBUG
     for i in range(nblocks):
         G_diag_blocks[i]  = 0.66*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_upper_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_lower_blocks[i] = 0.495*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_upper_blocks[i] = 0.56*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_lower_blocks[i] = 0.56*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
     P = permMat.generateBlockPermutationMatrix(nblocks, blockSize)
     A = convMat.convertBlocksBandedToDense(A_bloc_diag, A_bloc_upper, A_bloc_lower)
 
     PAP = P @ A @ P.T
 
-    #vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP")
+    vizUtils.vizualiseDenseMatrixFlat(P, "P")
+    vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP")
+
+
 
 
     return G_diag_blocks, G_upper_blocks, G_lower_blocks
@@ -199,8 +202,8 @@ def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     for i in range(nblocks):
         G_diag_blocks[i]  = 0.33*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
         if i < nblocks-1:
-            G_upper_blocks[i] = 0.165*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
-        G_lower_blocks[i] = 0.165*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+            G_upper_blocks[i] = 0.23*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
+        G_lower_blocks[i] = 0.23*np.ones((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
 
 
@@ -232,26 +235,32 @@ def hpr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
 
 
+    cornerProcessSize = 2
+    centralProcessSize = nblocks - 2*cornerProcessSize
+
+
     if comm_rank == 0:
-        startingBlock = 0 # 0-2
-        endingBlock   = nblocks//comm_size
+        startingBlock = 0
+        endingBlock   = cornerProcessSize
 
         G_diag_blocks[startingBlock:endingBlock]\
         , G_upper_blocks[startingBlock:endingBlock]\
         , G_lower_blocks[startingBlock:endingBlock-1] = hpr_ulcorner_process(A_bloc_diag[startingBlock:endingBlock], A_bloc_upper[startingBlock:endingBlock], A_bloc_lower[startingBlock:endingBlock-1])
 
         # Gather the results from the other processes
-        G_diag_blocks[endingBlock:2*(nblocks//comm_size)]      = comm.recv(source=1, tag=0)
-        G_upper_blocks[endingBlock:2*(nblocks//comm_size)]     = comm.recv(source=1, tag=1)
-        G_lower_blocks[endingBlock-1:2*(nblocks//comm_size)-1] = comm.recv(source=1, tag=2)
+        # - Central process
+        G_diag_blocks[endingBlock   : endingBlock+centralProcessSize]   = comm.recv(source=1, tag=0)
+        G_upper_blocks[endingBlock  : endingBlock+centralProcessSize]   = comm.recv(source=1, tag=1)
+        G_lower_blocks[endingBlock-1: endingBlock+centralProcessSize-1] = comm.recv(source=1, tag=2)
 
-        G_diag_blocks[2*(nblocks//comm_size):nblocks]      = comm.recv(source=2, tag=0)
-        G_upper_blocks[2*(nblocks//comm_size):nblocks-1]   = comm.recv(source=2, tag=1)
-        G_lower_blocks[2*(nblocks//comm_size)-1:nblocks-1] = comm.recv(source=2, tag=2)
+        # - Lower right corner process
+        G_diag_blocks[endingBlock+centralProcessSize   : nblocks]   = comm.recv(source=2, tag=0)
+        G_upper_blocks[endingBlock+centralProcessSize  : nblocks-1] = comm.recv(source=2, tag=1)
+        G_lower_blocks[endingBlock+centralProcessSize-1: nblocks-1] = comm.recv(source=2, tag=2)
 
     elif comm_rank == 1:
-        startingBlock = nblocks//comm_size # 2-4
-        endingBlock   = 2*(nblocks//comm_size)
+        startingBlock = cornerProcessSize
+        endingBlock   = startingBlock + centralProcessSize
 
         G_diag_blocks[startingBlock:endingBlock]\
         , G_upper_blocks[startingBlock:endingBlock]\
@@ -263,7 +272,7 @@ def hpr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
         comm.send(G_lower_blocks[startingBlock-1:endingBlock-1], dest=0, tag=2)
 
     else:
-        startingBlock = comm_rank*(nblocks//comm_size) # 4-6
+        startingBlock = cornerProcessSize + centralProcessSize
         endingBlock   = nblocks
 
         G_diag_blocks[startingBlock:endingBlock]\

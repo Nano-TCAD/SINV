@@ -103,6 +103,23 @@ def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_l
     plt.show()
 
 
+def compareDenseMatrix(A_ref, A, legend=""):
+    """
+        Compare two dense matrices.
+    """
+
+    plt.subplot(1, 2, 1)
+    plt.title('Reference solution')
+
+    plt.imshow(abs(A_ref), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
+
+    plt.subplot(1, 2, 2)
+    plt.title(legend)
+    plt.imshow(abs(A), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
+
+    plt.show()
+
+
 def showBenchmark(dictBenchtiming, nBlocks, blockSize, label=""):
     """
         Show a bar plot of the benchmark.

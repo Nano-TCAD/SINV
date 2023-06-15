@@ -1,6 +1,8 @@
 """
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
-@date: 2023-05
+@date: 2023-06
+
+@reference: 
 
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
@@ -12,7 +14,10 @@ from mpi4py       import MPI
 
 
 
-def generatePermutationMatrix(matSize):
+def generateSchurPermutationMatrix(matSize):
+    """
+        Generate a permutation matrix for the Schur decomposition procedure of the hpr method.
+    """
 
     P = np.zeros((matSize, matSize), dtype=np.int32)
 
@@ -33,7 +38,10 @@ def generatePermutationMatrix(matSize):
     return P
 
 
-def generateBlockPermutationMatrix(nBlocks, blockSize):
+def generateSchurBlockPermutationMatrix(nBlocks, blockSize):
+    """
+        Generate a block permutation matrix for the Schur bloc decomposition procedure of the hpr method.
+    """
 
     P = np.zeros((nBlocks*blockSize, nBlocks*blockSize), dtype=np.int32)
     I = np.eye(blockSize, dtype=np.int32)
@@ -54,3 +62,36 @@ def generateBlockPermutationMatrix(nBlocks, blockSize):
 
     return P
 
+
+
+def generateCyclicReductionPermutationMatrix(matSize):
+    """
+        Generate a permutation matrix suited for the Cyclic Reduction algorithm
+    """
+
+    P = np.zeros((matSize, matSize), dtype=np.int32)
+
+    for i in range(matSize):
+        if i%2 == 0:
+            P[i//2, i] = 1
+        else:
+            P[matSize//2 + i//2, i] = 1
+
+    return P
+
+
+def generateCyclicReductionBlockPermutationMatrix(nBlocks, blockSize):
+    """
+        Generate a block permutation matrix suited for the block Cyclic Reduction algorithm
+    """
+
+    P = np.zeros((nBlocks*blockSize, nBlocks*blockSize), dtype=np.int32)
+    I = np.eye(blockSize, dtype=np.int32)
+
+    for i in range(nBlocks):
+        if i%2 == 0:
+            P[(i//2)*blockSize:(i//2+1)*blockSize, i*blockSize:(i+1)*blockSize] = I
+        else:
+            P[(nBlocks//2 + i//2)*blockSize:(nBlocks//2 + i//2 + 1)*blockSize, i*blockSize:(i+1)*blockSize] = I
+
+    return P

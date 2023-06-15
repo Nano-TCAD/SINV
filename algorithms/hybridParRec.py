@@ -188,13 +188,15 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
     # Block Permutation phase
-    P = permMat.generateBlockPermutationMatrix(nblocks, blockSize)
+    P = permMat.generateSchurBlockPermutationMatrix(nblocks, blockSize)
     A = convMat.convertBlocksBandedToDense(A_bloc_diag, A_bloc_upper, A_bloc_lower)
 
     PAP = P @ A @ P.T
 
     #vizUtils.vizualiseDenseMatrixFlat(P, "P")
     #vizUtils.vizualiseDenseMatrixFlat(PAP, "PAP") 
+    vizUtils.vizualiseDenseMatrixFlat(A, "A")
+
 
 
     # Schur bloc decomposition
@@ -216,6 +218,12 @@ def hpr_central_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     """ vizUtils.vizualiseDenseMatrixFlat(L, "L") 
     vizUtils.vizualiseDenseMatrixFlat(U, "U") 
     vizUtils.vizualiseDenseMatrixFlat(S, "S") """
+
+
+    # Example using the A matrix
+    #Pcr = permMat.generateCyclicReductionBlockPermutationMatrix(nblocks, blockSize)
+    #PcrAPcr = Pcr @ A @ Pcr.T
+    #vizUtils.compareDenseMatrix(A, PcrAPcr, "A vs PcrAPcr")
 
 
 

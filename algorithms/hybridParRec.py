@@ -255,11 +255,11 @@ def hpr_lrcorner_process(A_bloc_diag, A_bloc_upper, A_bloc_lower):
     U = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
     S = np.zeros((blockSize, blockSize), dtype=A_bloc_diag.dtype)
 
-    inv_DLU = np.linalg.inv(A_bloc_diag[0, ])
+    inv_DLU = np.linalg.inv(A_bloc_diag[1, ])
 
     L = A_bloc_lower[1, ] @ inv_DLU
     U = inv_DLU @ A_bloc_upper[0, ]
-    S = A_bloc_diag[1, ] - L @ A_bloc_upper[0, ]
+    S = A_bloc_diag[0, ] - L @ A_bloc_upper[0, ]
 
     inv_S = np.linalg.inv(S)
 

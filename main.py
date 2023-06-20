@@ -13,7 +13,9 @@ import utils.vizualisation       as vizu
 import algorithms.fullInversion as inv
 import algorithms.rgf           as rgf
 import algorithms.rgf2sided     as rgf2sided
-import algorithms.hybridParRec  as hpr
+import algorithms.hpr_serial    as hprs
+import algorithms.hpr_parallel  as hprp
+import algorithms.bcr           as bcr
 
 import verifyResults as verif
 
@@ -165,7 +167,7 @@ if __name__ == "__main__":
 
     # .1 Serial HPR
     if rank == 0:
-        G_hpr_serial, greenRetardedBenchtiming["hpr_serial"] = hpr.hpr_serial(A, blocksize)
+        G_hpr_serial, greenRetardedBenchtiming["hpr_serial"] = hprs.hpr_serial(A, blocksize)
 
         G_hpr_serial_diag = np.zeros((size, size), dtype=np.complex128)
         G_hpr_serial_upper = np.zeros((size, size), dtype=np.complex128)
@@ -182,26 +184,48 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
         
+
+    if rank == 0:
+        G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
+
+        G_bcr_inverse_diag = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_bcr_inverse_diag\
+        , G_bcr_inverse_upper\
+        , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+
+        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+                                          GreenRetarded_refsol_block_upper, 
+                                          GreenRetarded_refsol_block_lower,
+                                          G_bcr_inverse_diag, 
+                                          G_bcr_inverse_upper, 
+                                          G_bcr_inverse_lower, "BCR Inverse")
+        
+
+
+
     comm.barrier()
     # .2
     G_hpr_diag\
         , G_hpr_upper\
-        , G_hpr_lower = hpr.hpr(A_block_diag, A_block_upper, A_block_lower)
+        , G_hpr_lower = hprp.hpr_parallel(A_block_diag, A_block_upper, A_block_lower)
     
     if rank == 0:
-        print("HPR: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+        print("HPR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                           GreenRetarded_refsol_block_upper, 
                                                                           GreenRetarded_refsol_block_lower, 
                                                                           G_hpr_diag, 
                                                                           G_hpr_upper, 
                                                                           G_hpr_lower))
 
-        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+        """ vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
                                               GreenRetarded_refsol_block_upper, 
                                               GreenRetarded_refsol_block_lower,
                                               G_hpr_diag, 
                                               G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution")
+                                              G_hpr_lower, "HPR solution") """
         
         
 

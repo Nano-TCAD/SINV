@@ -7,7 +7,7 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import utils.vizualisation       as vizUtils
+import utils.vizualisation       as vizu
 import utils.permutationMatrices as permMat
 import utils.generateMatrices    as genMat
 import utils.convertMatrices     as convMat
@@ -64,8 +64,12 @@ def block_cyclic_reduction():
         [0, 0, 0, 0, 0, 0, 1]
     ])
 
-    F = [1, 1, 1, 1, 1, 1, 1]
-    x = [0, 0, 0, 0, 0, 0, 0]
+    F = np.identity(size)
+    x = np.zeros((size, size))
+
+
+    """ F = [1, 1, 1, 1, 1, 1, 1]
+    x = [0, 0, 0, 0, 0, 0, 0] """
 
 
     """ # Extended system to size 7, Don't work (NaN value)
@@ -85,12 +89,13 @@ def block_cyclic_reduction():
 
 
     npinvert = np.linalg.inv(A)
-    print("A^-1 = {}".format(npinvert))
 
 
 
     index1, index2, offset = 0, 0, 0
     alpha, gamma = 0.0, 0.0
+
+    #vizu.vizualiseDenseMatrixFlat(A, "A")
 
     # Cycle reduction
     for i in range(int(math.log2(size + 1)) - 1):
@@ -104,8 +109,10 @@ def block_cyclic_reduction():
 
             for k in range(size):
                 A[j][k] -= alpha * A[index1][k] + gamma * A[index2][k]
+                F[j][k] -= alpha * F[index1][k] + gamma * F[index2][k]
 
-            F[j] -= alpha * F[index1] + gamma * F[index2]
+
+    #vizu.compareDenseMatrix(A, F, "F")
 
     # Back substitution
     index = (size - 1) // 2
@@ -129,7 +136,11 @@ def block_cyclic_reduction():
             x[index1] /= A[index1][index1]
             x[index2] /= A[index2][index2]
 
-    for i in range(size):
-        print("x{} = {}".format(i, x[i]))
+
+    vizu.compareDenseMatrix(npinvert, x, "A_ref VS A")
+
+
+    """ for i in range(size):
+        print("x{} = {}".format(i, x[i])) """
 
 

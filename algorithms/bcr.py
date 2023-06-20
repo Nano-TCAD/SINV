@@ -11,6 +11,7 @@ import utils.vizualisation       as vizu
 import utils.permutationMatrices as permMat
 import utils.generateMatrices    as genMat
 import utils.convertMatrices     as convMat
+import utils.transformMatrices   as transMat
 
 import numpy as np
 import math
@@ -21,40 +22,35 @@ from mpi4py import MPI
 
 
 
+
+
+
 def block_cyclic_reduction():
-    size = 7
-
-    # 2*x1 + 1*x2 + 0*x3 = 4
-    # 1*x1 + 2*x2 + 1*x3 = 7
-    # 0*x1 + 1*x2 + 2*x3 = 1
-
-    """ A = [
-        [2, 1, 0],
-        [1, 2, 1],
-        [0, 1, 2]
-    ] 
-    
-    F = [4, 7, 1]
-    x = [0, 0, 0]"""
 
 
-    """ 
-    # Extended system to size 6, Don't work (normal)
+
     A = np.array([
+        [2, 1, 0, 0, 0],
+        [1, 2, 1, 0, 0],
+        [0, 1, 2, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1]
+    ])
+
+    
+    # Extended system to size 6, Don't work (normal)
+    """ A = np.array([
         [2, 1, 0, 0, 0, 0],
         [1, 2, 1, 0, 0, 0],
         [0, 1, 2, 0, 0, 0],
         [0, 0, 0, 1, 0, 0],
         [0, 0, 0, 0, 1, 0],
         [0, 0, 0, 0, 0, 1]
-    ])
-
-    F = [4, 7, 1, 1, 1, 1]
-    x = [0, 0, 0, 0, 0, 0] """
+    ]) """
 
 
     # Extended system to size 7, WORKS
-    A = np.array([
+    """ A = np.array([
         [2, 1, 0, 0, 0, 0, 0],
         [1, 2, 1, 0, 0, 0, 0],
         [0, 1, 2, 0, 0, 0, 0],
@@ -62,32 +58,24 @@ def block_cyclic_reduction():
         [0, 0, 0, 0, 1, 0, 0],
         [0, 0, 0, 0, 0, 1, 0],
         [0, 0, 0, 0, 0, 0, 1]
-    ])
+    ]) """
+
+    d = transMat.distance_to_power_of_two(A.shape[0])
+    print("Distance to power of two: ", d)
+
+
+    A = transMat.identity_padding(A, d)
+
+    #vizu.vizualiseDenseMatrixFlat(A, "A")
+
+
+    size = A.shape[0]
 
     F = np.identity(size)
     x = np.zeros((size, size))
 
 
-    """ F = [1, 1, 1, 1, 1, 1, 1]
-    x = [0, 0, 0, 0, 0, 0, 0] """
-
-
-    """ # Extended system to size 7, Don't work (NaN value)
-    A = np.array([
-        [2, 1, 0, 0, 0, 0, 0],
-        [1, 2, 1, 0, 0, 0, 0],
-        [0, 1, 2, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0]
-    ])
-
-    F = [4, 7, 1, 0, 0, 0, 0]
-    x = [0, 0, 0, 0, 0, 0, 0] """
-
-
-
+    # Compute reference solution before A being modified (work in place)
     npinvert = np.linalg.inv(A)
 
 
@@ -96,6 +84,8 @@ def block_cyclic_reduction():
     alpha, gamma = 0.0, 0.0
 
     #vizu.vizualiseDenseMatrixFlat(A, "A")
+
+
 
     # Cycle reduction
     for i in range(int(math.log2(size + 1)) - 1):
@@ -138,9 +128,5 @@ def block_cyclic_reduction():
 
 
     vizu.compareDenseMatrix(npinvert, x, "A_ref VS A")
-
-
-    """ for i in range(size):
-        print("x{} = {}".format(i, x[i])) """
 
 

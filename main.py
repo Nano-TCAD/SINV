@@ -186,7 +186,11 @@ if __name__ == "__main__":
         
 
     if rank == 0:
-        G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
+        
+
+        bcr.block_cyclic_reduction()
+
+        """ G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
 
         G_bcr_inverse_diag = np.zeros((size, size), dtype=np.complex128)
         G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
@@ -201,7 +205,7 @@ if __name__ == "__main__":
                                           GreenRetarded_refsol_block_lower,
                                           G_bcr_inverse_diag, 
                                           G_bcr_inverse_upper, 
-                                          G_bcr_inverse_lower, "BCR Inverse")
+                                          G_bcr_inverse_lower, "BCR Inverse") """
         
 
 

@@ -8,9 +8,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import utils.vizualisation       as vizu
-import utils.permutationMatrices as permMat
-import utils.generateMatrices    as genMat
-import utils.convertMatrices     as convMat
 import utils.transformMatrices   as transMat
 
 import numpy as np
@@ -19,9 +16,6 @@ import scipy.linalg as la
 import time
 
 from mpi4py import MPI
-
-
-
 
 
 

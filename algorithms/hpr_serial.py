@@ -8,7 +8,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-import scipy.linalg as la
 import time
 
 

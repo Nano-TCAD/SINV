@@ -187,8 +187,18 @@ if __name__ == "__main__":
 
     if rank == 0:
         
+        B = np.array([
+            [2., 1., 0, 0, 0, 0, 0, 0],
+            [1, 2, 1, 0, 0, 0, 0, 0],
+            [0, 1, 2, 1, 0, 0, 0, 0],
+            [0, 0, 1, 2, 1, 0, 0, 0],
+            [0, 0, 0, 1, 2, 1, 0, 0],
+            [0, 0, 0, 0, 1, 2, 1, 0],
+            [0, 0, 0, 0, 0, 1, 2, 1],
+            [0, 0, 0, 0, 0, 0, 1, 2]
+        ])
 
-        bcr.block_cyclic_reduction()
+        bcr.block_cyclic_reduction(B, blocksize)
 
         """ G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
 

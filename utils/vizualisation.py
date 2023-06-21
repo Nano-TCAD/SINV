@@ -10,12 +10,22 @@ import numpy as np
 
 
 
-def vizualiseDenseMatrixFlat(mat, legend=""):
+def vizualiseDenseMatrixFlat(mat, legend="", blocksize=0):
     """
         Visualise a dense matrix in a 2D plot. Third dimension is represented by color.
     """
     plt.title('Dense matrix hotmat: ' + legend)
     plt.imshow(abs(mat), cmap='hot', interpolation='nearest')
+
+    if blocksize > 0:
+        # Proof of concept
+        # TODO: Mark the block in the vizualisation 
+        plt.axvline(x=-0.5, ymin=-0.5, ymax=blocksize-0.5, color='r')
+        plt.axhline(y=-0.5, xmin=-0.5, xmax=blocksize-0.5, color='r')
+
+        plt.axvline(x=blocksize-0.5, ymin=0, ymax=0.5, color='g')
+        plt.axhline(y=blocksize-0.5, xmin=0, xmax=0.5, color='g')
+    
     plt.show()
 
 

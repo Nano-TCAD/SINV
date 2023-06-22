@@ -198,7 +198,7 @@ if __name__ == "__main__":
             [0, 0, 0, 0, 0, 0, 1, 2]
         ])
 
-        bcr.block_cyclic_reduction(B, blocksize)
+        bcr.block_cyclic_reduction(B, 1)
 
         """ G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
 

@@ -30,7 +30,7 @@ def block_cyclic_reduction(B, blocksize):
 
     B = transMat.identity_padding(B, block_padding_distance*blocksize)
 
-    vizu.vizualiseDenseMatrixFlat(B, "B")
+    #vizu.vizualiseDenseMatrixFlat(B, "B")
 
 
 
@@ -150,13 +150,32 @@ def block_cyclic_reduction(B, blocksize):
     index_blockindex = (nblocks_padded - 1) // 2
     index_rowindex   = index_blockindex * blocksize
     indexp1_rowindex = (index_blockindex + 1) * blocksize
-    X[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex] = F[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex] @ np.linalg.inv(B[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex])
+    
+    #print("index_blockindex: ", index_blockindex, "index_rowindex: ", index_rowindex, "indexp1_rowindex: ", indexp1_rowindex)
 
-    for i in range(int(math.log2(nblocks_padded + 1)) - 2, -1, -1):
-        for j in range(int(math.pow(2, i + 1)) - 1, nblocks_padded, int(math.pow(2, i + 1))):
-            offset_blockindex = int(math.pow(2, i))
-            index1_blockindex = j - offset_blockindex
-            index2_blockindex = j + offset_blockindex
+    # First block inverse
+    #X[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex] = F[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex] @ np.linalg.inv(B[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex])
+
+    inv_diagBlock = np.linalg.inv(B[index_rowindex:indexp1_rowindex, index_rowindex:indexp1_rowindex])
+    for k_blockindex in range(nblocks_padded):
+        k_rowindex   = k_blockindex * blocksize
+        kp1_rowindex = (k_blockindex + 1) * blocksize
+
+        X[index_rowindex:indexp1_rowindex, k_rowindex:kp1_rowindex] = F[index_rowindex:indexp1_rowindex, k_rowindex:kp1_rowindex] @ inv_diagBlock
+
+
+    # Debug initialisation using the row from numpy inverse
+    #X[index_rowindex:indexp1_rowindex, :] = npinvert[index_rowindex:indexp1_rowindex, :]
+
+
+    for i_blockindex in range(int(math.log2(nblocks_padded + 1)) - 2, -1, -1):
+        print("i: ", i_blockindex)
+        for j_blockindex in range(int(math.pow(2, i_blockindex + 1)) - 1, nblocks_padded, int(math.pow(2, i_blockindex + 1))):
+            offset_blockindex = int(math.pow(2, i_blockindex))
+            index1_blockindex = j_blockindex - offset_blockindex
+            index2_blockindex = j_blockindex + offset_blockindex
+
+            print("  j_blockindex: ", j_blockindex, "offset_blockindex: ", offset_blockindex, "index1_blockindex: ", index1_blockindex, "index2_blockindex: ", index2_blockindex)
 
             # Pre-computing of row-based indices
             j_rowindex   = j_blockindex * blocksize
@@ -169,26 +188,42 @@ def block_cyclic_reduction(B, blocksize):
             index2p1_rowindex = (index2_blockindex + 1) * blocksize
 
             
-            X[index1_rowindex:index1p1_rowindex, index1_rowindex:index1p1_rowindex] = F[index1_rowindex:index1p1_rowindex, index1_rowindex:index1p1_rowindex]
-            X[index2_rowindex:index2p1_rowindex, index1_rowindex:index1p1_rowindex] = F[index2_rowindex:index2p1_rowindex, index1_rowindex:index1p1_rowindex]
+            X[index1_rowindex:index1p1_rowindex, :] = F[index1_rowindex:index1p1_rowindex, :]
+            X[index2_rowindex:index2p1_rowindex, :] = F[index2_rowindex:index2p1_rowindex, :]
 
+
+            for k_blockindex in range(nblocks_padded):
+                print("    k_blockindex: ", k_blockindex)
+                k_rowindex   = k_blockindex * blocksize
+                kp1_rowindex = (k_blockindex + 1) * blocksize
+
+                if k_blockindex != index1_blockindex:
+                    X[index1_rowindex:index1p1_rowindex, :] = X[index1_rowindex:index1p1_rowindex, :]\
+                                                                - (B[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex]\
+                                                                    @ X[k_rowindex:kp1_rowindex, :])
+                if k_blockindex != index2_blockindex:
+                    X[index2_rowindex:index2p1_rowindex, :] = X[index2_rowindex:index2p1_rowindex, :]\
+                                                                - (B[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex]\
+                                                                    @ X[k_rowindex:kp1_rowindex, :])
+
+            
+            """ X[index1_rowindex:index1p1_rowindex] = X[index1_rowindex:index1p1_rowindex]\
+                                                        @ np.linalg.inv(B[index1_rowindex:index1p1_rowindex, index1_rowindex:index1p1_rowindex])
+            X[index2_rowindex:index2p1_rowindex] = X[index2_rowindex:index2p1_rowindex]\
+                                                        @ np.linalg.inv(B[index2_rowindex:index2p1_rowindex, index2_rowindex:index2p1_rowindex]) """
+
+
+            inv_B1 = np.linalg.inv(B[index1_rowindex:index1p1_rowindex, index1_rowindex:index1p1_rowindex])
+            inv_B2 = np.linalg.inv(B[index2_rowindex:index2p1_rowindex, index2_rowindex:index2p1_rowindex])
 
             for k_blockindex in range(nblocks_padded):
                 k_rowindex   = k_blockindex * blocksize
                 kp1_rowindex = (k_blockindex + 1) * blocksize
 
-                if k_blockindex != index1_blockindex:
-                    X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex] = X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex]\
-                                                            - (B[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex]\
-                                                                @ X[k_rowindex:kp1_rowindex, k_rowindex:kp1_rowindex])
-                if k_blockindex != index2_blockindex:
-                    X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex] = X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex]\
-                                                            - (B[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex] 
-                                                                @ X[k_rowindex:kp1_rowindex, k_rowindex:kp1_rowindex])
-
-
-                X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex] = X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex] @ np.linalg.inv(B[index1_rowindex:index1p1_rowindex, index1_rowindex:index1p1_rowindex])
-                X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex] = X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex] @ np.linalg.inv(B[index2_rowindex:index2p1_rowindex, index2_rowindex:index2p1_rowindex])
+                X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex] = X[index1_rowindex:index1p1_rowindex, k_rowindex:kp1_rowindex]\
+                                                                                    @ inv_B1
+                X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex] = X[index2_rowindex:index2p1_rowindex, k_rowindex:kp1_rowindex]\
+                                                                                    @ inv_B2
 
 
     vizu.compareDenseMatrix(npinvert, X, "A_ref VS B")

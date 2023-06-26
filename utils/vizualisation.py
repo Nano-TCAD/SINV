@@ -117,19 +117,19 @@ def compareDenseMatrixFromBlocks(A_ref_bloc_diag, A_ref_bloc_upper, A_ref_bloc_l
 
 
 
-def compareDenseMatrix(A_ref, A, legend=""):
+def compareDenseMatrix(A, legend_A, B, legend_B):
     """
         Compare two dense matrices.
     """
 
     plt.subplot(1, 2, 1)
-    plt.title('Reference solution')
+    plt.title(legend_A)
 
-    plt.imshow(abs(A_ref), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
+    plt.imshow(abs(A), cmap='hot', interpolation='nearest', vmin=np.min(abs(A)), vmax=np.max(abs(A)))
 
     plt.subplot(1, 2, 2)
-    plt.title(legend)
-    plt.imshow(abs(A), cmap='hot', interpolation='nearest', vmin=np.min(abs(A_ref)), vmax=np.max(abs(A_ref)))
+    plt.title(legend_B)
+    plt.imshow(abs(B), cmap='hot', interpolation='nearest', vmin=np.min(abs(A)), vmax=np.max(abs(A)))
 
     plt.show()
 

@@ -51,4 +51,12 @@ def verifResultsBlocksTri(A_ref_diag, A_ref_upper, A_ref_lower, A_diag, A_upper,
         return True
     else:
         return False
+    
+
+def std_mat_dev(A, B):
+    """
+        Compute the standrd deviation of the difference between two matrices.
+    """
+
+    return np.std(A-B)
 

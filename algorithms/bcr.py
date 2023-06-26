@@ -2,12 +2,14 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-06
 
+@reference: https://doi.org/10.1016/j.jcp.2009.03.035
 @reference: https://doi.org/10.1017/CBO9780511812583
 
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import utils.vizualisation       as vizu
+import utils.transformMatrices   as transMat
 
 import numpy as np
 import math
@@ -160,32 +162,45 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
     for level_blockindex in range(height-1, -1, -1):
         stride_blockindex = int(math.pow(2, level_blockindex))
 
-        print("level_blockindex: ", level_blockindex, "stride_blockindex: ", stride_blockindex)
-
-        i_prod = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
+        # Determine the blocks-row to be produced
+        i_from = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
         
-        print("i_prod: ", i_prod)
+        i_prod = []
+        for i in range(len(i_from)):
+            if i == 0:
+                i_prod.append(i_from[i] - stride_blockindex)
+                i_prod.append(i_from[i] + stride_blockindex)
+            else:
+                if i_prod[i] != i_from[i] - stride_blockindex:
+                    i_prod.append(i_from[i] - stride_blockindex)
+                i_prod.append(i_from[i] + stride_blockindex)
 
         for i_prod_blockindex in range(len(i_prod)):
             k_to = i_bcr[i_prod[i_prod_blockindex]]
 
             if i_prod_blockindex == 0:
+                # Production row is the first row within the stride_blockindex range
+                # It only gets values from the below row 
                 k_from = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
                 G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
 
-            if i_prod_blockindex != 1 and i_prod_blockindex == len(i_prod) - 1:
-                if i_prod[-1] <= len(i_bcr) - stride_blockindex:
+            if i_prod_blockindex != 0 and i_prod_blockindex == len(i_prod) - 1:
+                if i_prod[-1] <= len(i_bcr) - stride_blockindex -1:
                     k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                     k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
                     G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
                 else:
+                    # Production row is the last row within the stride_blockindex range
+                    # It only gets values from the above row 
                     k_from = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
-
+                   
                     G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
             
             if i_prod_blockindex != 0 and i_prod_blockindex != len(i_prod) - 1:
+                # Production row is in the middle of the stride_blockindex range
+                # It gets values from the above and below rows
                 k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
@@ -199,11 +214,10 @@ def inverse_bcr(A, blocksize):
     """
         Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
     """
+    nblocks_initial = A.shape[0] // blocksize
+    block_padding_distance = transMat.distance_to_power_of_two(nblocks_initial)
 
-    # Reference solution, for debugging
-    npinvert = np.linalg.inv(A)
-
-    #vizu.vizualiseDenseMatrixFlat(A, "A")
+    A = transMat.identity_padding(A, block_padding_distance*blocksize)
 
     nblocks_padded = A.shape[0] // blocksize
 
@@ -214,12 +228,12 @@ def inverse_bcr(A, blocksize):
     # 1. Block cyclic reduction
     i_bcr = [i for i in range(nblocks_padded)]
     A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, blocksize)
-    
-    vizu.vizualiseDenseMatrixFlat(A, "A_bcr")
-    vizu.compareDenseMatrix(L, "L", U, "U")
 
     # 2. Block cyclic production
     G = invert_block(A, G, final_reduction_block, blocksize)
     G = produce_bcr(A, L, U, G, i_bcr, blocksize)
 
-    vizu.compareDenseMatrix(npinvert, "np_inv_ref", G, "G_init")
+    # Cut the padding
+    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
+
+    return G

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     greenLesserBenchtiming   = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
 
     # Problem parameters
-    size = 20
+    size = 14
     blocksize = 2
     density = blocksize**2/size**2
     bandwidth = np.ceil(blocksize/2)
@@ -152,18 +152,64 @@ if __name__ == "__main__":
                                                                           GreenRetarded_rgf2sided_lower)) 
 
 
-        """ matUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                            GreenRetarded_refsol_block_upper, 
-                                            GreenRetarded_refsol_block_lower,
-                                            GreenRetarded_rgf2sided_diag, 
-                                            GreenRetarded_rgf2sided_upper, 
-                                            GreenRetarded_rgf2sided_lower, "RGF 2-sided solution") """
+    comm.barrier()
+    # ---------------------------------------------------------------------------------------------
+    # 3. BCR (Block cyclic reduction) 
+    # ---------------------------------------------------------------------------------------------
+
+    if rank == 0:
+
+        B = np.array([
+            [2., 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]
+        ])
+
+
+        b_np = np.linalg.inv(B)
+
+
+        G_bcr_inverse = bcr.inverse_bcr(B, blocksize)
+
+        G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_bcr_inverse_diag\
+        , G_bcr_inverse_upper\
+        , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+
+        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
+                                          GreenRetarded_refsol_block_upper, 
+                                          GreenRetarded_refsol_block_lower,
+                                          G_bcr_inverse_diag, 
+                                          G_bcr_inverse_upper, 
+                                          G_bcr_inverse_lower, "BCR Inverse")
+        
+        C = b_np - G_bcr_inverse
+
+        vizu.vizualiseDenseMatrixFlat(C, "C")
+
+        # Compute Ill condition numer of the matrix A
+        print("Ill condition number of A: ", np.linalg.cond(A))
+        print("Ill condition number of B: ", np.linalg.cond(B))
 
 
 
     comm.barrier()
     # ---------------------------------------------------------------------------------------------
-    # 3. HPR (Hybrid Parallel Recurence) 
+    # 4. HPR (Hybrid Parallel Recurence) 
     # ---------------------------------------------------------------------------------------------
 
     # .1 Serial HPR
@@ -184,101 +230,6 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_diag, 
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
-        
-
-    if rank == 0:
-
-        """ # 4 BLOCKS OF 1X1
-        B = np.array([
-            [2., 1., 0, 0],
-            [1, 2, 1, 0],
-            [0, 1, 2, 1],
-            [0, 0, 1, 2]
-        ]) """
-        
-        """ # 4 BLOCKS OF 2X2
-        B = np.array([
-            [2., 1., 0, 0, 0, 0, 0, 0],
-            [1, 2, 1, 0, 0, 0, 0, 0],
-            [0, 1, 2, 1, 0, 0, 0, 0],
-            [0, 0, 1, 2, 1, 0, 0, 0],
-            [0, 0, 0, 1, 2, 1, 0, 0],
-            [0, 0, 0, 0, 1, 2, 1, 0],
-            [0, 0, 0, 0, 0, 1, 2, 1],
-            [0, 0, 0, 0, 0, 0, 1, 2]
-        ]) """
-
-        """ # 5 BLOCKS OF 2X2
-        B = np.array([
-            [2., 1., 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 2, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 2, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 2, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 2]
-        ]) """
-
-        # 7 BLOCKS OF 2X2
-        B = np.array([
-            [2., 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]
-        ])
-
-        """ 
-        # 4 BLOCKS OF 3X3
-        B = np.array([
-            [2., 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]
-        ]) """
-
-        bcr.inverse_bcr(B, 2)
-
-        # bcrv0.block_cyclic_reduction(B, 2)
-
-        """ G_bcr_inverse = bcr.bcr_inverse(A, blocksize)
-
-        G_bcr_inverse_diag = np.zeros((size, size), dtype=np.complex128)
-        G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
-        G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
-
-        G_bcr_inverse_diag\
-        , G_bcr_inverse_upper\
-        , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
-
-        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                          GreenRetarded_refsol_block_upper, 
-                                          GreenRetarded_refsol_block_lower,
-                                          G_bcr_inverse_diag, 
-                                          G_bcr_inverse_upper, 
-                                          G_bcr_inverse_lower, "BCR Inverse") """
-        
-
 
 
     comm.barrier()

@@ -8,6 +8,9 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
+# TODO: Modify to block-storage format: A, L, U, G
+# TODO: Only compute first off-diagonal block of G
+
 import utils.vizualisation       as vizu
 import utils.transformMatrices   as transMat
 

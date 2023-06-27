@@ -16,7 +16,6 @@ import algorithms.rgf2sided     as rgf2sided
 import algorithms.hpr_serial    as hprs
 import algorithms.hpr_parallel  as hprp
 import algorithms.bcr           as bcr
-import algorithms.bcr_v0        as bcrv0
 
 import verifyResults as verif
 
@@ -38,7 +37,7 @@ if __name__ == "__main__":
     greenLesserBenchtiming   = {"np": 0, "csc": 0, "rgf": 0, "rgf2sided": 0}
 
     # Problem parameters
-    size = 14
+    size = 20
     blocksize = 2
     density = blocksize**2/size**2
     bandwidth = np.ceil(blocksize/2)
@@ -180,7 +179,7 @@ if __name__ == "__main__":
         b_np = np.linalg.inv(B)
 
 
-        G_bcr_inverse = bcr.inverse_bcr(B, blocksize)
+        G_bcr_inverse = bcr.inverse_bcr(A, blocksize)
 
         G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
         G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
@@ -197,13 +196,16 @@ if __name__ == "__main__":
                                           G_bcr_inverse_upper, 
                                           G_bcr_inverse_lower, "BCR Inverse")
         
-        C = b_np - G_bcr_inverse
+        
+        Diff_diag  = GreenRetarded_refsol_block_diag - G_bcr_inverse_diag
+        Diff_upper = GreenRetarded_refsol_block_upper - G_bcr_inverse_upper
+        Diff_lower = GreenRetarded_refsol_block_lower - G_bcr_inverse_lower
 
-        vizu.vizualiseDenseMatrixFlat(C, "C")
+        vizu.vizualiseDenseMatrixFromBlocks(Diff_diag, Diff_upper, Diff_lower, "Diff BCR Inverse")
 
         # Compute Ill condition numer of the matrix A
-        print("Ill condition number of A: ", np.linalg.cond(A))
-        print("Ill condition number of B: ", np.linalg.cond(B))
+        #print("Ill condition number of A: ", np.linalg.cond(A))
+        #print("Ill condition number of B: ", np.linalg.cond(B))
 
 
 

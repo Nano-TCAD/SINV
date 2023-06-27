@@ -219,6 +219,8 @@ def inverse_bcr(A, blocksize):
 
     A = transMat.identity_padding(A, block_padding_distance*blocksize)
 
+    vizu.vizualiseDenseMatrixFlat(A, "A after I padding")
+
     nblocks_padded = A.shape[0] // blocksize
 
     L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
@@ -228,6 +230,11 @@ def inverse_bcr(A, blocksize):
     # 1. Block cyclic reduction
     i_bcr = [i for i in range(nblocks_padded)]
     A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, blocksize)
+
+
+    vizu.compareDenseMatrix(L, "L", U, "U")
+    vizu.vizualiseDenseMatrixFlat(A, "A")
+
 
     # 2. Block cyclic production
     G = invert_block(A, G, final_reduction_block, blocksize)

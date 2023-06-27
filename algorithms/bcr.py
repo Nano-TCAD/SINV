@@ -25,6 +25,7 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
     nblocks = A.shape[0] // blocksize
     offset_blockindex = int(math.pow(2, level)) 
 
+
     # Reduction from i (above row) and k (below row) to j row
     i_blockindex = i_elim[row] - offset_blockindex
     k_blockindex = i_elim[row] + offset_blockindex
@@ -50,14 +51,15 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
         A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
 
         # If the row above is not the top row
-        if i_blockindex > 0:
-            im1_rowindex = (i_blockindex - 1) * blocksize
+        if i_blockindex != i_elim[0]:
+            h_rowindex = (i_blockindex - offset_blockindex) * blocksize
+            hp1_rowindex = (i_blockindex - offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, im1_rowindex:i_rowindex] = - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, im1_rowindex:i_rowindex]
-
+            A[j_rowindex:jp1_rowindex, h_rowindex:hp1_rowindex] = - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, h_rowindex:hp1_rowindex]
+       
 
     # If there is a row below
-    if k_blockindex < nblocks:
+    if k_blockindex <= nblocks-1:
         A_kk_inv = np.linalg.inv(A[k_rowindex:kp1_rowindex, k_rowindex:kp1_rowindex])
         U[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex] = A_kk_inv @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
         L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] = A[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A_kk_inv
@@ -65,11 +67,11 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
         A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
 
         # If the row below is not the bottom row
-        if k_blockindex < nblocks - 1:
-            kp2_rowindex = (k_blockindex + 2) * blocksize
+        if k_blockindex != i_elim[-1]:
+            l_rowindex   = (k_blockindex + offset_blockindex) * blocksize
+            lp1_rowindex = (k_blockindex + offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, kp1_rowindex:kp2_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, kp1_rowindex:kp2_rowindex]
-
+            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
 
     return A, L, U
 
@@ -83,7 +85,6 @@ def reduce_bcr(A, L, U, i_bcr, blocksize):
     last_reduction_row = 0
 
     for level_blockindex in range(height):
-
         i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
 
         for row in range(len(i_elim)):
@@ -164,7 +165,7 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
 
         # Determine the blocks-row to be produced
         i_from = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
-        
+
         i_prod = []
         for i in range(len(i_from)):
             if i == 0:
@@ -174,6 +175,7 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
                 if i_prod[i] != i_from[i] - stride_blockindex:
                     i_prod.append(i_from[i] - stride_blockindex)
                 i_prod.append(i_from[i] + stride_blockindex)
+
 
         for i_prod_blockindex in range(len(i_prod)):
             k_to = i_bcr[i_prod[i_prod_blockindex]]
@@ -219,8 +221,6 @@ def inverse_bcr(A, blocksize):
 
     A = transMat.identity_padding(A, block_padding_distance*blocksize)
 
-    vizu.vizualiseDenseMatrixFlat(A, "A after I padding")
-
     nblocks_padded = A.shape[0] // blocksize
 
     L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
@@ -230,11 +230,6 @@ def inverse_bcr(A, blocksize):
     # 1. Block cyclic reduction
     i_bcr = [i for i in range(nblocks_padded)]
     A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, blocksize)
-
-
-    vizu.compareDenseMatrix(L, "L", U, "U")
-    vizu.vizualiseDenseMatrixFlat(A, "A")
-
 
     # 2. Block cyclic production
     G = invert_block(A, G, final_reduction_block, blocksize)

@@ -8,14 +8,10 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import utils.vizualisation       as vizu
-import utils.permutationMatrices as permMat
-import utils.generateMatrices    as genMat
-import utils.convertMatrices     as convMat
 
 import algorithms.bcr            as bcr
 
 import numpy as np
-import scipy.linalg as la
 import time
 
 from mpi4py import MPI
@@ -189,9 +185,8 @@ def inverse_hybrid(A, blocksize):
     top_blockrow     = 0
     bottom_blockrow  = 0
 
-    i_bcr = []
 
-    # Compute the first (top) and last (bottom) rows owned by the current process
+    # Phase 1. Schur reduction 
     if comm_rank == 0:
         # First / top process
         top_blockrow     = 0
@@ -199,52 +194,12 @@ def inverse_hybrid(A, blocksize):
 
         A, L, U = reduce_schur_topleftcorner(A, top_blockrow, bottom_blockrow, blocksize)
 
-
-        # Gather Schur reduction on process 0
-        # From central process
-        centrale_top_blockrow = 1 * (nblocks // comm_size)
-        centrale_bottom_blockrow = (1+1) * (nblocks // comm_size)
-
-        central_top_row    = centrale_top_blockrow * blocksize
-        central_bottom_row = centrale_bottom_blockrow * blocksize
-
-        A[central_top_row:central_bottom_row, :] = comm.recv(source=1, tag=0)
-        L[central_top_row:central_bottom_row, :] = comm.recv(source=1, tag=1)
-        U[central_top_row:central_bottom_row, :] = comm.recv(source=1, tag=2)
-
-
-        # From last process
-        last_top_blockrow    = (comm_size-1) * (nblocks // comm_size)
-        last_bottom_blockrow = nblocks
-
-        last_top_row    = last_top_blockrow * blocksize
-        last_bottom_row = last_bottom_blockrow * blocksize
-
-        A[last_top_row:last_bottom_row, :] = comm.recv(source=comm_size-1, tag=0)
-        L[last_top_row:last_bottom_row, :] = comm.recv(source=comm_size-1, tag=1)
-        U[last_top_row:last_bottom_row, :] = comm.recv(source=comm_size-1, tag=2)
-
-
-        # Get the BCR working indices 
-        i_bcr.append(bottom_blockrow-1)
-        i_bcr.append(centrale_top_blockrow)
-        i_bcr.append(centrale_bottom_blockrow-1)
-        i_bcr.append(last_top_blockrow)
-
     elif comm_rank == comm_size-1:
         # Last / bottom process
         top_blockrow     = comm_rank * (nblocks // comm_size)
         bottom_blockrow  = nblocks
 
         A, L, U = reduce_schur_bottomrightcorner(A, top_blockrow, bottom_blockrow, blocksize)
-
-        # Send Schur reduction to process 0
-        top_row    = top_blockrow * blocksize
-        bottom_row = bottom_blockrow * blocksize
-
-        comm.send(A[top_row:bottom_row, :], dest=0, tag=0)
-        comm.send(L[top_row:bottom_row, :], dest=0, tag=1)
-        comm.send(U[top_row:bottom_row, :], dest=0, tag=2)
         
     else:
         # Middle process
@@ -253,36 +208,63 @@ def inverse_hybrid(A, blocksize):
 
         A, L, U = reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize)
 
-        # Send Schur reduction to process 0
-        top_row    = top_blockrow * blocksize
-        bottom_row = bottom_blockrow * blocksize
-
-        comm.send(A[top_row:bottom_row, :], dest=0, tag=0)
-        comm.send(L[top_row:bottom_row, :], dest=0, tag=1)
-        comm.send(U[top_row:bottom_row, :], dest=0, tag=2)
-
 
     #print("comm_size = {}".format(comm_size))
-    print("Process {} owns rows [{} : {}[".format(comm_rank, top_blockrow, bottom_blockrow))
+    #print("Process {} owns rows [{} : {}[".format(comm_rank, top_blockrow, bottom_blockrow))
+
+
+    # Phase 2. BCR reduction
+    nblocks_bcr_system = (comm_size-1) * 2
+
+    #print("nblocks_bcr_system = {}".format(nblocks_bcr_system))
+
+    A_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks*blocksize), dtype=A.dtype)
+    L_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks*blocksize), dtype=A.dtype)
+    U_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks*blocksize), dtype=A.dtype)
+
 
     if comm_rank == 0:
-        vizu.vizualiseDenseMatrixFlat(A, "A")
-        vizu.compareDenseMatrix(L, "L", U, "U")
+        # Initialize first row of A_bcr with the Schur reduction of the first process, (1 row)
+        bottom_rowindice   = (bottom_blockrow-1) * blocksize
+        bottomp1_rowindice = bottom_blockrow * blocksize
 
-        print("i_bcr = {}".format(i_bcr))
+        A_bcr[0:blocksize, :] = A[bottom_rowindice:bottomp1_rowindice, :]
 
-        # A_bcr is a dense matrix that only contain the row in i_bcr
-        A_bcr = np.zeros((len(i_bcr)*blocksize, nblocks*blocksize), dtype=A.dtype)
+        # Receive the Schur reduction from the central process, (2 rows)
+        for i in range(1, comm_size-1):
+            i_rowindice   = blocksize + (2 * (i-1)) * blocksize
+            ip2_rowindice = i_rowindice + 2 * blocksize
+            
+            A_bcr[i_rowindice:ip2_rowindice, :] = comm.recv(source=i, tag=0)
 
-        for i, i_rowindice in enumerate(i_bcr):
-            top_rowindice    = i_rowindice * blocksize
-            bottom_rowindice = (i_rowindice+1) * blocksize
+        # Receive the Schur reduction from the last process, (1 row)
+        last_rowindice   = (nblocks_bcr_system-1)*blocksize
+        lastp1_rowindice = nblocks_bcr_system*blocksize
 
-            A_bcr[i*blocksize:(i+1)*blocksize, :] = A[top_rowindice:bottom_rowindice, :]
+        A_bcr[last_rowindice:lastp1_rowindice, :] = comm.recv(source=comm_size-1, tag=0)
 
         vizu.vizualiseDenseMatrixFlat(A_bcr, "A_bcr")
 
+    elif comm_rank == comm_size-1:
+        # Last process send his Schur reduced rows to process 0 
+        top_rowindice   = top_blockrow * blocksize
+        topp1_rowindice = (top_blockrow+1) * blocksize
 
+        comm.send(A[top_rowindice:topp1_rowindice, :], dest=0, tag=0)
+
+    else:
+        # Middle process send his Schur reduced rows to process 0 
+        top_rowindice   = top_blockrow * blocksize
+        topp1_rowindice = (top_blockrow+1) * blocksize
+
+        bottom_rowindice   = (bottom_blockrow-1) * blocksize
+        bottomp1_rowindice = bottom_blockrow * blocksize
+
+        A_reduced = np.zeros((2*blocksize, nblocks*blocksize), dtype=A.dtype)
+        A_reduced[0:blocksize, :]           = A[top_rowindice:topp1_rowindice, :]
+        A_reduced[blocksize:2*blocksize, :] = A[bottom_rowindice:bottomp1_rowindice, :]
+
+        comm.send(A_reduced, dest=0, tag=0)
 
 
 

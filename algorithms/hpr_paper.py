@@ -181,6 +181,7 @@ def inverse_hybrid(A, blocksize):
 
     L = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
     U = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
+    G = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
 
     top_blockrow     = 0
     bottom_blockrow  = 0
@@ -211,12 +212,10 @@ def inverse_hybrid(A, blocksize):
 
 
 
-    # Phase 2. BCR reduction
+    # Phase 2. BCR reduction & Production of the inverse of the reduced system
     nblocks_bcr_system = (comm_size-1) * 2
 
     A_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
-    L_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
-    U_bcr = np.zeros((nblocks_bcr_system*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
 
     if comm_rank == 0:
         # Initialize first row of A_bcr with the Schur reduction of the first process, (1 row)
@@ -231,7 +230,6 @@ def inverse_hybrid(A, blocksize):
         last_colindice  = last_blockcol * blocksize
 
         A_bcr[0:blocksize, :] = A[bottom_rowindice:bottomp1_rowindice, first_colindice:last_colindice]
-        L_bcr[0:blocksize, :] = L[bottom_rowindice:bottomp1_rowindice, first_colindice:last_colindice]
 
         # Receive the Schur reduction from the central process, (2 rows)
         for i in range(1, comm_size-1):
@@ -239,25 +237,31 @@ def inverse_hybrid(A, blocksize):
             ip2_rowindice = i_rowindice + 2 * blocksize
             
             A_bcr[i_rowindice:ip2_rowindice, :] = comm.recv(source=i, tag=0)
-            L_bcr[i_rowindice:ip2_rowindice, :] = comm.recv(source=i, tag=1)
-            U_bcr[i_rowindice:ip2_rowindice, :] = comm.recv(source=i, tag=2)
 
         # Receive the Schur reduction from the last process, (1 row)
         last_rowindice   = (nblocks_bcr_system-1)*blocksize
         lastp1_rowindice = nblocks_bcr_system*blocksize
 
         A_bcr[last_rowindice:lastp1_rowindice, :] = comm.recv(source=comm_size-1, tag=0)
-        L_bcr[last_rowindice:lastp1_rowindice, :] = comm.recv(source=comm_size-1, tag=1)
-        U_bcr[last_rowindice:lastp1_rowindice, :] = comm.recv(source=comm_size-1, tag=2)
 
 
         # Compute the BCR reduction of the aggregated system
-        vizu.vizualiseDenseMatrixFlat(A_bcr, "A_bcr")
-
         G_bcr = bcr.inverse_bcr(A_bcr, blocksize)
 
-        vizu.vizualiseDenseMatrixFlat(G_bcr, "G_bcr")
 
+        # Communicate the inverse of the reduced system back to the processes
+        # Initialize first row of G with the inverted reduced system, (1 row)
+        G[bottom_rowindice:bottomp1_rowindice, first_colindice:last_colindice] = G_bcr[0:blocksize, :]
+
+        # Send the computed inverse of the reduced system to the middle processes, (2 rows each)
+        for i in range(1, comm_size-1):
+            i_rowindice   = blocksize + (2 * (i-1)) * blocksize
+            ip2_rowindice = i_rowindice + 2 * blocksize
+            
+            comm.send(G_bcr[i_rowindice:ip2_rowindice, :], dest=i, tag=0)
+
+        # Send the computed inverse of the reduced system to the last process, (1 row)
+        comm.send(G_bcr[last_rowindice:lastp1_rowindice, :], dest=comm_size-1, tag=0)
 
     elif comm_rank == comm_size-1:
         # Last process send his Schur reduced rows to process 0 
@@ -272,14 +276,13 @@ def inverse_hybrid(A, blocksize):
         last_colindice  = last_blockcol * blocksize
 
         comm.send(A[top_rowindice:topp1_rowindice, first_colindice:last_colindice], dest=0, tag=0)
-        comm.send(L[top_rowindice:topp1_rowindice, first_colindice:last_colindice], dest=0, tag=1)
-        comm.send(U[top_rowindice:topp1_rowindice, first_colindice:last_colindice], dest=0, tag=2)
+
+        # Last process receive the inverse of the reduced system from process 0
+        G[top_rowindice:topp1_rowindice, first_colindice:last_colindice] = comm.recv(source=0, tag=0)
 
     else:
-        # Middle process send his Schur reduced rows to process 0 
+        # Middle processes send his Schur reduced rows to process 0 
         A_reduced = np.zeros((2*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
-        L_reduced = np.zeros((2*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
-        U_reduced = np.zeros((2*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
 
         # Rows strides
         top_rowindice   = top_blockrow * blocksize
@@ -302,27 +305,79 @@ def inverse_hybrid(A, blocksize):
         stop2_colindice  = stop2_blockcol * blocksize
 
         # Row 0, Col 0
-        A_reduced[0:blocksize, 0:2*blocksize]           = A[top_rowindice:topp1_rowindice, start1_colindice:stop1_colindice]
-        L_reduced[0:blocksize, 0:2*blocksize]           = L[top_rowindice:topp1_rowindice, start1_colindice:stop1_colindice]
-        U_reduced[0:blocksize, 0:2*blocksize]           = U[top_rowindice:topp1_rowindice, start1_colindice:stop1_colindice]
+        A_reduced[0:blocksize, 0:2*blocksize] = A[top_rowindice:topp1_rowindice, start1_colindice:stop1_colindice]
 
         # Row 1, Col 0
         A_reduced[blocksize:2*blocksize, 0:2*blocksize] = A[bottom_rowindice:bottomp1_rowindice, start1_colindice:stop1_colindice]
-        L_reduced[blocksize:2*blocksize, 0:2*blocksize] = L[bottom_rowindice:bottomp1_rowindice, start1_colindice:stop1_colindice]
-        U_reduced[blocksize:2*blocksize, 0:2*blocksize] = U[bottom_rowindice:bottomp1_rowindice, start1_colindice:stop1_colindice]
 
         # Row 0, Col 1
-        A_reduced[0:blocksize, 2*blocksize:]           = A[top_rowindice:topp1_rowindice, start2_colindice:stop2_colindice]
-        L_reduced[0:blocksize, 2*blocksize:]           = L[top_rowindice:topp1_rowindice, start2_colindice:stop2_colindice]
-        U_reduced[0:blocksize, 2*blocksize:]           = U[top_rowindice:topp1_rowindice, start2_colindice:stop2_colindice]
+        A_reduced[0:blocksize, 2*blocksize:] = A[top_rowindice:topp1_rowindice, start2_colindice:stop2_colindice]
 
         # Row 1, Col 1
         A_reduced[blocksize:2*blocksize, 2*blocksize:] = A[bottom_rowindice:bottomp1_rowindice, start2_colindice:stop2_colindice]
-        L_reduced[blocksize:2*blocksize, 2*blocksize:] = L[bottom_rowindice:bottomp1_rowindice, start2_colindice:stop2_colindice]
-        U_reduced[blocksize:2*blocksize, 2*blocksize:] = U[bottom_rowindice:bottomp1_rowindice, start2_colindice:stop2_colindice]
 
         comm.send(A_reduced, dest=0, tag=0)
-        comm.send(L_reduced, dest=0, tag=1)
-        comm.send(U_reduced, dest=0, tag=2)
 
+
+        # Middle processes received the inverse of the reduced system from process 0
+        G_reduced = np.zeros((2*blocksize, nblocks_bcr_system*blocksize), dtype=A.dtype)
+
+        G_reduced = comm.recv(source=0, tag=0)
+
+        # Row 0, Col 0
+        G[top_rowindice:topp1_rowindice, start1_colindice:stop1_colindice] = G_reduced[0:blocksize, 0:2*blocksize]
+
+        # Row 1, Col 0
+        G[bottom_rowindice:bottomp1_rowindice, start1_colindice:stop1_colindice] = G_reduced[blocksize:2*blocksize, 0:2*blocksize]
+
+        # Row 0, Col 1
+        G[top_rowindice:topp1_rowindice, start2_colindice:stop2_colindice] = G_reduced[0:blocksize, 2*blocksize:]
+
+        # Row 1, Col 1
+        G[bottom_rowindice:bottomp1_rowindice, start2_colindice:stop2_colindice] = G_reduced[blocksize:2*blocksize, 2*blocksize:]
+
+
+
+    # Phase 3. Schur production
+    if comm_rank == 0:
+        # First / top process
+        G = produce_schur_topleftcorner(A, L, U, G, top_blockrow, bottom_blockrow, blocksize)
+
+        # Gather results fron middle processes
+        for i in range(1, comm_size-1):
+            top_rowindice    = i * (nblocks // comm_size) * blocksize
+            bottom_rowindice = (i+1) * (nblocks // comm_size) * blocksize
+            
+            G[top_rowindice:bottom_rowindice, :] = comm.recv(source=i, tag=0)
+
+        # Gather result from last process
+        lastprocess_top_blockrow     = (comm_size-1) * (nblocks // comm_size)
+        lastprocess_bottom_blockrow  = nblocks
+        lastprocess_top_rowindice    = lastprocess_top_blockrow * blocksize
+        lastprocess_bottom_rowindice = lastprocess_bottom_blockrow * blocksize
+
+        G[lastprocess_top_rowindice:lastprocess_bottom_rowindice, :] = comm.recv(source=comm_size-1, tag=0)
+
+    elif comm_rank == comm_size-1:
+        # Last / bottom process
+        G = produce_schur_bottomrightcorner(A, L, U, G, top_blockrow, bottom_blockrow, blocksize)
+
+        # Send result to top process
+        top_rowindice    = top_blockrow * blocksize
+        bottom_rowindice = bottom_blockrow * blocksize
+
+        comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
+        
+    else:
+        # Middle process
+        G = produce_schur_center(A, L, U, G, top_blockrow, bottom_blockrow, blocksize)
+
+        # Send result to top process
+        top_rowindice    = top_blockrow * blocksize
+        bottom_rowindice = bottom_blockrow * blocksize
+
+        comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
+        
+        
+    return G
 

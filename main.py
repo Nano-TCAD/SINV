@@ -253,16 +253,14 @@ if __name__ == "__main__":
     # .3
     G_hpr_paper = hpr.inverse_hybrid(A, blocksize)
     
-    """ if rank == 0:
-        G_bcr_inverse = bcr.inverse_bcr(A, blocksize)
-
+    if rank == 0:
         G_hpr_paper_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
         G_hpr_paper_inverse_upper = np.zeros((size, size), dtype=np.complex128)
         G_hpr_paper_inverse_lower = np.zeros((size, size), dtype=np.complex128)
 
         G_hpr_paper_inverse_diag\
         , G_hpr_paper_inverse_upper\
-        , G_hpr_paper_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+        , G_hpr_paper_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_hpr_paper, blocksize)
 
         print("HPR paper: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                           GreenRetarded_refsol_block_upper, 
@@ -276,7 +274,7 @@ if __name__ == "__main__":
                                           GreenRetarded_refsol_block_lower,
                                           G_hpr_paper_inverse_diag, 
                                           G_hpr_paper_inverse_upper, 
-                                          G_hpr_paper_inverse_lower, "HPR paper Inverse") """
+                                          G_hpr_paper_inverse_lower, "HPR paper Inverse")
         
         
     

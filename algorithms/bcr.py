@@ -16,7 +16,6 @@ import utils.transformMatrices   as transMat
 
 import numpy as np
 import math
-import scipy.linalg as la
 import time
 
 from mpi4py import MPI

@@ -14,7 +14,10 @@ import utils.benchmarking        as bench
 import algorithms.fullInversion as inv
 import algorithms.rgf           as rgf
 import algorithms.rgf2sided     as rgf2sided
-import algorithms.hybridParRec  as hpr
+import algorithms.hpr_serial    as hprs
+import algorithms.hpr_parallel  as hprp
+import algorithms.bcr_serial    as bcrs
+import algorithms.bcr_parallel  as bcrp
 
 import verifyResults as verif
 
@@ -119,7 +122,6 @@ if __name__ == "__main__":
     GreenLesser_refsol_csc, csc_greenLesser_timings = inv.scipyCSCInversion(B_csc)
     
 
-
     if not verif.verifResults(GreenLesser_refsol_np, GreenLesser_refsol_csc):
         print("Error: Green lesser references solutions are different.")
         exit()
@@ -131,11 +133,12 @@ if __name__ == "__main__":
 
 
 
-    comm.barrier()
     # ---------------------------------------------------------------------------------------------
     # 1. RGF  
     # ---------------------------------------------------------------------------------------------
 
+    comm.barrier()
+    # .1 Single process RGF
     if rank == 0: # Single process algorithm
         
         GreenRetarded_rgf_diag\
@@ -150,15 +153,8 @@ if __name__ == "__main__":
                                                                  GreenRetarded_rgf_upper, 
                                                                  GreenRetarded_rgf_lower)) 
 
-
-
     comm.barrier()
-    # ---------------------------------------------------------------------------------------------
-    # 2. RGF 2-sided 
-    # ---------------------------------------------------------------------------------------------
-    # mpiexec -n 2 python benchmarking.py
-
-    
+    # .1 Double processes RGF
     GreenRetarded_rgf2sided_diag\
     , GreenRetarded_rgf2sided_upper\
     , GreenRetarded_rgf2sided_lower\
@@ -174,20 +170,59 @@ if __name__ == "__main__":
                                                                           GreenRetarded_rgf2sided_lower)) 
 
 
-        #matUtils.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-        #                                    GreenRetarded_refsol_block_upper, 
-        #                                    GreenRetarded_refsol_block_lower,
-        #                                    GreenRetarded_rgf2sided_diag, 
-        #                                    GreenRetarded_rgf2sided_upper, 
-        #                                    GreenRetarded_rgf2sided_lower, "RGF 2-sided solution")
 
-
+    # ---------------------------------------------------------------------------------------------
+    # 2. BCR (Block cyclic reduction) 
+    # ---------------------------------------------------------------------------------------------
 
     comm.barrier()
+    # .1 Serial BCR
+    if rank == 0:
+        G_bcr_parallel_inverse = bcrs.inverse_bcr(A, blocksize)
+
+        G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_bcr_parallel_inverse_diag\
+        , G_bcr_parallel_inverse_upper\
+        , G_bcr_parallel_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_parallel_inverse, blocksize)
+
+        print("BCR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                         GreenRetarded_refsol_block_upper, 
+                                                                         GreenRetarded_refsol_block_lower, 
+                                                                         G_bcr_parallel_inverse_diag, 
+                                                                         G_bcr_parallel_inverse_upper, 
+                                                                         G_bcr_parallel_inverse_lower))
+    
+    comm.barrier()
+    # .2 Parallel BCR
+    G_bcr_parallel_inverse = bcrp.inverse_bcr(A, blocksize)
+
+    #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
+
+    """ G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+    G_bcr_inverse_diag\
+    , G_bcr_inverse_upper\
+    , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+
+    print("BCR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                        GreenRetarded_refsol_block_upper, 
+                                                                        GreenRetarded_refsol_block_lower, 
+                                                                        G_bcr_inverse_diag, 
+                                                                        G_bcr_inverse_upper, 
+                                                                        G_bcr_inverse_lower)) """
+
+
+    
     # ---------------------------------------------------------------------------------------------
     # 3. HPR (Hybrid Parallel Recurence) 
     # ---------------------------------------------------------------------------------------------
 
+    comm.barrier()
     # .1 Serial HPR
     if rank == 0:
         G_hpr_serial, hpr_serial_greenRetarded_timings = hpr.hpr_serial(A, blocksize)
@@ -201,13 +236,34 @@ if __name__ == "__main__":
         , G_hpr_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_hpr_serial, blocksize)
 
         print("HPR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                         GreenRetarded_refsol_block_upper, 
-                                                                         GreenRetarded_refsol_block_lower, 
-                                                                         G_hpr_serial_diag, 
-                                                                         G_hpr_serial_upper, 
-                                                                         G_hpr_serial_lower))
-        
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_hpr_serial_diag, 
+                                                                          G_hpr_serial_upper, 
+                                                                          G_hpr_serial_lower))
+
     comm.barrier()
+    # .2 Parallel HPR
+    G_hpr_paper = hprp.inverse_hybrid(A, blocksize)
+    
+    if rank == 0:
+        G_hpr_paper_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+        G_hpr_paper_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_hpr_paper_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_hpr_paper_inverse_diag\
+        , G_hpr_paper_inverse_upper\
+        , G_hpr_paper_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_hpr_paper, blocksize)
+
+        print("HPR paper: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_hpr_paper_inverse_diag, 
+                                                                          G_hpr_paper_inverse_upper, 
+                                                                          G_hpr_paper_inverse_lower))
+        
+    
+
     # ---------------------------------------------------------------------------------------------
     # X. Data plotting
     # ---------------------------------------------------------------------------------------------

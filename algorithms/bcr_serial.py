@@ -34,11 +34,11 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
 
 
     # Computing of row-based indices
-    j_rowindex   = i_elim[row] * blocksize
-    jp1_rowindex = (i_elim[row] + 1) * blocksize
-
     i_rowindex   = i_blockindex * blocksize
     ip1_rowindex = (i_blockindex + 1) * blocksize
+
+    j_rowindex   = i_elim[row] * blocksize
+    jp1_rowindex = (i_elim[row] + 1) * blocksize
     
     k_rowindex   = k_blockindex * blocksize
     kp1_rowindex = (k_blockindex + 1) * blocksize

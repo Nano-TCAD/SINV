@@ -19,7 +19,10 @@ from mpi4py import MPI
 
 
 
-def reduce(A, L, U, row, level, i_elim, blocksize):
+def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
 
     nblocks = A.shape[0] // blocksize
     offset_blockindex = int(math.pow(2, level)) 
@@ -31,17 +34,19 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
 
 
     # Computing of row-based indices
-    j_rowindex   = i_elim[row] * blocksize
-    jp1_rowindex = (i_elim[row] + 1) * blocksize
-
     i_rowindex   = i_blockindex * blocksize
     ip1_rowindex = (i_blockindex + 1) * blocksize
+
+    j_rowindex   = i_elim[row] * blocksize
+    jp1_rowindex = (i_elim[row] + 1) * blocksize
     
     k_rowindex   = k_blockindex * blocksize
     kp1_rowindex = (k_blockindex + 1) * blocksize
 
+    print("Process: ", comm_rank, " j_blockindex: ", i_elim[row], " i_blockindex: ", i_blockindex, " k_blockindex: ", k_blockindex)
 
-    # If there is a row above
+
+    """ # If there is a row above
     if i_blockindex >= 0: 
         A_ii_inv = np.linalg.inv(A[i_rowindex:ip1_rowindex, i_rowindex:ip1_rowindex])
         U[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex] = A_ii_inv @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
@@ -70,13 +75,16 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
             l_rowindex   = (k_blockindex + offset_blockindex) * blocksize
             lp1_rowindex = (k_blockindex + offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
+            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex] """
 
     return A, L, U
 
 
 
-def reduce_bcr(A, L, U, i_bcr, blocksize):
+def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -86,10 +94,14 @@ def reduce_bcr(A, L, U, i_bcr, blocksize):
     for level_blockindex in range(height):
         i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
 
-        for row in range(len(i_elim)):
-            A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, blocksize)
+        # Only keep entries in i_elim that are in the current process
+        i_elim = [i for i in i_elim if i >= top_blockrow and i < bottom_blockrow]
 
-        last_reduction_row = i_elim[-1]
+        for row in range(len(i_elim)):
+            A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
+
+        if len(i_elim) > 0:
+            last_reduction_row = i_elim[-1]
 
     return A, L, U, last_reduction_row
 
@@ -216,10 +228,18 @@ def inverse_bcr(A, blocksize):
         Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
     """
 
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
     nblocks_initial = A.shape[0] // blocksize
     block_padding_distance = transMat.distance_to_power_of_two(nblocks_initial)
 
     A = transMat.identity_padding(A, block_padding_distance*blocksize)
+
+    if comm_rank == 0:
+        vizu.vizualiseDenseMatrixFlat(A, "A_padded")
 
     nblocks_padded = A.shape[0] // blocksize
 
@@ -228,13 +248,16 @@ def inverse_bcr(A, blocksize):
     G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
 
 
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
+    
+
+    #print("nblocks_padded: ", nblocks_padded)
 
     top_blockrow     = 0
     bottom_blockrow  = 0
 
+
+    i_bcr = [i for i in range(nblocks_padded)]
+    final_reduction_block = 0
 
     # 1. Block cyclic reduction
     if comm_rank == 0:
@@ -242,31 +265,28 @@ def inverse_bcr(A, blocksize):
         top_blockrow     = 0
         bottom_blockrow  = nblocks_padded // comm_size
 
-        #A, L, U = reduce_schur_topleftcorner(A, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
 
     elif comm_rank == comm_size-1:
         # Last / bottom process
         top_blockrow     = comm_rank * (nblocks_padded // comm_size)
         bottom_blockrow  = nblocks_padded
 
-        #A, L, U = reduce_schur_bottomrightcorner(A, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
         
     else:
         # Middle process
         top_blockrow     = comm_rank * (nblocks_padded // comm_size)
         bottom_blockrow  = (comm_rank+1) * (nblocks_padded // comm_size)
 
-        #A, L, U = reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
 
 
     #print("Process: ", comm_rank, "has blockrow", top_blockrow, "to", bottom_blockrow-1)
+    #print("Process: ", comm_rank, " i_bcr: ", i_bcr)
 
 
 
-
-    # 1. Block cyclic reduction
-    i_bcr = [i for i in range(nblocks_padded)]
-    A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, blocksize)
 
     #vizu.vizualiseDenseMatrixFlat(A, "A_reduced")
     #vizu.compareDenseMatrix(L, "L", U, "U")

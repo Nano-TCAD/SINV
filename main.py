@@ -15,8 +15,8 @@ import algorithms.rgf           as rgf
 import algorithms.rgf2sided     as rgf2sided
 import algorithms.hpr_serial    as hprs
 import algorithms.hpr_parallel  as hprp
-import algorithms.hpr_paper     as hpr
-import algorithms.bcr           as bcr
+import algorithms.bcr_serial    as bcrs
+import algorithms.bcr_parallel  as bcrp
 
 import verifyResults as verif
 
@@ -112,11 +112,12 @@ if __name__ == "__main__":
 
 
 
-    comm.barrier()
     # ---------------------------------------------------------------------------------------------
     # 1. RGF  
     # ---------------------------------------------------------------------------------------------
 
+    comm.barrier()
+    # .1 Single process RGF
     if rank == 0: # Single process algorithm
         GreenRetarded_rgf_diag\
         , GreenRetarded_rgf_upper\
@@ -130,14 +131,8 @@ if __name__ == "__main__":
                                                                  GreenRetarded_rgf_upper, 
                                                                  GreenRetarded_rgf_lower)) 
 
-
-
     comm.barrier()
-    # ---------------------------------------------------------------------------------------------
-    # 2. RGF 2-sided 
-    # ---------------------------------------------------------------------------------------------
-    # mpiexec -n 2 python benchmarking.py
-
+    # .1 Double processes RGF
     GreenRetarded_rgf2sided_diag\
     , GreenRetarded_rgf2sided_upper\
     , GreenRetarded_rgf2sided_lower\
@@ -153,49 +148,58 @@ if __name__ == "__main__":
 
 
 
+    # ---------------------------------------------------------------------------------------------
+    # 2. BCR (Block cyclic reduction) 
+    # ---------------------------------------------------------------------------------------------
+
     comm.barrier()
-    # ---------------------------------------------------------------------------------------------
-    # 3. BCR (Block cyclic reduction) 
-    # ---------------------------------------------------------------------------------------------
-
+    # .1 Serial BCR
     if rank == 0:
-        G_bcr_inverse = bcr.inverse_bcr(A, blocksize)
+        G_bcr_parallel_inverse = bcrs.inverse_bcr(A, blocksize)
 
-        G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
-        G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
-        G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_lower = np.zeros((size, size), dtype=np.complex128)
 
-        G_bcr_inverse_diag\
-        , G_bcr_inverse_upper\
-        , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+        G_bcr_parallel_inverse_diag\
+        , G_bcr_parallel_inverse_upper\
+        , G_bcr_parallel_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_parallel_inverse, blocksize)
 
         print("BCR serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                          GreenRetarded_refsol_block_upper, 
-                                                                          GreenRetarded_refsol_block_lower, 
-                                                                          G_bcr_inverse_diag, 
-                                                                          G_bcr_inverse_upper, 
-                                                                          G_bcr_inverse_lower))
+                                                                         GreenRetarded_refsol_block_upper, 
+                                                                         GreenRetarded_refsol_block_lower, 
+                                                                         G_bcr_parallel_inverse_diag, 
+                                                                         G_bcr_parallel_inverse_upper, 
+                                                                         G_bcr_parallel_inverse_lower))
+    
+    comm.barrier()
+    # .2 Parallel BCR
+    G_bcr_parallel_inverse = bcrp.inverse_bcr(A, blocksize)
 
-        """ vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                          GreenRetarded_refsol_block_upper, 
-                                          GreenRetarded_refsol_block_lower,
-                                          G_bcr_inverse_diag, 
-                                          G_bcr_inverse_upper, 
-                                          G_bcr_inverse_lower, "BCR Inverse") """
-        
-        """ Diff_diag  = GreenRetarded_refsol_block_diag - G_bcr_inverse_diag
-        Diff_upper = GreenRetarded_refsol_block_upper - G_bcr_inverse_upper
-        Diff_lower = GreenRetarded_refsol_block_lower - G_bcr_inverse_lower
+    #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
 
-        vizu.vizualiseDenseMatrixFromBlocks(Diff_diag, Diff_upper, Diff_lower, "Diff BCR Inverse") """
+    """ G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+
+    G_bcr_inverse_diag\
+    , G_bcr_inverse_upper\
+    , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+
+    print("BCR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                        GreenRetarded_refsol_block_upper, 
+                                                                        GreenRetarded_refsol_block_lower, 
+                                                                        G_bcr_inverse_diag, 
+                                                                        G_bcr_inverse_upper, 
+                                                                        G_bcr_inverse_lower)) """
 
 
+    
+    # ---------------------------------------------------------------------------------------------
+    # 3. HPR (Hybrid Parallel Recurence) 
+    # ---------------------------------------------------------------------------------------------
 
     comm.barrier()
-    # ---------------------------------------------------------------------------------------------
-    # 4. HPR (Hybrid Parallel Recurence) 
-    # ---------------------------------------------------------------------------------------------
-
     # .1 Serial HPR
     if rank == 0:
         G_hpr_serial, greenRetardedBenchtiming["hpr_serial"] = hprs.hpr_serial(A, blocksize)
@@ -215,43 +219,9 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
 
-
-
-    """ comm.barrier()
-    # .2
-    G_hpr_diag\
-        , G_hpr_upper\
-        , G_hpr_lower = hprp.hpr_parallel(A_block_diag, A_block_upper, A_block_lower)
-    
-    if rank == 0:
-        print("HPR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                          GreenRetarded_refsol_block_upper, 
-                                                                          GreenRetarded_refsol_block_lower, 
-                                                                          G_hpr_diag, 
-                                                                          G_hpr_upper, 
-                                                                          G_hpr_lower))
-
-        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                              GreenRetarded_refsol_block_upper, 
-                                              GreenRetarded_refsol_block_lower,
-                                              G_hpr_diag, 
-                                              G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution")
-        
-        
-
-        vizu.compareDenseMatrixFromBlocks(A_block_diag, 
-                                              A_block_upper, 
-                                              A_block_lower, 
-                                              G_hpr_diag, 
-                                              G_hpr_upper, 
-                                              G_hpr_lower, "HPR solution") """
-        
-
-
     comm.barrier()
-    # .3
-    G_hpr_paper = hpr.inverse_hybrid(A, blocksize)
+    # .2 Parallel HPR
+    G_hpr_paper = hprp.inverse_hybrid(A, blocksize)
     
     if rank == 0:
         G_hpr_paper_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
@@ -268,14 +238,6 @@ if __name__ == "__main__":
                                                                           G_hpr_paper_inverse_diag, 
                                                                           G_hpr_paper_inverse_upper, 
                                                                           G_hpr_paper_inverse_lower))
-
-        vizu.compareDenseMatrixFromBlocks(GreenRetarded_refsol_block_diag, 
-                                          GreenRetarded_refsol_block_upper, 
-                                          GreenRetarded_refsol_block_lower,
-                                          G_hpr_paper_inverse_diag, 
-                                          G_hpr_paper_inverse_upper, 
-                                          G_hpr_paper_inverse_lower, "HPR paper Inverse")
-        
         
     
 

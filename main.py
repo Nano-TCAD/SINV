@@ -178,20 +178,20 @@ if __name__ == "__main__":
 
     #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
 
-    """ G_bcr_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
-    G_bcr_inverse_upper = np.zeros((size, size), dtype=np.complex128)
-    G_bcr_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+    """ G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+    G_bcr_parallel_inverse_lower = np.zeros((size, size), dtype=np.complex128)
 
-    G_bcr_inverse_diag\
-    , G_bcr_inverse_upper\
-    , G_bcr_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_inverse, blocksize)
+    G_bcr_parallel_inverse_diag\
+    , G_bcr_parallel_inverse_upper\
+    , G_bcr_parallel_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_parallel_inverse, blocksize)
 
     print("BCR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                         GreenRetarded_refsol_block_upper, 
                                                                         GreenRetarded_refsol_block_lower, 
-                                                                        G_bcr_inverse_diag, 
-                                                                        G_bcr_inverse_upper, 
-                                                                        G_bcr_inverse_lower)) """
+                                                                        G_bcr_parallel_inverse_diag, 
+                                                                        G_bcr_parallel_inverse_upper, 
+                                                                        G_bcr_parallel_inverse_lower)) """
 
 
     

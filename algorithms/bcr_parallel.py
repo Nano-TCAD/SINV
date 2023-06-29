@@ -259,7 +259,7 @@ def inverse_bcr(A, blocksize):
         #A, L, U = reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize)
 
 
-    print("Process: ", comm_rank, "has blockrow", top_blockrow, "to", bottom_blockrow-1)
+    #print("Process: ", comm_rank, "has blockrow", top_blockrow, "to", bottom_blockrow-1)
 
 
 

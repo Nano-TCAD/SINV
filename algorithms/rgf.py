@@ -10,9 +10,10 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import numpy as np
 import time
 
+from typing import Tuple
 
 
-def rgf_leftToRight_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+def rgf_leftToRight_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """
         RGF algorithm performing block-tridiagonal inversion of the given matrix.
     """
@@ -55,7 +56,7 @@ def rgf_leftToRight_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
 
 
 
-def rgf_rightToLeft_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+def rgf_rightToLeft_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """
         RGF algorithm performing block-tridiagonal inversion of the given matrix.
     """

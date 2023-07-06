@@ -18,6 +18,43 @@ import time
 from mpi4py import MPI
 
 
+def send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+    if comm_rank == 0:
+        # Only need to send to 1 bottom process
+        pass
+    elif comm_rank == comm_size - 1:
+        # Only need to send to 1 top process
+        pass
+    else:
+        # Need to send to 1 top process and 1 bottom process
+        pass
+    
+
+
+def recv_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+    if comm_rank == 0:
+        # Only need to recv to 1 bottom process
+        pass
+    elif comm_rank == comm_size - 1:
+        # Only need to recv to 1 top process
+        pass
+    else:
+        # Need to recv to 1 top process and 1 bottom process
+        pass
+
+
 
 def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize):
 
@@ -30,6 +67,7 @@ def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize
 
     # Reduction from i (above row) and k (below row) to j row
     i_blockindex = i_elim[row] - offset_blockindex
+    j_blockindex = i_elim[row]
     k_blockindex = i_elim[row] + offset_blockindex
 
 
@@ -37,16 +75,15 @@ def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize
     i_rowindex   = i_blockindex * blocksize
     ip1_rowindex = (i_blockindex + 1) * blocksize
 
-    j_rowindex   = i_elim[row] * blocksize
-    jp1_rowindex = (i_elim[row] + 1) * blocksize
+    j_rowindex   = j_blockindex * blocksize
+    jp1_rowindex = (j_blockindex + 1) * blocksize
     
     k_rowindex   = k_blockindex * blocksize
     kp1_rowindex = (k_blockindex + 1) * blocksize
 
-    print("Process: ", comm_rank, " j_blockindex: ", i_elim[row], " i_blockindex: ", i_blockindex, " k_blockindex: ", k_blockindex)
+    # print("Process: ", comm_rank, " j_blockindex: ", j_blockindex, " i_blockindex: ", i_blockindex, " k_blockindex: ", k_blockindex)
 
-
-    """ # If there is a row above
+    # If there is a row above
     if i_blockindex >= 0: 
         A_ii_inv = np.linalg.inv(A[i_rowindex:ip1_rowindex, i_rowindex:ip1_rowindex])
         U[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex] = A_ii_inv @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
@@ -75,7 +112,7 @@ def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize
             l_rowindex   = (k_blockindex + offset_blockindex) * blocksize
             lp1_rowindex = (k_blockindex + offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex] """
+            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
 
     return A, L, U
 
@@ -92,13 +129,43 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
     last_reduction_row = 0
 
     for level_blockindex in range(height):
-        i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
+        #i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
 
         # Only keep entries in i_elim that are in the current process
-        i_elim = [i for i in i_elim if i >= top_blockrow and i < bottom_blockrow]
+        #i_elim = [i for i in i_elim if i >= top_blockrow and i < bottom_blockrow]
 
-        for row in range(len(i_elim)):
-            A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
+        i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
+
+        number_of_reduction = 0
+        for i in range(len(i_elim)):
+            if i_elim[i] >= top_blockrow and i_elim[i] < bottom_blockrow:
+                number_of_reduction += 1
+
+        indice_process_start_reduction = 0
+        for i in range(len(i_elim)):
+            if i_elim[i] >= top_blockrow and i_elim[i] < bottom_blockrow:
+                indice_process_start_reduction = i
+                break
+
+        indice_process_stop_reduction  = 0
+        for i in range(len(i_elim)):
+            if i_elim[i] >= top_blockrow and i_elim[i] < bottom_blockrow:
+                indice_process_stop_reduction = i
+  
+        #print("Process: ", comm_rank, " indice_process_start_reduction: ", indice_process_start_reduction, " indice_process_stop_reduction: ", indice_process_stop_reduction, " i_elim: ", i_elim)
+
+        if number_of_reduction != 0:
+            for row in range(indice_process_start_reduction, indice_process_stop_reduction + 1):
+                print("Process: ", comm_rank, " row: ", row, " number_of_reduction: ", number_of_reduction, " i_elim: ", i_elim)
+                #A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
+                pass
+
+        # Here each process should communicate the last row of the reduction to the next process
+        print("Process: ", comm_rank, " COMMUNICATE REDUCTION ")
+        send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
+
+        recv_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
+
 
         if len(i_elim) > 0:
             last_reduction_row = i_elim[-1]
@@ -238,8 +305,8 @@ def inverse_bcr(A, blocksize):
 
     A = transMat.identity_padding(A, block_padding_distance*blocksize)
 
-    if comm_rank == 0:
-        vizu.vizualiseDenseMatrixFlat(A, "A_padded")
+    """ if comm_rank == 0:
+        vizu.vizualiseDenseMatrixFlat(A, "A_padded") """
 
     nblocks_padded = A.shape[0] // blocksize
 

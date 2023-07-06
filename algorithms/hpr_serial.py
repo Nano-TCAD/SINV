@@ -10,9 +10,11 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import numpy as np
 import time
 
+from typing import Tuple
 
 
-def schurInvert(A):
+
+def schurInvert(A: np.ndarray) -> np.ndarray:
     # Compute the inverse of A using an explicite Schur decomposition
     # - Only interesting for teaching purposes
 
@@ -53,7 +55,7 @@ def schurInvert(A):
 
 
 
-def hpr_serial(A, blockSize):
+def hpr_serial(A: np.ndarray, blockSize: int) -> Tuple[np.ndarray, float]:
     # Implementation of the serial algorithm presented in section 3. of the paper
     # - The algorithm is equivalent to an RGF but with explicit LU decomposition
     # - TODO: Convert to block storage version (dense for now)

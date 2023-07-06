@@ -21,7 +21,7 @@ from mpi4py import MPI
 """ 
     Schur reductions functions
 """
-def reduce_schur_topleftcorner(A, top_blockrow, bottom_blockrow, blocksize):
+def reduce_schur_topleftcorner(A: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     nblocks = A.shape[0] // blocksize
     
@@ -43,7 +43,7 @@ def reduce_schur_topleftcorner(A, top_blockrow, bottom_blockrow, blocksize):
     return A, L, U
 
 
-def reduce_schur_bottomrightcorner(A, top_blockrow, bottom_blockrow, blocksize):
+def reduce_schur_bottomrightcorner(A: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     nblocks = A.shape[0] // blocksize
     
@@ -65,7 +65,7 @@ def reduce_schur_bottomrightcorner(A, top_blockrow, bottom_blockrow, blocksize):
     return A, L, U
 
 
-def reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize):
+def reduce_schur_center(A: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     nblocks = A.shape[0] // blocksize
     
@@ -100,7 +100,7 @@ def reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize):
 """ 
     Schur production functions
 """
-def produce_schur_topleftcorner(A, L, U, G, top_blockrow, bottom_blockrow, blocksize):
+def produce_schur_topleftcorner(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     # Corner produce upwards
     for i in range(bottom_blockrow-1, top_blockrow-1, -1):
@@ -115,7 +115,7 @@ def produce_schur_topleftcorner(A, L, U, G, top_blockrow, bottom_blockrow, block
     return G
 
 
-def produce_schur_bottomrightcorner(A, L, U, G, top_blockrow, bottom_blockrow, blocksize):
+def produce_schur_bottomrightcorner(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     # Corner produce downwards
     for i in range(top_blockrow, bottom_blockrow-1):
@@ -130,7 +130,7 @@ def produce_schur_bottomrightcorner(A, L, U, G, top_blockrow, bottom_blockrow, b
     return G
 
 
-def produce_schur_center(A, L, U, G, top_blockrow, bottom_blockrow, blocksize):
+def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
 
     # Center produce upwards
     top_rowindice   = top_blockrow*blocksize
@@ -169,7 +169,7 @@ def produce_schur_center(A, L, U, G, top_blockrow, bottom_blockrow, blocksize):
 
 
 
-def inverse_hybrid(A, blocksize):
+def inverse_hybrid(A: np.ndarray, blocksize: int):
     """
         Invert a matrix using the hybrid parallel reduction algorithm
     """

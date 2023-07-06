@@ -14,10 +14,11 @@ import numpy as np
 import time
 
 from mpi4py import MPI
+from typing import Tuple
 
 
 
-def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lower_leftprocess):
+def rgf_leftprocess(A_bloc_diag_leftprocess: np.ndarray, A_bloc_upper_leftprocess: np.ndarray, A_bloc_lower_leftprocess: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
         Left process of the 2-sided RGF algorithm.
             - Array traversal is done from left to right
@@ -64,7 +65,8 @@ def rgf_leftprocess(A_bloc_diag_leftprocess, A_bloc_upper_leftprocess, A_bloc_lo
     return G_diag_blocks_leftprocess, G_upper_blocks_leftprocess, G_lower_blocks_leftprocess
 
 
-def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc_lower_rightprocess):
+
+def rgf_rightprocess(A_bloc_diag_rightprocess: np.ndarray, A_bloc_upper_rightprocess: np.ndarray, A_bloc_lower_rightprocess: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
         Right process of the 2-sided RGF algorithm.
             - Array traversal is done from right to left
@@ -111,7 +113,8 @@ def rgf_rightprocess(A_bloc_diag_rightprocess, A_bloc_upper_rightprocess, A_bloc
     return G_diag_blocks_rightprocess, G_upper_blocks_rightprocess, G_lower_blocks_rightprocess
 
 
-def rgf2sided_Gr(A_bloc_diag, A_bloc_upper, A_bloc_lower):
+
+def rgf2sided_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """
         Block-tridiagonal selected inversion using 2-sided RGF algorithm.
             - Using MPI for multiprocessing

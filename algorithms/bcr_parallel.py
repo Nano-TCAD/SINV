@@ -18,6 +18,7 @@ import time
 from mpi4py import MPI
 
 
+
 def send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
 
     comm = MPI.COMM_WORLD
@@ -27,13 +28,42 @@ def send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_proce
 
     if comm_rank == 0:
         # Only need to send to 1 bottom process
-        pass
+        # Send i_elim[indice_process_stop_reduction]
+        i_rowindice   = i_elim[indice_process_stop_reduction] * blocksize
+        ip1_rowindice = (i_elim[indice_process_stop_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
+        comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=2)
+
     elif comm_rank == comm_size - 1:
         # Only need to send to 1 top process
-        pass
+        # Send i_elim[indice_process_start_reduction]
+
+        i_rowindice   = i_elim[indice_process_start_reduction] * blocksize
+        ip1_rowindice = (i_elim[indice_process_start_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
+        comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=2)
+
     else:
         # Need to send to 1 top process and 1 bottom process
-        pass
+        # Send i_elim[indice_process_start_reduction] and i_elim[indice_process_stop_reduction]
+
+        i_rowindice   = i_elim[indice_process_start_reduction] * blocksize
+        ip1_rowindice = (i_elim[indice_process_start_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
+        comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=2)
+
+        i_rowindice   = i_elim[indice_process_stop_reduction] * blocksize
+        ip1_rowindice = (i_elim[indice_process_stop_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
+        comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=2)
     
 
 
@@ -45,14 +75,44 @@ def recv_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_proce
 
 
     if comm_rank == 0:
-        # Only need to recv to 1 bottom process
-        pass
+        # Only need to recv from 1 bottom process
+        # Recv: i_elim[indice_process_stop_reduction+1]
+
+        i_rowindice   = i_elim[indice_process_stop_reduction+1] * blocksize
+        ip1_rowindice = (i_elim[indice_process_stop_reduction+1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
+        U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=2)
+
     elif comm_rank == comm_size - 1:
-        # Only need to recv to 1 top process
-        pass
+        # Only need to recv from 1 top process
+        # Recv i_elim[indice_process_start_reduction-1]
+
+        i_rowindice   = i_elim[indice_process_start_reduction-1] * blocksize
+        ip1_rowindice = (i_elim[indice_process_start_reduction-1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
+        U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=2)
+
     else:
-        # Need to recv to 1 top process and 1 bottom process
-        pass
+        # Need to recv from 1 top process and 1 bottom process
+        # Recv i_elim[indice_process_start_reduction-1] and i_elim[indice_process_stop_reduction+1]
+
+        i_rowindice   = i_elim[indice_process_start_reduction-1] * blocksize
+        ip1_rowindice = (i_elim[indice_process_start_reduction-1]+1) * blocksize 
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
+        U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=2)
+
+        i_rowindice   = i_elim[indice_process_stop_reduction+1] * blocksize
+        ip1_rowindice = (i_elim[indice_process_stop_reduction+1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
+        U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=2)
 
 
 
@@ -156,16 +216,14 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
 
         if number_of_reduction != 0:
             for row in range(indice_process_start_reduction, indice_process_stop_reduction + 1):
-                print("Process: ", comm_rank, " row: ", row, " number_of_reduction: ", number_of_reduction, " i_elim: ", i_elim)
-                #A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
+                #print("Process: ", comm_rank, " row: ", row, " number_of_reduction: ", number_of_reduction, " i_elim: ", i_elim)
+                A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
                 pass
 
         # Here each process should communicate the last row of the reduction to the next process
-        print("Process: ", comm_rank, " COMMUNICATE REDUCTION ")
-        send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
-
-        recv_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
-
+        if level_blockindex != height - 1:
+            send_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
+            recv_reduction(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
 
         if len(i_elim) > 0:
             last_reduction_row = i_elim[-1]
@@ -220,20 +278,73 @@ def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
 
 
 
-def invert_block(A, G, target_block, blocksize):
+def invert_block(A, G, target_block, top_blockrow, bottom_blockrow, blocksize):
     """
         Invert a block of the matrix A and store it in G
     """
-    target_row    = target_block * blocksize
-    target_row_p1 = (target_block + 1) * blocksize
-    
-    G[target_row: target_row_p1, target_row: target_row_p1] = np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
+    if target_block >= top_blockrow and target_block < bottom_blockrow:
+        target_row    = target_block * blocksize
+        target_row_p1 = (target_block + 1) * blocksize
+
+        G[target_row: target_row_p1, target_row: target_row_p1] = np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
 
     return G
 
 
 
-def produce_bcr(A, L, U, G, i_bcr, blocksize):
+def send_to_produce(A, L, U, i_from, i_prod, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+    indice_process_start_reduction = 0
+    for i in range(len(i_from)):
+        if i_from[i] >= top_blockrow and i_from[i] < bottom_blockrow:
+            indice_process_start_reduction = i
+            break
+
+    indice_process_stop_reduction  = 0
+    for i in range(len(i_from)):
+        if i_from[i] >= top_blockrow and i_from[i] < bottom_blockrow:
+            indice_process_stop_reduction = i
+
+    number_of_from = 0
+    for i in range(len(i_from)):
+        if i_from[i] >= top_blockrow and i_from[i] < bottom_blockrow:
+            number_of_from += 1
+
+    #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from)
+
+
+    if number_of_from != 0:
+        if comm_rank == 0:
+            print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", i_prod[indice_process_stop_reduction])
+
+        elif comm_rank == comm_size - 1:
+            print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", i_prod[indice_process_start_reduction])
+
+        else:
+            print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", i_prod[indice_process_start_reduction], " and ", i_prod[indice_process_stop_reduction])
+        
+
+
+def rcve_to_produce(A, L, U, i_from, i_prod, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+
+
+
+def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -255,7 +366,22 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
                 i_prod.append(i_from[i] + stride_blockindex)
 
 
-        for i_prod_blockindex in range(len(i_prod)):
+        number_of_production = 0
+        for i in range(len(i_prod)):
+            if i_prod[i] >= top_blockrow and i_prod[i] < bottom_blockrow:
+                number_of_production += 1
+
+        number_of_from = 0
+        for i in range(len(i_from)):
+            if i_from[i] >= top_blockrow and i_from[i] < bottom_blockrow:
+                number_of_from += 1
+
+
+        send_to_produce(A, L, U, i_from, i_prod, top_blockrow, bottom_blockrow, blocksize)
+        rcve_to_produce(A, L, U, i_from, i_prod, top_blockrow, bottom_blockrow, blocksize)
+
+
+        """ for i_prod_blockindex in range(len(i_prod)):
             k_to = i_bcr[i_prod[i_prod_blockindex]]
 
             if i_prod_blockindex == 0:
@@ -284,7 +410,7 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
                 k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize) """
 
     return G
 
@@ -352,19 +478,18 @@ def inverse_bcr(A, blocksize):
     #print("Process: ", comm_rank, "has blockrow", top_blockrow, "to", bottom_blockrow-1)
     #print("Process: ", comm_rank, " i_bcr: ", i_bcr)
 
+    #vizu.vizualiseDenseMatrixFlat(A, "A_reduced proc: " + str(comm_rank))
+    #vizu.compareDenseMatrix(L, "L", U, "U proc:" + str(comm_rank))
 
 
 
-    #vizu.vizualiseDenseMatrixFlat(A, "A_reduced")
-    #vizu.compareDenseMatrix(L, "L", U, "U")
+    # 2. Block cyclic production
+    G = invert_block(A, G, final_reduction_block, top_blockrow, bottom_blockrow, blocksize)
+    G = produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize)
 
-
-
-    """ # 2. Block cyclic production
-    G = invert_block(A, G, final_reduction_block, blocksize)
-    G = produce_bcr(A, L, U, G, i_bcr, blocksize)
+    #vizu.vizualiseDenseMatrixFlat(G, "G proc: " + str(comm_rank))
 
     # Cut the padding
-    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize] """
+    #G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
 
     return G

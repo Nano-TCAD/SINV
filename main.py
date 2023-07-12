@@ -17,6 +17,7 @@ import algorithms.hpr_serial    as hprs
 import algorithms.hpr_parallel  as hprp
 import algorithms.bcr_serial    as bcrs
 import algorithms.bcr_parallel  as bcrp
+import algorithms.nested_dissection as nd
 
 import verifyResults as verif
 
@@ -248,5 +249,3 @@ if __name__ == "__main__":
         #vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
 
         #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
-
-

@@ -125,6 +125,8 @@ if __name__ == "__main__":
         , GreenRetarded_rgf_lower\
         , greenRetardedBenchtiming["rgf"] = rgf.rgf_leftToRight_Gr(A_block_diag, A_block_upper, A_block_lower)
 
+        #vizu.vizualiseDenseMatrixFromBlocks(GreenRetarded_rgf_diag, GreenRetarded_rgf_upper, GreenRetarded_rgf_lower)
+
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                  GreenRetarded_refsol_block_upper, 
                                                                  GreenRetarded_refsol_block_lower, 

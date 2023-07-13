@@ -186,15 +186,13 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
 
-    last_reduction_row = 0
+    last_reduction_block = 0
 
     for level_blockindex in range(height):
-        #i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
+        i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
 
         # Only keep entries in i_elim that are in the current process
         #i_elim = [i for i in i_elim if i >= top_blockrow and i < bottom_blockrow]
-
-        i_elim = [i for i in range(int(math.pow(2, level_blockindex + 1)) - 1, nblocks, int(math.pow(2, level_blockindex + 1)))]
 
         number_of_reduction = 0
         for i in range(len(i_elim)):
@@ -218,7 +216,6 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
             for row in range(indice_process_start_reduction, indice_process_stop_reduction + 1):
                 #print("Process: ", comm_rank, " row: ", row, " number_of_reduction: ", number_of_reduction, " i_elim: ", i_elim)
                 A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
-                pass
 
         # Here each process should communicate the last row of the reduction to the next process
         if level_blockindex != height - 1:
@@ -226,21 +223,41 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
             recv_reducprod(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
 
         if len(i_elim) > 0:
-            last_reduction_row = i_elim[-1]
+            last_reduction_block = i_elim[-1]
 
-    return A, L, U, last_reduction_row
+    return A, L, U, last_reduction_block
 
 
 
-def corner_produce(A, L, U, G, k_from, k_to, blocksize):
+def check_blockrow_processownership(blockrow, top_blockrow, bottom_blockrow):
+    """
+        Check if a blockrow is owned by a process
+    """
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    if blockrow >= top_blockrow and blockrow < bottom_blockrow:
+        return True
+    else:
+        print("Process: ", comm_rank, " know that it doesn't own the blockrow: ", blockrow)
+        return False
+
+
+def corner_produce(A, L, U, G, k_from, k_to, top_blockrow, bottom_blockrow, blocksize):
     """
         Corner process block production
     """
+
+    
     k_from_rowindex   = k_from * blocksize
     kp1_from_rowindex = (k_from + 1) * blocksize
 
     k_to_rowindex     = k_to * blocksize
     kp1_to_rowindex   = (k_to + 1) * blocksize
+
+    check_blockrow_processownership(k_from, top_blockrow, bottom_blockrow)
 
     G[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex] @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
     G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] @ G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex]
@@ -250,7 +267,7 @@ def corner_produce(A, L, U, G, k_from, k_to, blocksize):
 
 
 
-def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
+def center_produce(A, L, U, G, k_above, k_to, k_below, top_blockrow, bottom_blockrow, blocksize):
     """
         Center process block production
     """
@@ -262,6 +279,9 @@ def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
 
     k_below_rowindex   = k_below * blocksize
     kp1_below_rowindex = (k_below + 1) * blocksize
+
+    check_blockrow_processownership(k_above, top_blockrow, bottom_blockrow)
+    check_blockrow_processownership(k_below, top_blockrow, bottom_blockrow)
 
     G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
                                                                                 - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
@@ -310,7 +330,7 @@ def send_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_p
         comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=2)
         comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", indice_process_stop_reduction)
+        print("Process: ", comm_rank, " send: ", i_from[indice_process_stop_reduction])
 
     elif comm_rank == comm_size - 1:
         # Only need to send to 1 top process
@@ -324,7 +344,7 @@ def send_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_p
         comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=2)
         comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", indice_process_start_reduction)
+        print("Process: ", comm_rank, " send: ", i_from[indice_process_start_reduction])
 
     else:
         # Need to send to 1 top process and 1 bottom process
@@ -346,7 +366,7 @@ def send_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_p
         comm.send(U[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=2)
         comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_from: ", i_from, " send: ", indice_process_start_reduction, " and ", indice_process_stop_reduction)
+        print("Process: ", comm_rank, " send: ", i_from[indice_process_start_reduction], " and ", i_from[indice_process_stop_reduction])
     
 
 
@@ -369,7 +389,7 @@ def rcve_to_produce(A, L, U, G, i_to, indice_process_start_reduction, indice_pro
         U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=2)
         G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_to: ", i_to, " recv: ", indice_process_stop_reduction+1)
+        print("Process: ", comm_rank, " recv: ", i_to[indice_process_stop_reduction+1])
 
 
     elif comm_rank == comm_size - 1:
@@ -384,8 +404,8 @@ def rcve_to_produce(A, L, U, G, i_to, indice_process_start_reduction, indice_pro
         U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=2)
         G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_to: ", i_to, " recv: ", indice_process_start_reduction-1)
-
+        print("Process: ", comm_rank, " recv: ", i_to[indice_process_start_reduction-1])
+        
 
     else:
         # Need to recv from 1 top process and 1 bottom process
@@ -407,19 +427,19 @@ def rcve_to_produce(A, L, U, G, i_to, indice_process_start_reduction, indice_pro
         U[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=2)
         G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
 
-        #print("Process: ", comm_rank, " i_start: ", indice_process_start_reduction, " i_stop: ", indice_process_stop_reduction, " i_to: ", i_to, " recv: ", indice_process_start_reduction-1, " and ", indice_process_stop_reduction+1)
+        print("Process: ", comm_rank, " recv: ", i_to[indice_process_start_reduction-1], " and ", i_to[indice_process_stop_reduction+1])
 
 
 
-def brdcst_last_reduction(A, L, U, G, i_from, top_blockrow, bottom_blockrow, blocksize):
+def brdcst_last_reduction(A, L, U, G, last_reduction_block, top_blockrow, bottom_blockrow, blocksize):
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
 
-    i_rowindice   = i_from[0] * blocksize
-    ip1_rowindice = (i_from[0]+1) * blocksize
+    i_rowindice   = last_reduction_block * blocksize
+    ip1_rowindice = (last_reduction_block+1) * blocksize
 
-    if i_from[0] >= top_blockrow and i_from[0] <= bottom_blockrow:
+    if last_reduction_block >= top_blockrow and last_reduction_block < bottom_blockrow:
         # This process is the one that produced the last reduction
         # Send to all processes
 
@@ -438,6 +458,8 @@ def brdcst_last_reduction(A, L, U, G, i_from, top_blockrow, bottom_blockrow, blo
         L[i_rowindice:ip1_rowindice, :] = comm.bcast(None, root=broadcasting_process)
         U[i_rowindice:ip1_rowindice, :] = comm.bcast(None, root=broadcasting_process)
         G[i_rowindice:ip1_rowindice, :] = comm.bcast(None, root=broadcasting_process)
+
+    return A, L, U, G
 
 
 
@@ -475,10 +497,18 @@ def agregate_result_on_root(G, nblocks_padded, top_blockrow, bottom_blockrow, bl
 
         comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
 
+    """ if comm_rank == 0:
+        # Root process that need to agregate all the results
+        for i in range(1, comm_size):
+            G[:, :] += comm.recv(source=i, tag=0)
+
+    else:
+        comm.send(G[:, :], dest=0, tag=0) """
+
     return G
 
 
-def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
+""" def produce_bcr_old(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
 
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
@@ -503,11 +533,9 @@ def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
                     i_prod.append(i_from[i] - stride_blockindex)
                 i_prod.append(i_from[i] + stride_blockindex)
 
+        #vizu.vizualiseDenseMatrixFlat(G, "G process " + str(comm_rank) + " level " + str(level_blockindex))
 
-        if level_blockindex == height-1:
-            # Broadcast the last reduction
-            brdcst_last_reduction(A, L, U, G, i_from, top_blockrow, bottom_blockrow, blocksize)
-        else:
+        if level_blockindex != height-1:
             indice_process_start_reduction = 0
             for i in range(len(i_from)):
                 if i_from[i] >= top_blockrow and i_from[i] < bottom_blockrow:
@@ -522,29 +550,128 @@ def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
             send_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
             rcve_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
 
-
+        if comm_rank == 0:
+            print("Process: ", comm_rank, " i_from: ", i_from, " i_prod: ", i_prod)
+        
         for i_prod_blockindex in range(len(i_prod)):
             k_to = i_bcr[i_prod[i_prod_blockindex]]
+
+            if k_to >= top_blockrow and k_to < bottom_blockrow:
+
+
+                if i_prod_blockindex == 0:
+                    # Production row is the first row within the stride_blockindex range
+                    # It only gets values from the below row 
+                    k_from = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
+
+                    print("Process: ", comm_rank, " k_to: ", k_to, " k_from: ", k_from, " corner_process 0 - i_prod: ", i_prod)
+
+                    G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+
+                if i_prod_blockindex != 0 and i_prod_blockindex == len(i_prod) - 1:
+                    if i_prod[-1] <= len(i_bcr) - stride_blockindex -1:
+                        k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
+                        k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
+
+                        print("Process: ", comm_rank, " k_to: ", k_to, " k_above: ", k_above, " k_below: ", k_below, " center_process 0 - i_prod: ", i_prod)
+
+                        G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                    else:
+                        # Production row is the last row within the stride_blockindex range
+                        # It only gets values from the above row 
+                        k_from = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
+
+                        print("Process: ", comm_rank, " k_to: ", k_to, " k_from: ", k_from, " corner_process 1 - i_prod: ", i_prod)
+                    
+                        G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                
+                if i_prod_blockindex != 0 and i_prod_blockindex != len(i_prod) - 1:
+                    # Production row is in the middle of the stride_blockindex range
+                    # It gets values from the above and below rows
+                    k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
+                    k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
+
+                    print("Process: ", comm_rank, " k_to: ", k_to, " k_above: ", k_above, " k_below: ", k_below, " center_process 1 - i_prod: ", i_prod)
+
+                    G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+
+    return G """
+
+
+
+
+
+
+
+def compute_i_from(level, nblocks):
+    """
+        Compute the blocks-row that will be used to produce blocks-row at the current level of the production tree
+    """
+
+    return [i for i in range(int(math.pow(2, level + 1)) - 1, nblocks, int(math.pow(2, level + 1)))]
+
+
+
+def compute_i_prod(i_from, stride_blockindex):
+    """
+        Compute the blocks-row to be produced at the current level of the production tree
+    """
+
+    i_prod = []
+    for i in range(len(i_from)):
+        if i == 0:
+            i_prod.append(i_from[i] - stride_blockindex)
+            i_prod.append(i_from[i] + stride_blockindex)
+        else:
+            if i_prod[i] != i_from[i] - stride_blockindex:
+                i_prod.append(i_from[i] - stride_blockindex)
+            i_prod.append(i_from[i] + stride_blockindex)
+
+    return i_prod
+
+
+
+def process_produce(A, L, U, G, i_bcr, i_prod, stride_blockindex, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    # Buffer that wil store the values computed by the current process but that don't
+    # belong to the blocks-row it owns
+    G_backproduction_topblockrow = np.zeros((blocksize, G.shape[1]))
+    G_backproduction_botblockrow = np.zeros((blocksize, G.shape[1]))
+
+    for i_prod_blockindex in range(len(i_prod)):
+        k_to = i_bcr[i_prod[i_prod_blockindex]]
+
+        if k_to >= top_blockrow and k_to < bottom_blockrow:
 
             if i_prod_blockindex == 0:
                 # Production row is the first row within the stride_blockindex range
                 # It only gets values from the below row 
                 k_from = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                print("Process: ", comm_rank, " k_to: ", k_to, " k_from: ", k_from, " corner_process 0 - i_prod: ", i_prod)
+
+                G = corner_produce(A, L, U, G, k_from, k_to, top_blockrow, bottom_blockrow, blocksize)
 
             if i_prod_blockindex != 0 and i_prod_blockindex == len(i_prod) - 1:
                 if i_prod[-1] <= len(i_bcr) - stride_blockindex -1:
                     k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                     k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                    G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                    print("Process: ", comm_rank, " k_to: ", k_to, " k_above: ", k_above, " k_below: ", k_below, " center_process 0 - i_prod: ", i_prod)
+
+                    G = center_produce(A, L, U, G, k_above, k_to, k_below, top_blockrow, bottom_blockrow, blocksize)
                 else:
                     # Production row is the last row within the stride_blockindex range
                     # It only gets values from the above row 
                     k_from = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
-                   
-                    G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+
+                    print("Process: ", comm_rank, " k_to: ", k_to, " k_from: ", k_from, " corner_process 1 - i_prod: ", i_prod)
+                
+                    G = corner_produce(A, L, U, G, k_from, k_to, top_blockrow, bottom_blockrow, blocksize)
             
             if i_prod_blockindex != 0 and i_prod_blockindex != len(i_prod) - 1:
                 # Production row is in the middle of the stride_blockindex range
@@ -552,9 +679,43 @@ def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
                 k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                print("Process: ", comm_rank, " k_to: ", k_to, " k_above: ", k_above, " k_below: ", k_below, " center_process 1 - i_prod: ", i_prod)
 
-    return G
+                G = center_produce(A, L, U, G, k_above, k_to, k_below, top_blockrow, bottom_blockrow,  blocksize)
+
+    return G_backproduction_topblockrow, G_backproduction_botblockrow
+
+
+
+def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    nblocks = len(i_bcr)
+    height  = int(math.log2(nblocks))
+
+    
+
+    for level_blockindex in range(height-1, -1, -1):
+        stride_blockindex = int(math.pow(2, level_blockindex))
+
+        # Determine the blocks-row to be produced
+        i_from = compute_i_from(level_blockindex, nblocks)
+        i_prod = compute_i_prod(i_from, stride_blockindex)
+
+        #print("Process: ", comm_rank, " level_blockindex: ", level_blockindex, " stride_blockindex: ", stride_blockindex, " i_from: ", i_from, " i_prod: ", i_prod)
+
+        G_backproduction_topblockrow,\
+        G_backproduction_botblockrow = process_produce(A, L, U, G, i_bcr, i_prod, stride_blockindex, top_blockrow, bottom_blockrow, blocksize)
+
+
+
+
+
+
+
 
 
 
@@ -583,12 +744,10 @@ def inverse_bcr(A, blocksize):
     G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
 
 
-    
-
     #print("nblocks_padded: ", nblocks_padded)
 
-    top_blockrow     = 0
-    bottom_blockrow  = 0
+    process_top_blockrow     = 0
+    process_bottom_blockrow  = 0
 
 
     i_bcr = [i for i in range(nblocks_padded)]
@@ -597,45 +756,47 @@ def inverse_bcr(A, blocksize):
     # 1. Block cyclic reduction
     if comm_rank == 0:
         # First / top process
-        top_blockrow     = 0
-        bottom_blockrow  = nblocks_padded // comm_size
+        process_top_blockrow     = 0
+        process_bottom_blockrow  = nblocks_padded // comm_size
 
-        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
 
     elif comm_rank == comm_size-1:
         # Last / bottom process
-        top_blockrow     = comm_rank * (nblocks_padded // comm_size)
-        bottom_blockrow  = nblocks_padded
+        process_top_blockrow     = comm_rank * (nblocks_padded // comm_size)
+        process_bottom_blockrow  = nblocks_padded
 
-        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
         
     else:
         # Middle process
-        top_blockrow     = comm_rank * (nblocks_padded // comm_size)
-        bottom_blockrow  = (comm_rank+1) * (nblocks_padded // comm_size)
+        process_top_blockrow     = comm_rank * (nblocks_padded // comm_size)
+        process_bottom_blockrow  = (comm_rank+1) * (nblocks_padded // comm_size)
 
-        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize)
+        A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
 
 
-    #print("Process: ", comm_rank, "has blockrow", top_blockrow, "to", bottom_blockrow-1)
+    #print("Process: ", comm_rank, "has blockrow", process_top_blockrow, "to", process_bottom_blockrow-1)
     #print("Process: ", comm_rank, " i_bcr: ", i_bcr)
 
     #vizu.vizualiseDenseMatrixFlat(A, "A_reduced proc: " + str(comm_rank))
     #vizu.compareDenseMatrix(L, "L", U, "U proc:" + str(comm_rank))
 
 
-
     # 2. Block cyclic production
-    G = invert_block(A, G, final_reduction_block, top_blockrow, bottom_blockrow, blocksize)
-    G = produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize)
+    G = invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
 
-    
+    # Bcast final reduction block to all processes
+    A, L, U, G = brdcst_last_reduction(A, L, U, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
 
-    G = agregate_result_on_root(G, nblocks_padded, top_blockrow, bottom_blockrow, blocksize)
+    G = produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
+
+    """ G = agregate_result_on_root(G, nblocks_padded, process_top_blockrow, process_bottom_blockrow, blocksize)
 
     if comm_rank == 0:
         G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
-        vizu.vizualiseDenseMatrixFlat(G, "G proc: " + str(comm_rank))
+        vizu.vizualiseDenseMatrixFlat(G, "G proc: " + str(comm_rank)) """
+
 
     # Cut the padding
     """ G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]

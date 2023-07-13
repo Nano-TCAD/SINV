@@ -251,3 +251,4 @@ if __name__ == "__main__":
         #vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
 
         #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
+

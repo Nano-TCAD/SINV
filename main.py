@@ -179,22 +179,23 @@ if __name__ == "__main__":
     # .2 Parallel BCR
     G_bcr_parallel_inverse = bcrp.inverse_bcr(A, blocksize)
 
-    #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
+    if rank == 0:
+        #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
 
-    """ G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
-    G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
-    G_bcr_parallel_inverse_lower = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
+        G_bcr_parallel_inverse_lower = np.zeros((size, size), dtype=np.complex128)
 
-    G_bcr_parallel_inverse_diag\
-    , G_bcr_parallel_inverse_upper\
-    , G_bcr_parallel_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_parallel_inverse, blocksize)
+        G_bcr_parallel_inverse_diag\
+        , G_bcr_parallel_inverse_upper\
+        , G_bcr_parallel_inverse_lower = convMat.convertDenseToBlocksTriDiagStorage(G_bcr_parallel_inverse, blocksize)
 
-    print("BCR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                        GreenRetarded_refsol_block_upper, 
-                                                                        GreenRetarded_refsol_block_lower, 
-                                                                        G_bcr_parallel_inverse_diag, 
-                                                                        G_bcr_parallel_inverse_upper, 
-                                                                        G_bcr_parallel_inverse_lower)) """
+        print("BCR parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                            GreenRetarded_refsol_block_upper, 
+                                                                            GreenRetarded_refsol_block_lower, 
+                                                                            G_bcr_parallel_inverse_diag, 
+                                                                            G_bcr_parallel_inverse_upper, 
+                                                                            G_bcr_parallel_inverse_lower))
 
 
     

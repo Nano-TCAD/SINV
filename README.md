@@ -15,7 +15,7 @@ Implementations of several selected inversion algorithms.
     - Serial, non-pivoting, block tri-diagonal matrix selected inversion algorithm. 
     - @reference: https://doi.org/10.1016/j.jcp.2009.03.035
     - @reference: https://doi.org/10.1017/CBO9780511812583
-- [ ] __BCR-P__
+- [x] __BCR-P__
     - Multi-processes version of BCR-S
     - @reference: https://doi.org/10.1017/CBO9780511812583
 - [x] __HPR-P__ (Hybrid Parallel Reccurence)

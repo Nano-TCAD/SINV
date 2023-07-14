@@ -19,10 +19,11 @@ import math
 import time
 
 from mpi4py import MPI
+from typing import Tuple
 
 
 
-def reduce(A, L, U, row, level, i_elim, blocksize):
+def reduce(A: np.ndarray, L: np.ndarray, U: np.ndarray, row: int, level: int, i_elim: np.ndarray, blocksize: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     nblocks = A.shape[0] // blocksize
     offset_blockindex = int(math.pow(2, level)) 
@@ -34,11 +35,11 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
 
 
     # Computing of row-based indices
-    j_rowindex   = i_elim[row] * blocksize
-    jp1_rowindex = (i_elim[row] + 1) * blocksize
-
     i_rowindex   = i_blockindex * blocksize
     ip1_rowindex = (i_blockindex + 1) * blocksize
+
+    j_rowindex   = i_elim[row] * blocksize
+    jp1_rowindex = (i_elim[row] + 1) * blocksize
     
     k_rowindex   = k_blockindex * blocksize
     kp1_rowindex = (k_blockindex + 1) * blocksize
@@ -79,7 +80,7 @@ def reduce(A, L, U, row, level, i_elim, blocksize):
 
 
 
-def reduce_bcr(A, L, U, i_bcr, blocksize):
+def reduce_bcr(A: np.ndarray, L: np.ndarray, U: np.ndarray, i_bcr: np.ndarray, blocksize: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -98,7 +99,7 @@ def reduce_bcr(A, L, U, i_bcr, blocksize):
 
 
 
-def corner_produce(A, L, U, G, k_from, k_to, blocksize):
+def corner_produce(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, k_from: int, k_to: int, blocksize: int) -> np.ndarray:
     """
         Corner process block production
     """
@@ -116,7 +117,7 @@ def corner_produce(A, L, U, G, k_from, k_to, blocksize):
 
 
 
-def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
+def center_produce(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, k_above: int, k_to: int, k_below: int, blocksize: int) -> np.ndarray:
     """
         Center process block production
     """
@@ -144,7 +145,7 @@ def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
 
 
 
-def invert_block(A, G, target_block, blocksize):
+def invert_block(A: np.ndarray, G: np.ndarray, target_block: int, blocksize: int) -> np.ndarray:
     """
         Invert a block of the matrix A and store it in G
     """
@@ -157,7 +158,7 @@ def invert_block(A, G, target_block, blocksize):
 
 
 
-def produce_bcr(A, L, U, G, i_bcr, blocksize):
+def produce_bcr(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, i_bcr: np.ndarray, blocksize: int) -> np.ndarray:
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -214,7 +215,7 @@ def produce_bcr(A, L, U, G, i_bcr, blocksize):
 
 
 
-def inverse_bcr(A, blocksize):
+def inverse_bcr(A: np.ndarray, blocksize: int) -> np.ndarray:
     """
         Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
     """

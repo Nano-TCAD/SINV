@@ -18,6 +18,7 @@ import algorithms.hpr_parallel  as hprp
 import algorithms.bcr_serial    as bcrs
 import algorithms.bcr_parallel  as bcrp
 import algorithms.nested_dissection as nd
+import algorithms.pdiv          as pdiv
 
 import verifyResults as verif
 
@@ -243,6 +244,31 @@ if __name__ == "__main__":
                                                                           G_hpr_paper_inverse_upper, 
                                                                           G_hpr_paper_inverse_lower))
         
+
+
+    # ---------------------------------------------------------------------------------------------
+    # 4. Pairwise
+    # ---------------------------------------------------------------------------------------------
+
+    comm.barrier()
+    # .1 Pairwise 2007
+    if rank == 0:
+        G_pw07_serial = pdiv.pdiv(A, blocksize)
+
+        G_pw07_serial_diag = np.zeros((size, size), dtype=np.complex128)
+        G_pw07_serial_upper = np.zeros((size, size), dtype=np.complex128)
+        G_pw07_serial_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_pw07_serial_diag\
+        , G_pw07_serial_upper\
+        , G_pw07_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pw07_serial, blocksize)
+
+        print("Pairwise2007: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_pw07_serial_diag, 
+                                                                          G_pw07_serial_upper, 
+                                                                          G_pw07_serial_lower))
     
 
     # ---------------------------------------------------------------------------------------------

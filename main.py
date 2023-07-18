@@ -19,6 +19,7 @@ import algorithms.bcr_serial    as bcrs
 import algorithms.bcr_parallel  as bcrp
 import algorithms.nested_dissection as nd
 import algorithms.pdiv          as pdiv
+import algorithms.smw           as smw
 
 import verifyResults as verif
 
@@ -253,7 +254,8 @@ if __name__ == "__main__":
     comm.barrier()
     # .1 PDIV
     if rank == 0:
-        G_pdiv_serial = pdiv.pdiv(A, blocksize)
+        #G_pdiv_serial = pdiv.pdiv(A, blocksize)
+        G_pdiv_serial = smw.smw(A, blocksize)
 
         G_pdiv_serial_diag = np.zeros((size, size), dtype=np.complex128)
         G_pdiv_serial_upper = np.zeros((size, size), dtype=np.complex128)

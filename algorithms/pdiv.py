@@ -22,21 +22,17 @@ from mpi4py import MPI
 
 
 
-def create_partitions(A, blocksize):
+def partition_domain(A, n_partitions, blocksize):
     """
-        Create the partitions K and the connections vectors X and Y from a dense matrix A.
+        Partition the matrix A into K_i submatrices. B_i stores the connecting blocks 
+        between the K_i submatrices.
     """
-
-    n_partitions = 2
 
     nblocks = A.shape[0] // blocksize
     nblock_per_partition = nblocks // n_partitions
 
-    print("Creating ", n_partitions, " partitions of ", nblock_per_partition, " blocks eachs.")
-
-    K = np.zeros((n_partitions, nblock_per_partition*blocksize, nblock_per_partition*blocksize), dtype=A.dtype)
-    X = np.zeros((n_partitions-1, 2*blocksize, 2*blocksize), dtype=A.dtype)
-    Y = np.zeros((n_partitions-1, 2*blocksize, 2*blocksize), dtype=A.dtype)
+    K_i = np.zeros((n_partitions, nblock_per_partition*blocksize, nblock_per_partition*blocksize), dtype=A.dtype)
+    B_i = np.zeros((n_partitions-1, blocksize, blocksize), dtype=A.dtype)
 
     for i in range(n_partitions):
         starting_block_of_partition = i * nblock_per_partition
@@ -45,29 +41,87 @@ def create_partitions(A, blocksize):
         starting_row_of_partition = starting_block_of_partition * blocksize
         ending_row_of_partition   = ending_block_of_partition * blocksize
 
-        print("Partition: ", i, " starting_block_of_partition: ", starting_block_of_partition, " ending_block_of_partition: ", ending_block_of_partition)
-
-        K[i] = A[starting_row_of_partition:ending_row_of_partition, starting_row_of_partition:ending_row_of_partition]
+        K_i[i] = A[starting_row_of_partition:ending_row_of_partition, starting_row_of_partition:ending_row_of_partition]
 
         if i < n_partitions-1:
-            X[i, 0:blocksize, blocksize:2*blocksize] = -A[ending_row_of_partition-blocksize:ending_row_of_partition, ending_row_of_partition:ending_row_of_partition+blocksize].T
-            X[i, blocksize:2*blocksize, 0:blocksize] = -A[ending_row_of_partition:ending_row_of_partition+blocksize, ending_row_of_partition-blocksize:ending_row_of_partition]
-            
-            Y[i, 0:blocksize, blocksize:2*blocksize]   = np.identity(blocksize, dtype=A.dtype)
-            Y[i, blocksize:2*blocksize, 0:blocksize] = np.identity(blocksize, dtype=A.dtype)
+            B_i[i] = A[ending_row_of_partition-blocksize:ending_row_of_partition, ending_row_of_partition:ending_row_of_partition+blocksize]
 
-    return K, X, Y
+    return K_i, B_i
 
 
-def invert_diag_partitions(K):
+
+def invert_diag_partitions(phi_i):
     """
-        Invert each diagonal partition of K.
+        Invert the given partition.
     """
 
-    for i in range(K.shape[0]):
-        K[i] = np.linalg.inv(K[i])
+    phi_i_inv = np.linalg.inv(phi_i)
 
-    return K
+    return phi_i_inv
+
+
+
+def assemble_subpartitions(phi_1, phi_2):
+    """
+        Assemble the two given subpartitions into a single matrix.
+    """
+
+    assembled_system_size = phi_1.shape[0] + phi_2.shape[0]
+
+    PHI_12 = np.zeros((assembled_system_size, assembled_system_size), dtype=phi_1.dtype)
+
+    PHI_12[0:phi_1.shape[0], 0:phi_1.shape[0]] = phi_1
+    PHI_12[phi_1.shape[0]:assembled_system_size, phi_1.shape[0]:assembled_system_size] = phi_2
+
+    return PHI_12
+
+
+def compute_update_term(phi_1, phi_2, B, blocksize):
+    """
+        Compute the update term for the given subpartitions.
+    """
+
+    subpartition_size = phi_1.shape[0]
+
+    assembled_system_size = 2*subpartition_size
+
+    U = np.zeros((assembled_system_size, assembled_system_size), dtype=phi_1.dtype)
+
+    J11, J12, J21, J22 = compute_J(phi_1, phi_2, B, blocksize)
+
+    U[0:subpartition_size, 0:subpartition_size] = -1 * phi_1[:, subpartition_size-blocksize:subpartition_size] @ B @ J12 @ phi_1[:, subpartition_size-blocksize:subpartition_size].T
+    U[0:subpartition_size, subpartition_size:assembled_system_size] = -1 * phi_1[:, subpartition_size-blocksize:subpartition_size] @ B @ J11 @ phi_2[:, 0:blocksize].T
+    U[subpartition_size:assembled_system_size, 0:subpartition_size] = -1 * phi_2[:, 0:blocksize] @ B.T @ J22 @ phi_1[:, subpartition_size-blocksize:subpartition_size].T
+    U[subpartition_size:assembled_system_size, subpartition_size:assembled_system_size] = -1 * phi_2[:, 0:blocksize] @ B.T @ J21 @ phi_2[:, 0:blocksize].T
+
+    return U
+
+
+def compute_J(phi_1, phi_2, B, blocksize):
+    """
+        Compute the J factors of the update matrix.
+    """
+
+    subpartition_size = phi_1.shape[0]
+
+    J11 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
+    J12 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
+    J21 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
+    J22 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
+
+    J11 = np.identity(blocksize, dtype=phi_1.dtype)
+    J12 = -1 * phi_2[0:blocksize, 0:blocksize] @ B.T
+    J21 = -1 * phi_1[subpartition_size-blocksize:subpartition_size, subpartition_size-blocksize:subpartition_size] @ B
+    J22 = np.identity(blocksize, dtype=phi_1.dtype)
+
+    return J11, J12, J21, J22
+
+
+
+
+def update_partition(PHI, U):
+    
+    return PHI + U
 
 
 
@@ -78,21 +132,57 @@ def pdiv(A, blocksize):
     """
 
     nblocks = A.shape[0] // blocksize
-
     G = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
 
-    vizu.vizualiseDenseMatrixFlat(A, legend="A")
+    n_partitions = 2
 
 
-    K, X, Y = create_partitions(A, blocksize)
+    # 1. Partition the problem
+    K_i, B_i = partition_domain(A, n_partitions, blocksize)
 
-    vizu.vizualiseDenseMatrixFlat(K[0], legend="K[0]")
-    vizu.vizualiseDenseMatrixFlat(K[1], legend="K[1]")
-    vizu.vizualiseDenseMatrixFlat(X[0], legend="X[0]")
-    vizu.vizualiseDenseMatrixFlat(Y[0], legend="Y[0]")
+    # 2. Invert the subpartitions
+    for i in range(n_partitions):
+        K_i[i] = invert_diag_partitions(K_i[i])
 
-    K = invert_diag_partitions(K)
+    # 3. Assemble the subpartitions
+    PHI_12 = assemble_subpartitions(K_i[0], K_i[1])
+
+    # 4. Compute the update term
+    U = compute_update_term(K_i[0], K_i[1], B_i[0], blocksize)
+
+    vizu.compareDenseMatrix(PHI_12, "PHI_12", U, "U")
+
+    # 5. Update the partition
+    G = update_partition(PHI_12, U)
 
 
+    vizu.vizualiseDenseMatrixFlat(G, legend="G")
+
+
+
+
+
+
+
+
+
+
+    """ H_vector = np.zeros((2*blocksize, nblocks*blocksize), dtype=A.dtype)
+    V_vector = np.zeros((nblocks*blocksize, 2*blocksize), dtype=A.dtype)
+
+    # Fill H and V with random values
+    from numpy import random
+    for i in range(2*blocksize):
+        for j in range(nblocks*blocksize):
+            H_vector[i, j] = random.random()
+            V_vector[j, i] = random.random()
+
+    vizu.vizualiseDenseMatrixFlat(H_vector, legend="H_vector")
+    vizu.vizualiseDenseMatrixFlat(V_vector, legend="V_vector")
+
+    M = V_vector @ H_vector
+
+    vizu.vizualiseDenseMatrixFlat(M, legend="M")
+ """
     return G
 

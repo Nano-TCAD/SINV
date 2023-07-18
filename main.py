@@ -125,7 +125,7 @@ if __name__ == "__main__":
         , GreenRetarded_rgf_upper\
         , GreenRetarded_rgf_lower\
         , greenRetardedBenchtiming["rgf"] = rgf.rgf_leftToRight_Gr(A_block_diag, A_block_upper, A_block_lower)
-
+        
         #vizu.vizualiseDenseMatrixFromBlocks(GreenRetarded_rgf_diag, GreenRetarded_rgf_upper, GreenRetarded_rgf_lower)
 
         print("RGF: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
@@ -251,24 +251,24 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------------------
 
     comm.barrier()
-    # .1 Pairwise 2007
+    # .1 PDIV
     if rank == 0:
-        G_pw07_serial = pdiv.pdiv(A, blocksize)
+        G_pdiv_serial = pdiv.pdiv(A, blocksize)
 
-        G_pw07_serial_diag = np.zeros((size, size), dtype=np.complex128)
-        G_pw07_serial_upper = np.zeros((size, size), dtype=np.complex128)
-        G_pw07_serial_lower = np.zeros((size, size), dtype=np.complex128)
+        G_pdiv_serial_diag = np.zeros((size, size), dtype=np.complex128)
+        G_pdiv_serial_upper = np.zeros((size, size), dtype=np.complex128)
+        G_pdiv_serial_lower = np.zeros((size, size), dtype=np.complex128)
 
-        G_pw07_serial_diag\
-        , G_pw07_serial_upper\
-        , G_pw07_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pw07_serial, blocksize)
+        G_pdiv_serial_diag\
+        , G_pdiv_serial_upper\
+        , G_pdiv_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pdiv_serial, blocksize)
 
-        print("Pairwise2007: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+        print("PDIV: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                           GreenRetarded_refsol_block_upper, 
                                                                           GreenRetarded_refsol_block_lower, 
-                                                                          G_pw07_serial_diag, 
-                                                                          G_pw07_serial_upper, 
-                                                                          G_pw07_serial_lower))
+                                                                          G_pdiv_serial_diag, 
+                                                                          G_pdiv_serial_upper, 
+                                                                          G_pdiv_serial_lower))
     
 
     # ---------------------------------------------------------------------------------------------

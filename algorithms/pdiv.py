@@ -11,7 +11,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
 
 import utils.vizualisation       as vizu
-import utils.transformMatrices   as transMat
 
 import numpy as np
 import math
@@ -104,15 +103,19 @@ def compute_J(phi_1, phi_2, B, blocksize):
 
     subpartition_size = phi_1.shape[0]
 
-    J11 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
-    J12 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
-    J21 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
-    J22 = np.zeros((blocksize, blocksize), dtype=phi_1.dtype)
+    J = np.zeros((2*blocksize, 2*blocksize), dtype=phi_1.dtype)
 
-    J11 = np.identity(blocksize, dtype=phi_1.dtype)
-    J12 = -1 * phi_2[0:blocksize, 0:blocksize] @ B.T
-    J21 = -1 * phi_1[subpartition_size-blocksize:subpartition_size, subpartition_size-blocksize:subpartition_size] @ B
-    J22 = np.identity(blocksize, dtype=phi_1.dtype)
+    J[0:blocksize, 0:blocksize] = np.identity(blocksize, dtype=phi_1.dtype)
+    J[0:blocksize, blocksize:2*blocksize] = -1 * phi_2[0:blocksize, 0:blocksize] @ B.T
+    J[blocksize:2*blocksize, 0:blocksize] = -1 * phi_1[subpartition_size-blocksize:subpartition_size, subpartition_size-blocksize:subpartition_size] @ B
+    J[blocksize:2*blocksize, blocksize:2*blocksize] = np.identity(blocksize, dtype=phi_1.dtype)
+
+    J = np.linalg.inv(J)
+
+    J11 = J[0:blocksize, 0:blocksize]
+    J12 = J[0:blocksize, blocksize:2*blocksize]
+    J21 = J[blocksize:2*blocksize, 0:blocksize]
+    J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
 
     return J11, J12, J21, J22
 

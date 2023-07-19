@@ -36,33 +36,35 @@ def extract_factors(A, blocksize):
     u[(nblock_per_partition-1)*blocksize:nblock_per_partition*blocksize, 0:blocksize]           = A[(nblock_per_partition-1)*blocksize:nblock_per_partition*blocksize, nblock_per_partition*blocksize:(nblock_per_partition+1)*blocksize]
     u[nblock_per_partition*blocksize:(nblock_per_partition+1)*blocksize, blocksize:2*blocksize] = A[nblock_per_partition*blocksize:(nblock_per_partition+1)*blocksize, (nblock_per_partition-1)*blocksize:nblock_per_partition*blocksize]
 
-    v[(nblock_per_partition-1)*blocksize:nblock_per_partition*blocksize, blocksize:2*blocksize] = np.identity(blocksize)
-    v[nblock_per_partition*blocksize:(nblock_per_partition+1)*blocksize, 0:blocksize]           = np.identity(blocksize)
+
+    v[(nblock_per_partition-1)*blocksize:nblock_per_partition*blocksize, blocksize:2*blocksize] = np.identity(blocksize, dtype=A.dtype)
+    v[nblock_per_partition*blocksize:(nblock_per_partition+1)*blocksize, 0:blocksize]           = np.identity(blocksize, dtype=A.dtype)
 
     return K, u, v
 
 
 
-
-
 def smw(A, blocksize):
+    """
+        Apply the Sherman-Morrison-Woodbury formula to compute the inverse of a block-trdiagonal 
+        matrix by decomposing it into 2 partitions and computing the inverse of the reduced matrix.
+    """
+
+    G_verif = np.linalg.inv(A)
 
     nblocks = A.shape[0] // blocksize
     G = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
 
+    # Decompose the input matrix into K matrix and u, v vectors
     K, u, v = extract_factors(A, blocksize)
 
-    vizu.vizualiseDenseMatrixFlat(K, "K")
-    vizu.vizualiseDenseMatrixFlat(u, "u")
-    vizu.vizualiseDenseMatrixFlat(v.T, "v.T")
-
+    # Invert the reduced matrix
     K_inv = np.linalg.inv(K)
 
-    #vizu.vizualiseDenseMatrixFlat(K_inv, "K_inv")
+    # Compute the update term
+    U = K_inv @ u @ np.linalg.inv(np.identity(2*blocksize, dtype=G.dtype) + v.T @ K_inv @ u) @ v.T @ K_inv
 
-    G = K_inv + K_inv @ u @ np.linalg.inv(np.identity(2*blocksize) + v.T @ K_inv @ u) @ v.T @ K_inv
-
-    vizu.vizualiseDenseMatrixFlat(G, "G")
-
+    # Update the inverse
+    G = K_inv - U
 
     return G

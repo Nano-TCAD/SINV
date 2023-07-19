@@ -172,6 +172,7 @@ def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndar
 def inverse_hybrid(A: np.ndarray, blocksize: int):
     """
         Invert a matrix using the hybrid parallel reduction algorithm
+        - Work in place and will overwrite the input matrix A
     """
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()

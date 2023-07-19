@@ -60,6 +60,8 @@ if __name__ == "__main__":
     GreenRetarded_refsol_np, greenRetardedBenchtiming["np"]   = inv.numpyInversion(A)
     GreenRetarded_refsol_csc, greenRetardedBenchtiming["csc"] = inv.scipyCSCInversion(A_csc)
 
+    #vizu.vizualiseDenseMatrixFlat(GreenRetarded_refsol_np, "GreenRetarded_refsol_np")
+
     if not verif.verifResults(GreenRetarded_refsol_np, GreenRetarded_refsol_csc):
         print("Error: Green retarded references solutions are different.")
         exit()
@@ -89,6 +91,8 @@ if __name__ == "__main__":
 
     GreenLesser_refsol_np, greenLesserBenchtiming["np"]   = inv.numpyInversion(B)
     greenLesserBenchtiming["np"] += timing
+
+    
 
     # 2. CSC matrix
     GreenAdvanced_refsol_csc = convMat.convertDenseToCSC(GreenAdvanced_refsol_np)
@@ -199,7 +203,6 @@ if __name__ == "__main__":
                                                                             G_bcr_parallel_inverse_upper, 
                                                                             G_bcr_parallel_inverse_lower))
 
-
     
     # ---------------------------------------------------------------------------------------------
     # 3. HPR (Hybrid Parallel Recurence) 
@@ -225,9 +228,11 @@ if __name__ == "__main__":
                                                                           G_hpr_serial_upper, 
                                                                           G_hpr_serial_lower))
 
+
     comm.barrier()
     # .2 Parallel HPR
-    G_hpr_paper = hprp.inverse_hybrid(A, blocksize)
+    A_copy = np.copy(A)
+    G_hpr_paper = hprp.inverse_hybrid(A_copy, blocksize)
     
     if rank == 0:
         G_hpr_paper_inverse_diag  = np.zeros((size, size), dtype=np.complex128)

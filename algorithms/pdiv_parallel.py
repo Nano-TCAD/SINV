@@ -107,7 +107,20 @@ def partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize):
         @return: K_i, B_i
     """
 
-    pass
+    K_i = []
+    B_i = []
+
+    for i in range(len(l_start_blockrow)):
+        start_index = l_start_blockrow[i]*blocksize
+        stop_index  = start_index + l_partitions_sizes[i]*blocksize
+
+        K_i.append(A[start_index:stop_index, start_index:stop_index])
+
+        if i < len(l_start_blockrow)-1:
+            B_i.append(A[stop_index-blocksize:stop_index, stop_index:stop_index+blocksize])
+
+    return K_i, B_i
+
 
 
 def send_partitions(K_i, l_start_blockrow, l_partitions_sizes, blocksize):
@@ -239,15 +252,15 @@ def pdiv(A, blocksize):
 
     K_local, B_local, l_start_blockrow, l_partitions_sizes = allocate_memory_for_partitions(A, n_partitions, n_reduction_steps, blocksize)
 
-    """ if comm_rank == 0:
+    if comm_rank == 0:
         K_i, B_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
-        send_partitions(K_i, l_start_blockrow, l_partitions_sizes, blocksize)
-        send_bridges(B_i, n_reduction_steps, blocksize)
-    else:
-        recv_partitions(K_local, l_start_blockrow, l_partitions_sizes, blocksize)
-        recv_bridges(B_local, n_reduction_steps, blocksize)
+        #send_partitions(K_i, l_start_blockrow, l_partitions_sizes, blocksize)
+        #send_bridges(B_i, n_reduction_steps, blocksize)
+    #else:
+        #recv_partitions(K_local, l_start_blockrow, l_partitions_sizes, blocksize)
+        #recv_bridges(B_local, n_reduction_steps, blocksize)
 
-    
+    """ 
     # Inversion of the local partition
     invert_partition(K_local, blocksize)
 

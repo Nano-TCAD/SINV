@@ -109,8 +109,8 @@ def compute_J(phi_1, phi_2, B, blocksize):
     J = np.zeros((2*blocksize, 2*blocksize), dtype=phi_1.dtype)
 
     J[0:blocksize, 0:blocksize] = np.identity(blocksize, dtype=phi_1.dtype)
-    J[0:blocksize, blocksize:2*blocksize] = -1 * phi_2[0:blocksize, 0:blocksize] @ B.T
-    J[blocksize:2*blocksize, 0:blocksize] = -1 * phi_1[subpartition_size-blocksize:subpartition_size, subpartition_size-blocksize:subpartition_size] @ B
+    J[0:blocksize, blocksize:2*blocksize] = phi_2[0:blocksize, 0:blocksize] @ B.T
+    J[blocksize:2*blocksize, 0:blocksize] = phi_1[subpartition_size-blocksize:subpartition_size, subpartition_size-blocksize:subpartition_size] @ B
     J[blocksize:2*blocksize, blocksize:2*blocksize] = np.identity(blocksize, dtype=phi_1.dtype)
 
     J = np.linalg.inv(J)
@@ -133,8 +133,8 @@ def update_partition(PHI, U):
 
 def pdiv(A, blocksize):
     """
-        Implementation of the pairwise algorithm as described in the 2007 paper
-        and extended in 2011.
+        Serial reference implementation for the PDIV/Pairwise selected inverse
+        algorithm.
     """
 
     nblocks = A.shape[0] // blocksize
@@ -156,39 +156,10 @@ def pdiv(A, blocksize):
     # 4. Compute the update term
     U = compute_update_term(K_i[0], K_i[1], B_i[0], blocksize)
 
-    vizu.compareDenseMatrix(PHI_12, "PHI_12", U, "U")
+    #vizu.compareDenseMatrix(PHI_12, "PHI_12", U, "U")
 
     # 5. Update the partition
     G = update_partition(PHI_12, U)
 
-
-    vizu.vizualiseDenseMatrixFlat(G, legend="G")
-
-
-
-
-
-
-
-
-
-
-    """ H_vector = np.zeros((2*blocksize, nblocks*blocksize), dtype=A.dtype)
-    V_vector = np.zeros((nblocks*blocksize, 2*blocksize), dtype=A.dtype)
-
-    # Fill H and V with random values
-    from numpy import random
-    for i in range(2*blocksize):
-        for j in range(nblocks*blocksize):
-            H_vector[i, j] = random.random()
-            V_vector[j, i] = random.random()
-
-    vizu.vizualiseDenseMatrixFlat(H_vector, legend="H_vector")
-    vizu.vizualiseDenseMatrixFlat(V_vector, legend="V_vector")
-
-    M = V_vector @ H_vector
-
-    vizu.vizualiseDenseMatrixFlat(M, legend="M")
- """
     return G
 

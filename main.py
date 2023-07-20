@@ -18,7 +18,8 @@ import algorithms.hpr_parallel  as hprp
 import algorithms.bcr_serial    as bcrs
 import algorithms.bcr_parallel  as bcrp
 import algorithms.nested_dissection as nd
-import algorithms.pdiv          as pdiv
+import algorithms.pdiv_serial   as pdiv_s
+import algorithms.pdiv_parallel as pdiv_p
 import algorithms.smw           as smw
 
 import verifyResults as verif
@@ -259,8 +260,7 @@ if __name__ == "__main__":
     comm.barrier()
     # .1 PDIV
     if rank == 0:
-        #G_pdiv_serial = pdiv.pdiv(A, blocksize)
-        G_pdiv_serial = smw.smw(A, blocksize)
+        G_pdiv_serial = pdiv_s.pdiv(A, blocksize)
 
         G_pdiv_serial_diag = np.zeros((size, size), dtype=np.complex128)
         G_pdiv_serial_upper = np.zeros((size, size), dtype=np.complex128)
@@ -270,7 +270,28 @@ if __name__ == "__main__":
         , G_pdiv_serial_upper\
         , G_pdiv_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pdiv_serial, blocksize)
 
-        print("PDIV: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+        print("PDIV serial: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
+                                                                          GreenRetarded_refsol_block_upper, 
+                                                                          GreenRetarded_refsol_block_lower, 
+                                                                          G_pdiv_serial_diag, 
+                                                                          G_pdiv_serial_upper, 
+                                                                          G_pdiv_serial_lower))
+
+
+    comm.barrier()
+    # .1 PDIV
+    if rank == 0:
+        G_pdiv_serial = pdiv_p.pdiv(A, blocksize)
+
+        G_pdiv_serial_diag = np.zeros((size, size), dtype=np.complex128)
+        G_pdiv_serial_upper = np.zeros((size, size), dtype=np.complex128)
+        G_pdiv_serial_lower = np.zeros((size, size), dtype=np.complex128)
+
+        G_pdiv_serial_diag\
+        , G_pdiv_serial_upper\
+        , G_pdiv_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pdiv_serial, blocksize)
+
+        print("PDIV parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
                                                                           GreenRetarded_refsol_block_upper, 
                                                                           GreenRetarded_refsol_block_lower, 
                                                                           G_pdiv_serial_diag, 

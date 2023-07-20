@@ -15,7 +15,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import sys
 sys.path.append('../')
 
-import utils.vizualisation       as vizu
+import utils.vizualisation as vizu
 
 import numpy as np
 import math
@@ -25,25 +25,21 @@ from mpi4py import MPI
 
 
 
-def allocate_memory_for_partitions(A, n_partitions, n_reduction_steps, blocksize):
-    """
-        Allocate the needed memory to store the current partition of the
-        system at each steps of the assembly process.
 
-        @param A:            matrix to partition
+def divide_matrix(A, n_partitions, blocksize):
+    """
+        Compute the n_partitions segments that divide the matrix A.
+
+        @param A:            matrix to divide
         @param n_partitions: number of partitions
         @param blocksize:    size of a block
 
-        @return: K_local, B_local, l_start_blockrow, l_partitions_sizes
+        @return: l_start_blockrow, l_partitions_sizes
     """
-
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
 
     nblocks = A.shape[0] // blocksize
     partition_blocksize = nblocks // n_partitions
     blocksize_of_first_partition = nblocks - partition_blocksize * (n_partitions-1)
-
 
     # Compute the starting block row and the partition size for each process
     l_start_blockrow   = []
@@ -57,6 +53,25 @@ def allocate_memory_for_partitions(A, n_partitions, n_reduction_steps, blocksize
             l_start_blockrow.append(l_start_blockrow[i-1] + l_partitions_sizes[i-1])
             l_partitions_sizes.append(partition_blocksize)
 
+    return l_start_blockrow, l_partitions_sizes
+
+
+
+def allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize):
+    """
+        Allocate the needed memory to store the current partition of the
+        system at each steps of the assembly process.
+
+        @param A:                  matrix to partition
+        @param l_partitions_sizes: list of the size of each partition
+        @param n_partitions:       number of partitions
+        @param blocksize:          size of a block
+
+        @return: K_local, B_local
+    """
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
 
     # Compute the needed memory for the local K matrix and B bridges factors
     K_havent_been_allocated = True
@@ -90,7 +105,7 @@ def allocate_memory_for_partitions(A, n_partitions, n_reduction_steps, blocksize
     B_local = np.zeros((B_number_of_blocks_to_allocate, blocksize), dtype=A.dtype)
 
 
-    return K_local, B_local, l_start_blockrow, l_partitions_sizes
+    return K_local, B_local
                 
 
 
@@ -123,20 +138,47 @@ def partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize):
 
 
 
-def send_partitions(K_i, l_start_blockrow, l_partitions_sizes, blocksize):
+def send_partitions(K_i, K_local):
     """
         Send the partitions to the correct process.
 
         @param K_i:                list of the partitions
-        @param l_start_blockrow:   list of processes starting block row
+        @param K_local:            local partition
+    """
+
+    comm = MPI.COMM_WORLD
+
+    for process_i in range(len(K_i)):
+        if process_i == 0:
+            # Localy store the first partition in the local K matrix
+            partition_size = K_i[process_i].shape[0]
+            K_local[0:partition_size, 0:partition_size] = K_i[process_i]
+        else:
+            # Send the partition to the correct process
+            comm.send(K_i[process_i], dest=process_i, tag=0)
+
+
+
+def recv_partitions(K_local, l_partitions_sizes, blocksize):
+    """
+        Receive the partitions from the master process.
+
+        @param K_local:            local partition
         @param l_partitions_sizes: list of processes partition size
         @param blocksize:          size of a block
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    start_index = 0
+    stop_index  = l_partitions_sizes[comm_rank]*blocksize
+
+    K_local[start_index:stop_index, start_index:stop_index] = comm.recv(source=0, tag=0)
 
 
-def send_bridges(B_i, n_reduction_steps, blocksize):
+
+def send_bridges(B_i, n_partitions, n_reduction_steps, blocksize):
     """
         Send the bridges to the correct process.
 
@@ -145,20 +187,22 @@ def send_bridges(B_i, n_reduction_steps, blocksize):
         @param blocksize:         size of a block
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
 
+    bridges_to_send = [[] for i in range(n_reduction_steps)]
+    to_wich_process = 0
 
-def recv_partitions(K_local, l_start_blockrow, l_partitions_sizes, blocksize):
-    """
-        Receive the partitions from the master process.
+    print("Process", comm_rank, " bridges_to_send: ", bridges_to_send)
 
-        @param K_local:            local partition
-        @param l_start_blockrow:   list of processes starting block row
-        @param l_partitions_sizes: list of processes partition size
-        @param blocksize:          size of a block
-    """
+    for current_step in range(1, n_reduction_steps+1, 1):
+        
+        current_step_partition_blocksize = int(math.pow(2, current_step))
 
-    pass
+        for process in range(0, n_partitions, current_step_partition_blocksize):
+
+            print("Process", comm_rank, " current_step: ", current_step, " current_step_partition_blocksize: ", current_step_partition_blocksize, " process: ", process)
+
 
 
 def recv_bridges(B_local, n_reduction_steps, blocksize):
@@ -173,6 +217,7 @@ def recv_bridges(B_local, n_reduction_steps, blocksize):
     pass
 
 
+
 def invert_partition(K_local, blocksize):
     """
         Invert the local partition.
@@ -182,6 +227,7 @@ def invert_partition(K_local, blocksize):
     """
 
     pass
+
 
 
 def assemble_subpartitions(K_local, current_step, n_reduction_steps, blocksize):
@@ -195,6 +241,7 @@ def assemble_subpartitions(K_local, current_step, n_reduction_steps, blocksize):
     """
 
     pass
+
 
 
 def compute_update_term(K_local, B_local, current_step, n_reduction_steps, blocksize):
@@ -213,6 +260,7 @@ def compute_update_term(K_local, B_local, current_step, n_reduction_steps, block
     pass
 
 
+
 def update_partition(K_local, U, current_step, n_reduction_steps, blocksize):
     """
         Update the local partition with the update term.
@@ -225,6 +273,7 @@ def update_partition(K_local, U, current_step, n_reduction_steps, blocksize):
     """
 
     pass
+
 
 
 def pdiv(A, blocksize):
@@ -250,15 +299,19 @@ def pdiv(A, blocksize):
     n_partitions      = comm_size
     n_reduction_steps = int(math.log2(n_partitions))
 
-    K_local, B_local, l_start_blockrow, l_partitions_sizes = allocate_memory_for_partitions(A, n_partitions, n_reduction_steps, blocksize)
+    l_start_blockrow, l_partitions_sizes = divide_matrix(A, n_partitions, blocksize)
+    K_local, B_local = allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize)
 
     if comm_rank == 0:
         K_i, B_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
-        #send_partitions(K_i, l_start_blockrow, l_partitions_sizes, blocksize)
-        #send_bridges(B_i, n_reduction_steps, blocksize)
-    #else:
-        #recv_partitions(K_local, l_start_blockrow, l_partitions_sizes, blocksize)
+        send_partitions(K_i, K_local)
+        send_bridges(B_i, n_partitions, n_reduction_steps, blocksize)
+    else:
+        recv_partitions(K_local, l_partitions_sizes, blocksize)
         #recv_bridges(B_local, n_reduction_steps, blocksize)
+
+    #vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local")
+    #vizu.vizualiseDenseMatrixFlat(B_local, f"Process: {comm_rank}, B_local")
 
     """ 
     # Inversion of the local partition

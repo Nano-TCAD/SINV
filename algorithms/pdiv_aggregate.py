@@ -12,9 +12,6 @@ Pairwise algorithm:
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import sys
-sys.path.append('../')
-
 import numpy as np
 import math
 
@@ -22,15 +19,26 @@ from mpi4py import MPI
 
 
 
-def divide_matrix(A, n_partitions, blocksize):
-    """
-        Compute the n_partitions segments that divide the matrix A.
+def divide_matrix(A: np.ndarray, 
+                  n_partitions: int, 
+                  blocksize: int) -> [list, list]:
+    """ Compute the n_partitions segments that divide the matrix A.
 
-        @param A:            matrix to divide
-        @param n_partitions: number of partitions
-        @param blocksize:    size of a block
+    Parameters
+    ----------
+    A : numpy matrix            
+        matrix to divide
+    n_partitions : int
+        number of partitions
+    blocksize : int
+        size of a block
 
-        @return: l_start_blockrow, l_partitions_sizes
+    Returns
+    -------
+    l_start_blockrow : list
+        list of processes starting block index
+    l_partitions_sizes : list
+        list of processes partition size
     """
 
     nblocks = A.shape[0] // blocksize
@@ -53,17 +61,33 @@ def divide_matrix(A, n_partitions, blocksize):
 
 
 
-def allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize):
-    """
-        Allocate the needed memory to store the current partition of the
-        system at each steps of the assembly process.
+def allocate_memory_for_partitions(A: np.ndarray, 
+                                   l_partitions_sizes: list, 
+                                   n_partitions: int, 
+                                   n_reduction_steps: int, 
+                                   blocksize: int) -> [np.ndarray, list]:
+    """ Allocate the needed memory to store the current partition of the
+    system at each steps of the assembly process.
 
-        @param A:                  matrix to partition
-        @param l_partitions_sizes: list of the size of each partition
-        @param n_partitions:       number of partitions
-        @param blocksize:          size of a block
+    Parameters
+    ----------
+    A : numpy matrix
+        matrix to partition
+    l_partitions_sizes : list
+        list of the size of each partition
+    n_partitions : int
+        number of partitions
+    n_reduction_steps : int
+        number of reduction steps
+    blocksize : int
+        size of a block
 
-        @return: K_local, B_local
+    Returns
+    -------
+    K_local : numpy matrix
+        local partition
+    B_local : list
+        list of the local bridges matrices
     """
 
     comm = MPI.COMM_WORLD
@@ -104,17 +128,30 @@ def allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduct
                 
 
 
-def partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize):
-    """
-        Partition the matrix A into K_i submatrices and B_i bridge matrices
-        that stores the connecting elements between the submatrices.
+def partition_subdomain(A: np.ndarray, 
+                        l_start_blockrow: list, 
+                        l_partitions_sizes: list, 
+                        blocksize: int) -> [np.ndarray, list]:
+    """ Partition the matrix A into K_i submatrices and B_i bridge matrices
+    that stores the connecting elements between the submatrices.
+    
+    Parameters
+    ----------
+    A : numpy matrix
+        matrix to partition
+    l_start_blockrow : list
+        list of processes starting block index
+    l_partitions_sizes : list
+        list of processes partition size
+    blocksize : int
+        size of a block
 
-        @param A:                  matrix to partition
-        @param l_start_blockrow:   list of processes starting block row
-        @param l_partitions_sizes: list of processes partition size
-        @param blocksize:          size of a block
-
-        @return: K_i, B_i
+    Returns
+    -------
+    K_i : list
+        list of the partitions
+    B_i : list
+        list of the bridges
     """
 
     K_i = []
@@ -133,12 +170,20 @@ def partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize):
 
 
 
-def send_partitions(K_i, K_local):
-    """
-        Send the partitions to the correct process.
+def send_partitions(K_i: np.ndarray, 
+                    K_local: np.ndarray):
+    """ Send the partitions to the correct process.
 
-        @param K_i:                list of the partitions
-        @param K_local:            local partition
+    Parameters
+    ----------
+    K_i : list
+        list of the partitions
+    K_local : numpy matrix
+        local partition
+
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -154,13 +199,23 @@ def send_partitions(K_i, K_local):
 
 
 
-def recv_partitions(K_local, l_partitions_sizes, blocksize):
-    """
-        Receive the partitions from the master process.
+def recv_partitions(K_local: np.ndarray, 
+                    l_partitions_sizes: list, 
+                    blocksize: int):
+    """ Receive the partitions from the master process.
+    
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    l_partitions_sizes : list
+        list of processes partition size
+    blocksize : int
+        size of a block
 
-        @param K_local:            local partition
-        @param l_partitions_sizes: list of processes partition size
-        @param blocksize:          size of a block
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -173,14 +228,26 @@ def recv_partitions(K_local, l_partitions_sizes, blocksize):
 
 
 
-def send_bridges(B_i, B_local, n_partitions, n_reduction_steps):
-    """
-        Send the bridges to the correct process.
+def send_bridges(B_i: list, 
+                 B_local: list, 
+                 n_partitions: int, 
+                 n_reduction_steps: int):
+    """ Send the bridges to the correct process.
 
-        @param B_i:               list of the bridges
-        @param B_local:           local bridge matrix
-        @param n_reduction_steps: number of reduction steps
-        @param blocksize:         size of a block
+    Parameters
+    ----------
+    B_i : list
+        list of the bridges
+    B_local : list
+        local bridge matrix
+    n_partitions : int
+        number of partitions
+    n_reduction_steps : int
+        number of reduction steps
+
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -203,13 +270,23 @@ def send_bridges(B_i, B_local, n_partitions, n_reduction_steps):
 
 
 
-def recv_bridges(B_local, n_partitions, n_reduction_steps):
-    """
-        Receive the bridges matrices from the master process.
+def recv_bridges(B_local: list, 
+                 n_partitions: int, 
+                 n_reduction_steps: int):
+    """ Receive the bridges matrices from the master process.
 
-        @param B_local:           local bridge matrix
-        @param n_partitions:      number of partitions
-        @param n_reduction_steps: number of reduction steps
+    Parameters
+    ----------
+    B_local : list
+        local bridge matrix
+    n_partitions : int
+        number of partitions
+    n_reduction_steps : int
+        number of reduction steps
+
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -229,13 +306,23 @@ def recv_bridges(B_local, n_partitions, n_reduction_steps):
 
 
 
-def invert_partition(K_local, l_partitions_sizes, blocksize):
-    """
-        Invert the local partition.
+def invert_partition(K_local: np.ndarray, 
+                     l_partitions_sizes: list, 
+                     blocksize: int):
+    """ Invert the local partition.
 
-        @param K_local:   local partition
-        @param l_partitions_sizes: list of processes partition size
-        @param blocksize: size of a block
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    l_partitions_sizes : list
+        list of processes partition size
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -244,19 +331,34 @@ def invert_partition(K_local, l_partitions_sizes, blocksize):
     start_index = 0
     stop_index  = l_partitions_sizes[comm_rank]*blocksize
 
-    K_local[start_index:stop_index, start_index:stop_index] = np.linalg.inv(K_local[start_index:stop_index, start_index:stop_index])
+    K_local[start_index:stop_index, start_index:stop_index]\
+        = np.linalg.inv(K_local[start_index:stop_index, start_index:stop_index])
 
 
 
-def assemble_subpartitions(K_local, l_partitions_sizes, active_process, current_step, blocksize):
-    """
-        Assemble two subpartitions in a diagonal manner.
+def assemble_subpartitions(K_local: np.ndarray, 
+                           l_partitions_sizes: list, 
+                           active_process: int, 
+                           current_step: int, 
+                           blocksize: int):
+    """ Assemble two subpartitions in a diagonal manner.
 
-        @param K_local:            local partition
-        @param l_partitions_sizes: list of processes partition size
-        @param active_process:     active process
-        @param current_step:       current reduction step
-        @param blocksize:          size of a block
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    l_partitions_sizes : list
+        list of processes partition size
+    active_process : int
+        active process
+    current_step : int
+        current reduction step
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -286,16 +388,33 @@ def assemble_subpartitions(K_local, l_partitions_sizes, active_process, current_
 
 
 
-def compute_J(K_local, B, phi_1_size, blocksize):
-    """
-        Compute the J matrix.
+def compute_J(K_local: np.ndarray, 
+              B: np.ndarray, 
+              phi_1_size: int, 
+              blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """ Compute the J matrix.
 
-        @param K_local:               local partition
-        @param B:                     bridge matrix
-        @param phi_1_size:            size of phi_1
-        @param blocksize:             size of a block
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    B : numpy matrix
+        bridge matrix
+    phi_1_size : int
+        size of phi_1
+    blocksize : int
+        size of a block
 
-        @return: J11, J12, J21, J22
+    Returns
+    -------
+    J11 : numpy matrix
+        J11 matrix
+    J12 : numpy matrix
+        J12 matrix
+    J21 : numpy matrix
+        J21 matrix
+    J22 : numpy matrix
+        J22 matrix
     """
 
     J = np.zeros((2*blocksize, 2*blocksize), dtype=K_local.dtype)
@@ -316,22 +435,34 @@ def compute_J(K_local, B, phi_1_size, blocksize):
 
 
 
-def compute_update_term(K_local, B_local, l_partitions_sizes, active_process, current_step, blocksize):
+def compute_update_term(K_local: np.ndarray, 
+                        B_local: np.ndarray, 
+                        l_partitions_sizes: list, 
+                        active_process: int, 
+                        current_step: int, 
+                        blocksize: int) -> np.ndarray:
+    """ Compute the update term between the two assembled subpartitions.
+
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    B_local : numpy matrix
+        local bridges matrices
+    l_partitions_sizes : list
+        list of processes partition size
+    active_process : int
+        active process
+    current_step : int
+        current reduction step
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    U : numpy matrix
+        update term
     """
-        Compute the update term between the two assembled subpartitions.
-
-        @param K_local:            local partition
-        @param B_local:            local bridges matrices
-        @param l_partitions_sizes: list of processes partition size
-        @param active_process:     active process
-        @param current_step:       current reduction step
-        @param blocksize:          size of a block
-
-        @return: U
-    """
-
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
 
     current_step_partition_stride = int(math.pow(2, current_step))
 
@@ -358,12 +489,20 @@ def compute_update_term(K_local, B_local, l_partitions_sizes, active_process, cu
 
 
 
-def update_partition(K_local, U):
-    """
-        Update the local partition with the update term.
+def update_partition(K_local: np.ndarray, 
+                     U: np.ndarray):
+    """ Update the local partition with the update term.
 
-        @param K_local:           local partition
-        @param U:                 update term
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local partition
+    U : numpy matrix
+        update term
+
+    Returns
+    -------
+    None
     """
 
     start_index = 0
@@ -373,14 +512,26 @@ def update_partition(K_local, U):
 
 
 
-def pdiv_aggregate(A, blocksize):
-    """
-        Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
+def pdiv_aggregate(A: np.ndarray, 
+                   blocksize: int) -> np.ndarray:
+    """ Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
         
-        @param A:         matrix to invert
-        @param blocksize: size of a block
+    Parameters
+    ----------
+    A : numpy matrix
+        matrix to invert
+    blocksize : int
+        size of a block
 
-        @return: K_local (that is on process 0 the inverted matrix)
+    Returns
+    -------
+    K_local : numpy matrix
+        local partition
+        
+    Raises
+    ------
+    ValueError
+        If the number of processes is not a power of 2.
     """
 
     # MPI initialization

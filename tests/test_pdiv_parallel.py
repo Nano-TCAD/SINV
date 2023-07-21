@@ -12,7 +12,7 @@ import utils.generateMatrices    as genMat
 import utils.transformMatrices   as transMat
 import utils.vizualisation       as vizu
 
-import algorithms.pdiv_parallel as pdiv_p
+import algorithms.pdiv_aggregate as pdiv_a
 
 import numpy as np
 import math
@@ -45,11 +45,17 @@ if __name__ == '__main__':
 
 
     # Compute the retarded Green's function with the parallel P-Division algorithm
-    G_pdiv = pdiv_p.pdiv(A_init, blocksize)
+    G_pdiv = pdiv_a.pdiv_aggregate(A_init, blocksize)
 
 
     if comm_rank == 0:
-        # Compute the error
-        error = np.linalg.norm(G_ref - G_pdiv, ord='fro') / np.linalg.norm(G_ref, ord='fro')
-        print("Error: ", error)
-        #vizu.compareDenseMatrix(G_ref, "G_ref", G_pdiv, "G_pdiv")
+        # Check the correctness of the result
+        result = np.allclose(G_ref, G_pdiv, rtol=1e-05, atol=1e-08)
+        if result:
+            print("The result is correct.")
+        else:
+            print("The result is incorrect.")
+
+        G_diff = np.abs(G_ref - G_pdiv)
+        #vizu.vizualiseDenseMatrixFlat(G_diff, "G_diff")
+

@@ -15,14 +15,10 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import sys
 sys.path.append('../')
 
-import utils.vizualisation as vizu
-
 import numpy as np
 import math
-import time
 
 from mpi4py import MPI
-
 
 
 
@@ -252,14 +248,14 @@ def invert_partition(K_local, l_partitions_sizes, blocksize):
 
 
 
-def assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitions, blocksize):
+def assemble_subpartitions(K_local, l_partitions_sizes, active_process, current_step, blocksize):
     """
         Assemble two subpartitions in a diagonal manner.
 
         @param K_local:            local partition
         @param l_partitions_sizes: list of processes partition size
+        @param active_process:     active process
         @param current_step:       current reduction step
-        @param n_partitions:       number of partitions
         @param blocksize:          size of a block
     """
 
@@ -267,41 +263,68 @@ def assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitio
     comm_rank = comm.Get_rank()
 
     current_step_partition_stride = int(math.pow(2, current_step))
+    sending_process = active_process + current_step_partition_stride//2
 
-    for process_recv in range(0, n_partitions, int(math.pow(2, current_step))):
+    if comm_rank == active_process:
+        # If the process is receiving: we need to compute the start and stop index 
+        # of the local (and already allocated) container where the subpartition will be stored
+        start_block = l_partitions_sizes[active_process]
+        stop_block  = start_block + l_partitions_sizes[sending_process]
+
+        start_index = start_block*blocksize
+        stop_index  = stop_block*blocksize
         
-        process_send = process_recv + current_step_partition_stride//2
+        K_local[start_index:stop_index, start_index:stop_index] = comm.recv(source=sending_process, tag=2)
+    
+    elif comm_rank == sending_process:
+        # If the process is the sending process: it send its entire partition
+        comm.send(K_local, dest=active_process, tag=2)
 
-        if comm_rank == process_recv:
-            # If the process is receiving: we need to compute the start and stop index 
-            # of the local (and already allocated) container where the subpartition will be stored
-            start_block = l_partitions_sizes[process_recv]
-            stop_block  = start_block + l_partitions_sizes[process_send]
-
-            start_index = start_block*blocksize
-            stop_index  = stop_block*blocksize
-            
-            K_local[start_index:stop_index, start_index:stop_index] = comm.recv(source=process_send, tag=2)
-        
-        elif comm_rank == process_send:
-            # If the process is the sending process: it send its entire partition
-            comm.send(K_local, dest=process_recv, tag=2)
-
-        # Update the size of all the partitions that have been extended by
-        # receiving a subpartition.
-        l_partitions_sizes[process_recv] += l_partitions_sizes[process_send]
+    # Update the size of all the partitions that have been extended by
+    # receiving a subpartition.
+    l_partitions_sizes[active_process] += l_partitions_sizes[sending_process]
 
 
 
-def compute_update_term(K_local, B_local, l_partitions_sizes, current_step, n_partitions, blocksize):
+def compute_J(K_local, B, phi_1_size, blocksize):
+    """
+        Compute the J matrix.
+
+        @param K_local:               local partition
+        @param B:                     bridge matrix
+        @param phi_1_size:            size of phi_1
+        @param blocksize:             size of a block
+
+        @return: J11, J12, J21, J22
+    """
+
+    J = np.zeros((2*blocksize, 2*blocksize), dtype=K_local.dtype)
+
+    J[0:blocksize, 0:blocksize] = np.identity(blocksize, dtype=K_local.dtype)
+    J[0:blocksize, blocksize:2*blocksize] = K_local[phi_1_size:phi_1_size+blocksize , phi_1_size:phi_1_size+blocksize] @ B.T
+    J[blocksize:2*blocksize, 0:blocksize] = K_local[phi_1_size-blocksize:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B
+    J[blocksize:2*blocksize, blocksize:2*blocksize] = np.identity(blocksize, dtype=K_local.dtype)
+
+    J = np.linalg.inv(J)
+
+    J11 = J[0:blocksize, 0:blocksize]
+    J12 = J[0:blocksize, blocksize:2*blocksize]
+    J21 = J[blocksize:2*blocksize, 0:blocksize]
+    J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
+
+    return J11, J12, J21, J22
+
+
+
+def compute_update_term(K_local, B_local, l_partitions_sizes, active_process, current_step, blocksize):
     """
         Compute the update term between the two assembled subpartitions.
 
         @param K_local:            local partition
         @param B_local:            local bridges matrices
         @param l_partitions_sizes: list of processes partition size
+        @param active_process:     active process
         @param current_step:       current reduction step
-        @param n_partitions:       number of partitions
         @param blocksize:          size of a block
 
         @return: U
@@ -310,48 +333,47 @@ def compute_update_term(K_local, B_local, l_partitions_sizes, current_step, n_pa
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
 
-    print("Process: ", comm_rank, " is computing the update term at step: ", current_step)
-
     current_step_partition_stride = int(math.pow(2, current_step))
 
-    phi_1_size = l_partitions_sizes[comm_rank]
-    phi_2_size = l_partitions_sizes[comm_rank+current_step_partition_stride//2]
+    phi_2_blocksize = l_partitions_sizes[active_process + current_step_partition_stride//2]
+    phi_1_blocksize = l_partitions_sizes[active_process]-phi_2_blocksize
+
+    phi_1_size = phi_1_blocksize*blocksize
+    phi_2_size = phi_2_blocksize*blocksize
 
     assembled_system_size = phi_1_size + phi_2_size
 
     U = np.zeros((assembled_system_size, assembled_system_size), dtype=K_local.dtype)
 
-    #print(B_local[current_step-1])
+    B = B_local[current_step-1]
 
+    J11, J12, J21, J22 = compute_J(K_local, B, phi_1_size, blocksize)
 
-
-
-    # After computing the update term, we update the size of the local partition
-    # to match the summ of the two assembeld subpartitions
-    l_partitions_sizes[comm_rank] = assembled_system_size
-    print("Process: ", comm_rank, "l_partitions_sizes[comm_rank] = ", assembled_system_size)
+    U[0:phi_1_size, 0:phi_1_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B @ J12 @ K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size].T
+    U[0:phi_1_size, phi_1_size:assembled_system_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B @ J11 @ K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize].T
+    U[phi_1_size:assembled_system_size, 0:phi_1_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ B.T @ J22 @ K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size].T
+    U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ B.T @ J21 @ K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize].T
 
     return U
 
 
 
-
-def update_partition(K_local, U, current_step, n_reduction_steps, blocksize):
+def update_partition(K_local, U):
     """
         Update the local partition with the update term.
 
         @param K_local:           local partition
         @param U:                 update term
-        @param current_step:      current reduction step
-        @param n_reduction_steps: number of reduction steps
-        @param blocksize:         size of a block
     """
 
-    pass
+    start_index = 0
+    stop_index  = U.shape[0]
+
+    K_local[start_index:stop_index, start_index:stop_index] = K_local[start_index:stop_index, start_index:stop_index] + U
 
 
 
-def pdiv(A, blocksize):
+def pdiv_aggregate(A, blocksize):
     """
         Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
         
@@ -377,6 +399,7 @@ def pdiv(A, blocksize):
     l_start_blockrow, l_partitions_sizes = divide_matrix(A, n_partitions, blocksize)
     K_local, B_local = allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize)
 
+    # Partitioning
     if comm_rank == 0:
         K_i, B_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
         send_partitions(K_i, K_local)
@@ -384,34 +407,22 @@ def pdiv(A, blocksize):
     else:
         recv_partitions(K_local, l_partitions_sizes, blocksize)
         recv_bridges(B_local, n_partitions, n_reduction_steps)
-    
+
     # Inversion of the local partition
     invert_partition(K_local, l_partitions_sizes, blocksize)
 
-    #vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local")
-    """ if comm_rank == 0:
-            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local") """
-
     # Reduction steps
     for current_step in range(1, n_reduction_steps+1):
-    #for current_step in range(1, 2):
-        """ if comm_rank == 0:
-            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local before assemble") """
+        for active_process in range(0, n_partitions, int(math.pow(2, current_step))):
 
-        # Processes recv and send their subpartitions
-        assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitions, blocksize)
+            # Processes recv and send their subpartitions
+            assemble_subpartitions(K_local, l_partitions_sizes, active_process, current_step, blocksize)
 
-        # The active processes compute the update term and update their local partition
-        for process_update in range(0, n_partitions, int(math.pow(2, current_step))):
-            if comm_rank == process_update:
-                U = compute_update_term(K_local, B_local, l_partitions_sizes, current_step, n_partitions, blocksize)
-                #update_partition(K_local, U, current_step, n_reduction_steps, blocksize)
-
-        """ if comm_rank == 0:
-            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local after update") """
-    
+            # The active processes compute the update term and update their local partition
+            if comm_rank == active_process:
+                U = compute_update_term(K_local, B_local, l_partitions_sizes, active_process, current_step, blocksize)
+                update_partition(K_local, U)
 
 
-
-    return A
+    return K_local
 

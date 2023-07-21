@@ -275,13 +275,8 @@ def assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitio
         if comm_rank == process_recv:
             # If the process is receiving: we need to compute the start and stop index 
             # of the local (and already allocated) container where the subpartition will be stored
-            start_block = 0
-            for i in range(process_recv, process_send, 1):
-                start_block += l_partitions_sizes[i]
-
-            stop_block = start_block
-            for i in range(current_step_partition_stride//2):
-                stop_block += l_partitions_sizes[process_send+i]
+            start_block = l_partitions_sizes[process_recv]
+            stop_block  = start_block + l_partitions_sizes[process_send]
 
             start_index = start_block*blocksize
             stop_index  = stop_block*blocksize
@@ -292,22 +287,52 @@ def assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitio
             # If the process is the sending process: it send its entire partition
             comm.send(K_local, dest=process_recv, tag=2)
 
+        # Update the size of all the partitions that have been extended by
+        # receiving a subpartition.
+        l_partitions_sizes[process_recv] += l_partitions_sizes[process_send]
 
 
-def compute_update_term(K_local, B_local, current_step, n_reduction_steps, blocksize):
+
+def compute_update_term(K_local, B_local, l_partitions_sizes, current_step, n_partitions, blocksize):
     """
         Compute the update term between the two assembled subpartitions.
 
-        @param K_local:           local partition
-        @param B_local:           local bridges matrices
-        @param current_step:      current reduction step
-        @param n_reduction_steps: number of reduction steps
-        @param blocksize:         size of a block
+        @param K_local:            local partition
+        @param B_local:            local bridges matrices
+        @param l_partitions_sizes: list of processes partition size
+        @param current_step:       current reduction step
+        @param n_partitions:       number of partitions
+        @param blocksize:          size of a block
 
         @return: U
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    print("Process: ", comm_rank, " is computing the update term at step: ", current_step)
+
+    current_step_partition_stride = int(math.pow(2, current_step))
+
+    phi_1_size = l_partitions_sizes[comm_rank]
+    phi_2_size = l_partitions_sizes[comm_rank+current_step_partition_stride//2]
+
+    assembled_system_size = phi_1_size + phi_2_size
+
+    U = np.zeros((assembled_system_size, assembled_system_size), dtype=K_local.dtype)
+
+    #print(B_local[current_step-1])
+
+
+
+
+    # After computing the update term, we update the size of the local partition
+    # to match the summ of the two assembeld subpartitions
+    l_partitions_sizes[comm_rank] = assembled_system_size
+    print("Process: ", comm_rank, "l_partitions_sizes[comm_rank] = ", assembled_system_size)
+
+    return U
+
 
 
 
@@ -369,12 +394,21 @@ def pdiv(A, blocksize):
 
     # Reduction steps
     for current_step in range(1, n_reduction_steps+1):
+    #for current_step in range(1, 2):
+        """ if comm_rank == 0:
+            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local before assemble") """
+
+        # Processes recv and send their subpartitions
         assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitions, blocksize)
-        #U = compute_update_term(K_local, B_local, current_step, n_reduction_steps, blocksize)
-        #update_partition(K_local, U, current_step, n_reduction_steps, blocksize)
+
+        # The active processes compute the update term and update their local partition
+        for process_update in range(0, n_partitions, int(math.pow(2, current_step))):
+            if comm_rank == process_update:
+                U = compute_update_term(K_local, B_local, l_partitions_sizes, current_step, n_partitions, blocksize)
+                #update_partition(K_local, U, current_step, n_reduction_steps, blocksize)
 
         """ if comm_rank == 0:
-            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local") """
+            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local after update") """
     
 
 

@@ -532,6 +532,15 @@ def pdiv_aggregate(A: np.ndarray,
     ------
     ValueError
         If the number of processes is not a power of 2.
+
+    Notes
+    -----
+    The PDIV (Pairwise) algorithm is a divide and conquer approch to compute
+    the inverse of a matrix. The matrix is divided into submatrices, distributed
+    among the processes, inverted locally and updated thourgh a series of reduction.
+
+    This implementation agregates and update the inverted sub-partitions in a 
+    divide and conquer manner. 
     """
 
     # MPI initialization

@@ -17,10 +17,8 @@ import algorithms.hpr_serial    as hprs
 import algorithms.hpr_parallel  as hprp
 import algorithms.bcr_serial    as bcrs
 import algorithms.bcr_parallel  as bcrp
-import algorithms.nested_dissection as nd
-import algorithms.pdiv_serial   as pdiv_s
+import algorithms.depreciated.pdiv_serial   as pdiv_s
 import algorithms.pdiv_aggregate as pdiv_a
-import algorithms.smw           as smw
 
 import verifyResults as verif
 

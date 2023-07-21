@@ -83,15 +83,15 @@ def allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduct
     for current_step in range(n_reduction_steps, -1, -1):
         
         # Size of the system that will be assembled at this step (equal to the stride)
-        current_step_partition_blocksize = int(math.pow(2, current_step))
+        current_step_partition_stride = int(math.pow(2, current_step))
 
         # Look at each processes that will perform computations at this step
-        for process in range(0, n_partitions, current_step_partition_blocksize):
-            if process == comm_rank:
+        for process_i in range(0, n_partitions, current_step_partition_stride):
+            if process_i == comm_rank:
                 if K_havent_been_allocated:
                     # Loop through the blocks that will be assembled at this step
                     # to compute the needed memory for the local K matrix
-                    for i in range(process, process+current_step_partition_blocksize):
+                    for i in range(process_i, process_i+current_step_partition_stride):
                         K_number_of_blocks_to_allocate += l_partitions_sizes[i]
                     K_havent_been_allocated = False
 
@@ -102,8 +102,7 @@ def allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduct
     K_local = np.zeros((K_number_of_blocks_to_allocate*blocksize, K_number_of_blocks_to_allocate*blocksize), dtype=A.dtype)
 
     # Allocate memory for the local B bridges factors
-    B_local = np.zeros((B_number_of_blocks_to_allocate, blocksize), dtype=A.dtype)
-
+    B_local = [np.zeros(blocksize, dtype=A.dtype) for i in range(B_number_of_blocks_to_allocate)]
 
     return K_local, B_local
                 
@@ -178,69 +177,120 @@ def recv_partitions(K_local, l_partitions_sizes, blocksize):
 
 
 
-def send_bridges(B_i, n_partitions, n_reduction_steps, blocksize):
+def send_bridges(B_i, B_local, n_partitions, n_reduction_steps):
     """
         Send the bridges to the correct process.
 
         @param B_i:               list of the bridges
-        @param n_reduction_steps: number of reduction steps
-        @param blocksize:         size of a block
-    """
-
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-
-    bridges_to_send = [[] for i in range(n_reduction_steps)]
-    to_wich_process = 0
-
-    print("Process", comm_rank, " bridges_to_send: ", bridges_to_send)
-
-    for current_step in range(1, n_reduction_steps+1, 1):
-        
-        current_step_partition_blocksize = int(math.pow(2, current_step))
-
-        for process in range(0, n_partitions, current_step_partition_blocksize):
-
-            print("Process", comm_rank, " current_step: ", current_step, " current_step_partition_blocksize: ", current_step_partition_blocksize, " process: ", process)
-
-
-
-def recv_bridges(B_local, n_reduction_steps, blocksize):
-    """
-        Receive the bridges matrices from the master process.
-
         @param B_local:           local bridge matrix
         @param n_reduction_steps: number of reduction steps
         @param blocksize:         size of a block
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+
+    local_bridge_index = 0
+
+    for current_step in range(1, n_reduction_steps+1, 1):
+        
+        current_step_partition_stride = int(math.pow(2, current_step))
+
+        for process_i in range(0, n_partitions, current_step_partition_stride):
+            
+            bridge_index = process_i+current_step_partition_stride//2-1
+
+            if process_i == 0:
+                B_local[local_bridge_index] = B_i[bridge_index]
+                local_bridge_index += 1
+            else:
+                comm.send(B_i[bridge_index], dest=process_i, tag=1)
 
 
 
-def invert_partition(K_local, blocksize):
+def recv_bridges(B_local, n_partitions, n_reduction_steps):
+    """
+        Receive the bridges matrices from the master process.
+
+        @param B_local:           local bridge matrix
+        @param n_partitions:      number of partitions
+        @param n_reduction_steps: number of reduction steps
+    """
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    local_bridge_index = 0
+
+    for current_step in range(1, n_reduction_steps+1, 1):
+        
+        current_step_partition_stride = int(math.pow(2, current_step))
+
+        for process_i in range(0, n_partitions, current_step_partition_stride):
+
+            if process_i == comm_rank:
+                B_local[local_bridge_index] = comm.recv(source=0, tag=1)
+                local_bridge_index += 1
+
+
+
+def invert_partition(K_local, l_partitions_sizes, blocksize):
     """
         Invert the local partition.
 
         @param K_local:   local partition
+        @param l_partitions_sizes: list of processes partition size
         @param blocksize: size of a block
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    start_index = 0
+    stop_index  = l_partitions_sizes[comm_rank]*blocksize
+
+    K_local[start_index:stop_index, start_index:stop_index] = np.linalg.inv(K_local[start_index:stop_index, start_index:stop_index])
 
 
 
-def assemble_subpartitions(K_local, current_step, n_reduction_steps, blocksize):
+def assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitions, blocksize):
     """
         Assemble two subpartitions in a diagonal manner.
 
-        @param K_local:           local partition
-        @param current_step:      current reduction step
-        @param n_reduction_steps: number of reduction steps
-        @param blocksize:         size of a block
+        @param K_local:            local partition
+        @param l_partitions_sizes: list of processes partition size
+        @param current_step:       current reduction step
+        @param n_partitions:       number of partitions
+        @param blocksize:          size of a block
     """
 
-    pass
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    current_step_partition_stride = int(math.pow(2, current_step))
+
+    for process_recv in range(0, n_partitions, int(math.pow(2, current_step))):
+        
+        process_send = process_recv + current_step_partition_stride//2
+
+        if comm_rank == process_recv:
+            # If the process is receiving: we need to compute the start and stop index 
+            # of the local (and already allocated) container where the subpartition will be stored
+            start_block = 0
+            for i in range(process_recv, process_send, 1):
+                start_block += l_partitions_sizes[i]
+
+            stop_block = start_block
+            for i in range(current_step_partition_stride//2):
+                stop_block += l_partitions_sizes[process_send+i]
+
+            start_index = start_block*blocksize
+            stop_index  = stop_block*blocksize
+            
+            K_local[start_index:stop_index, start_index:stop_index] = comm.recv(source=process_send, tag=2)
+        
+        elif comm_rank == process_send:
+            # If the process is the sending process: it send its entire partition
+            comm.send(K_local, dest=process_recv, tag=2)
 
 
 
@@ -305,27 +355,29 @@ def pdiv(A, blocksize):
     if comm_rank == 0:
         K_i, B_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
         send_partitions(K_i, K_local)
-        send_bridges(B_i, n_partitions, n_reduction_steps, blocksize)
+        send_bridges(B_i, B_local, n_partitions, n_reduction_steps)
     else:
         recv_partitions(K_local, l_partitions_sizes, blocksize)
-        #recv_bridges(B_local, n_reduction_steps, blocksize)
+        recv_bridges(B_local, n_partitions, n_reduction_steps)
+    
+    # Inversion of the local partition
+    invert_partition(K_local, l_partitions_sizes, blocksize)
 
     #vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local")
-    #vizu.vizualiseDenseMatrixFlat(B_local, f"Process: {comm_rank}, B_local")
-
-    """ 
-    # Inversion of the local partition
-    invert_partition(K_local, blocksize)
-
+    """ if comm_rank == 0:
+            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local") """
 
     # Reduction steps
-    for current_step in range(0, n_reduction_steps):
-        assemble_subpartitions(K_local, current_step, n_reduction_steps, blocksize)
-        U = compute_update_term(K_local, B_local, current_step, n_reduction_steps, blocksize)
-        update_partition(K_local, U, current_step, n_reduction_steps, blocksize) """
+    for current_step in range(1, n_reduction_steps+1):
+        assemble_subpartitions(K_local, l_partitions_sizes, current_step, n_partitions, blocksize)
+        #U = compute_update_term(K_local, B_local, current_step, n_reduction_steps, blocksize)
+        #update_partition(K_local, U, current_step, n_reduction_steps, blocksize)
+
+        """ if comm_rank == 0:
+            vizu.vizualiseDenseMatrixFlat(K_local, f"Process: {comm_rank}, K_local") """
     
+
+
 
     return A
 
-
-#assembly_process = [i for i in range(0, n_partitions, int(math.pow(2, current_step)))]

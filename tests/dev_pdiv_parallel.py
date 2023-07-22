@@ -8,11 +8,9 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 import sys
 sys.path.append('../')
 
-import utils.generateMatrices    as genMat
-import utils.transformMatrices   as transMat
-import utils.vizualisation       as vizu
-
-import algorithms.pdiv_aggregate as pdiv_a
+from sinv import utils
+from sinv import algorithms
+#from sinv.algorithms import pdiv_aggregate as pdiv_a 
 
 import numpy as np
 import math

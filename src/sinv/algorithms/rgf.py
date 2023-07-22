@@ -13,9 +13,30 @@ import time
 from typing import Tuple
 
 
-def rgf_leftToRight_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
-    """
-        RGF algorithm performing block-tridiagonal inversion of the given matrix.
+def rgf_leftToRight_Gr(A_bloc_diag: np.ndarray, 
+                       A_bloc_upper: np.ndarray, 
+                       A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    """ RGF algorithm performing block-tridiagonal inversion of the given matrix.
+
+    Parameters
+    ----------
+    A_bloc_diag : np.ndarray
+        Block-diagonal elements of the matrix to invert.
+    A_bloc_upper : np.ndarray
+        Upper block-diagonal elements of the matrix to invert.
+    A_bloc_lower : np.ndarray
+        Lower block-diagonal elements of the matrix to invert.
+
+    Returns
+    -------
+    G_diag_blocks : np.ndarray
+        Diagonal blocks of the inverse matrix.
+    G_upper_blocks : np.ndarray
+        Upper diagonal blocks of the inverse matrix.
+    G_lower_blocks : np.ndarray
+        Lower diagonal blocks of the inverse matrix.
+    timing : float
+        Time taken by the algorithm.
     """
     nblocks = A_bloc_diag.shape[0]
     blockSize = A_bloc_diag.shape[1]
@@ -56,9 +77,30 @@ def rgf_leftToRight_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc
 
 
 
-def rgf_rightToLeft_Gr(A_bloc_diag: np.ndarray, A_bloc_upper: np.ndarray, A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
-    """
-        RGF algorithm performing block-tridiagonal inversion of the given matrix.
+def rgf_rightToLeft_Gr(A_bloc_diag: np.ndarray, 
+                       A_bloc_upper: np.ndarray, 
+                       A_bloc_lower: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    """ RGF algorithm performing block-tridiagonal inversion of the given matrix.
+    
+    Parameters
+    ----------
+    A_bloc_diag : np.ndarray
+        Block-diagonal elements of the matrix to invert.
+    A_bloc_upper : np.ndarray
+        Upper block-diagonal elements of the matrix to invert.
+    A_bloc_lower : np.ndarray
+        Lower block-diagonal elements of the matrix to invert.
+
+    Returns
+    -------
+    G_diag_blocks : np.ndarray
+        Diagonal blocks of the inverse matrix.
+    G_upper_blocks : np.ndarray
+        Upper diagonal blocks of the inverse matrix.
+    G_lower_blocks : np.ndarray
+        Lower diagonal blocks of the inverse matrix.
+    timing : float
+        Time taken by the algorithm.
     """
     nblocks = A_bloc_diag.shape[0]
     blockSize = A_bloc_diag.shape[1]

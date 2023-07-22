@@ -7,9 +7,8 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import utils.vizualisation as vizu
-
-import algorithms.bcr_serial as bcrs
+from sinv import utils
+from sinv import algorithms
 
 import numpy as np
 import time

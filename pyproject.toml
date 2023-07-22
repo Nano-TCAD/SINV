@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SINV"
+version = "0.1"
+authors = [{ name = "Vincent Maillou", email = "vmaillou@iis.ee.ethz.ch" }]
+description = "Implementations of selected inversion algorithms"
+readme = "README.MD"
+requires-python = ">=3.8"
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "mpi4py",
+]
+
+[project.urls]
+repository = "https://github.com/Nano-TCAD/SINV"
+
+[tool.setuptools.dynamic]
+version = { attr = "sinv" }

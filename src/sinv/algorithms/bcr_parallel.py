@@ -8,8 +8,7 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import utils.vizualisation       as vizu
-import utils.transformMatrices   as transMat
+from sinv import utils
 
 import numpy as np
 import math

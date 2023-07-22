@@ -247,7 +247,7 @@ def inverse_hybrid(A: np.ndarray, blocksize: int):
 
 
         # Compute the BCR reduction of the aggregated system
-        G_bcr = bcrs.inverse_bcr(A_bcr, blocksize)
+        G_bcr = bcrs.inverse_bcr_serial(A_bcr, blocksize)
 
 
         # Communicate the inverse of the reduced system back to the processes

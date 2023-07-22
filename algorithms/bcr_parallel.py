@@ -19,7 +19,7 @@ from mpi4py import MPI
 
 
 
-def inverse_bcr(A, blocksize):
+def inverse_bcr_parallel(A, blocksize):
     """
         Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
     """

@@ -215,7 +215,7 @@ def produce_bcr(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, i_bc
 
 
 
-def inverse_bcr(A: np.ndarray, blocksize: int) -> np.ndarray:
+def inverse_bcr_serial(A: np.ndarray, blocksize: int) -> np.ndarray:
     """
         Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
     """

@@ -20,7 +20,7 @@ import algorithms.bcr_parallel  as bcrp
 import algorithms.depreciated.pdiv_serial   as pdiv_s
 import algorithms.pdiv_aggregate as pdiv_a
 
-import verifyResults as verif
+import utils.verifyResults as verif
 
 import numpy as np
 import time
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     comm.barrier()
     # .1 Serial BCR
     if rank == 0:
-        G_bcr_parallel_inverse = bcrs.inverse_bcr(A, blocksize)
+        G_bcr_parallel_inverse = bcrs.inverse_bcr_serial(A, blocksize)
 
         G_bcr_parallel_inverse_diag  = np.zeros((size, size), dtype=np.complex128)
         G_bcr_parallel_inverse_upper = np.zeros((size, size), dtype=np.complex128)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     
     comm.barrier()
     # .2 Parallel BCR
-    G_bcr_parallel_inverse = bcrp.inverse_bcr(A, blocksize)
+    G_bcr_parallel_inverse = bcrp.inverse_bcr_parallel(A, blocksize)
 
     if rank == 0:
         #vizu.vizualiseDenseMatrixFlat(G_bcr_parallel_inverse, "G_bcr_inverse")
@@ -274,34 +274,3 @@ if __name__ == "__main__":
                                                                           G_pdiv_serial_diag, 
                                                                           G_pdiv_serial_upper, 
                                                                           G_pdiv_serial_lower))
-
-
-    comm.barrier()
-    # .1 PDIV
-    if rank == 0:
-        G_pdiv_serial = pdiv_a.pdiv_aggregate(A, blocksize)
-
-        G_pdiv_serial_diag = np.zeros((size, size), dtype=np.complex128)
-        G_pdiv_serial_upper = np.zeros((size, size), dtype=np.complex128)
-        G_pdiv_serial_lower = np.zeros((size, size), dtype=np.complex128)
-
-        G_pdiv_serial_diag\
-        , G_pdiv_serial_upper\
-        , G_pdiv_serial_lower = convMat.convertDenseToBlocksTriDiagStorage(G_pdiv_serial, blocksize)
-
-        print("PDIV parallel: Gr validation: ", verif.verifResultsBlocksTri(GreenRetarded_refsol_block_diag, 
-                                                                          GreenRetarded_refsol_block_upper, 
-                                                                          GreenRetarded_refsol_block_lower, 
-                                                                          G_pdiv_serial_diag, 
-                                                                          G_pdiv_serial_upper, 
-                                                                          G_pdiv_serial_lower))
-    
-
-    # ---------------------------------------------------------------------------------------------
-    # X. Data plotting
-    # ---------------------------------------------------------------------------------------------
-    #if rank == 0:
-        #vizu.showBenchmark(greenRetardedBenchtiming, size/blocksize, blocksize, label="Retarded Green's function")
-
-        #vizu.showBenchmark(greenLesserBenchtiming, size/blocksize, blocksize, label="Lesser Green's function")
-

@@ -2,7 +2,7 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-07
 
-PDIV (Parallel Divide & Conquer) algorithm:
+PDIV (P-Division) algorithm:
 @reference: https://doi.org/10.1063/1.2748621
 @reference: https://doi.org/10.1063/1.3624612
 
@@ -626,6 +626,4 @@ def pdiv_aggregate(A: np.ndarray,
                 U = compute_update_term(K_local, B_local, l_partitions_sizes, active_process, current_step, blocksize)
                 update_partition(K_local, U)
 
-
     return K_local
-

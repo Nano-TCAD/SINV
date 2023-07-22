@@ -9,8 +9,7 @@ import sys
 sys.path.append('../')
 
 from sinv import utils
-from sinv import algorithms
-#from sinv.algorithms import pdiv_aggregate as pdiv_a 
+from sinv import algorithms as alg
 
 import numpy as np
 import math
@@ -36,14 +35,14 @@ if __name__ == '__main__':
     seed = 63
 
     # Retarded Green's function initial matrix
-    A_init = genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
-    A_init = transMat.transformToSymmetric(A_init)
+    A_init = utils.genMat.generateBandedDiagonalMatrix(size, bandwidth, isComplex, seed)
+    A_init = utils.transMat.transformToSymmetric(A_init)
 
     G_ref = np.linalg.inv(A_init)
 
 
     # Compute the retarded Green's function with the parallel P-Division algorithm
-    G_pdiv = pdiv_a.pdiv_aggregate(A_init, blocksize)
+    G_pdiv = alg.pdiv_a.pdiv_aggregate(A_init, blocksize)
 
 
     if comm_rank == 0:

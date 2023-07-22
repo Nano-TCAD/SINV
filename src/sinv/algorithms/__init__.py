@@ -1,15 +1,14 @@
 # Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
-from .rgf import rgf_leftToRight_Gr
-from .rgf import rgf_rightToLeft_Gr
-from .rgf2sided import rgf2sided_Gr
+from . import rgf 
+from . import rgf2sided as rgf2s
 
-from .hpr_serial import hpr_serial
-from .hpr_parallel import inverse_hybrid
+from . import hpr_serial   as hpr_s
+from . import hpr_parallel as hpr_p
 
-from .bcr_serial import inverse_bcr_serial
-from .bcr_parallel import inverse_bcr_parallel
+from . import bcr_serial   as bcr_s
+from . import bcr_parallel as bcr_p
 
-from .pdiv_aggregate import pdiv_aggregate
-from .pdiv_localmap import pdiv_localmap
+from . import pdiv_aggregate as pdiv_a
+from . import pdiv_localmap  as pdiv_lm
 

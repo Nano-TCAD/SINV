@@ -19,6 +19,56 @@ from mpi4py import MPI
 
 
 
+def check_input(A: np.ndarray, 
+                blocksize: int, 
+                comm_size: int):
+    """ Check the validity of the inputs parameters.
+
+    Parameters
+    ----------
+    A : numpy matrix
+        matrix to invert
+    blocksize : int
+        size of a block
+    comm_size : int
+        number of processes
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        The number of processes must be a power of 2.
+    ValueError
+        The matrix size must be a multiple of the blocksize.
+    ValueError
+        The blocksize must be smaller than the matrix size.
+    ValueError
+        The blocksize must be greater than 0.
+    ValueError
+        The number of blocks must be greater than the number of processes.
+    """
+
+    if not math.log2(comm_size).is_integer():
+        raise ValueError("The number of processes must be a power of 2.")
+    
+    if A.shape[0] % blocksize != 0:
+        raise ValueError("The matrix size must be a multiple of the blocksize.")
+    
+    if blocksize > A.shape[0]:
+        raise ValueError("The blocksize must be smaller than the matrix size.")
+    
+    if blocksize < 1:
+        raise ValueError("The blocksize must be greater than 0.")
+    
+    nblocks = A.shape[0] // blocksize
+    if nblocks < comm_size:
+        raise ValueError("The number of blocks must be greater than the number of processes.")
+    
+
+
 def divide_matrix(A: np.ndarray, 
                   n_partitions: int, 
                   blocksize: int) -> [list, list]:
@@ -527,11 +577,6 @@ def pdiv_aggregate(A: np.ndarray,
     -------
     K_local : numpy matrix
         local partition
-        
-    Raises
-    ------
-    ValueError
-        If the number of processes is not a power of 2.
 
     Notes
     -----
@@ -548,10 +593,8 @@ def pdiv_aggregate(A: np.ndarray,
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
 
-    if not math.log2(comm_size).is_integer():
-        raise ValueError("The number of processes must be a power of 2.")
-
-
+    check_input(A, blocksize, comm_size)
+    
     # Preprocessing
     n_partitions      = comm_size
     n_reduction_steps = int(math.log2(n_partitions))

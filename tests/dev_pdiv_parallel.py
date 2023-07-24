@@ -26,8 +26,8 @@ if __name__ == '__main__':
     comm_size = comm.Get_size()
 
     # Problem parameters
-    size = 20
-    blocksize = 2
+    size = 1000
+    blocksize = 10
     density = blocksize**2/size**2
     bandwidth = np.ceil(blocksize/2)
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     if comm_rank == 0:
         # Check the correctness of the result
-        result = np.allclose(G_ref, G_pdiv, rtol=1e-05, atol=1e-08)
+        result = np.allclose(G_ref, G_pdiv)
         if result:
             print("The result is correct.")
         else:

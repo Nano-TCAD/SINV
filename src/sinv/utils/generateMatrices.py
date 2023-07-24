@@ -31,7 +31,7 @@ def generateDenseMatrix(size, isComplex=False, seed=None):
         Generate a dense matrix of shape: (size x size) filled with random numbers.
     """
 
-    return generateRandomNumpyMat(size, seed, isComplex)
+    return generateRandomNumpyMat(size, isComplex, seed)
 
 
 
@@ -41,7 +41,7 @@ def generateSparseMatrix(size, density, isComplex=False, seed=None):
         filled with random numbers.
     """
 
-    A = generateRandomNumpyMat(size, seed, isComplex)
+    A = generateRandomNumpyMat(size, isComplex, seed)
 
     A[A < (1-density)] = 0
 
@@ -55,7 +55,7 @@ def generateBandedDiagonalMatrix(size, bandwidth, isComplex=False, seed=None):
         filled with random numbers.
     """
 
-    A = generateRandomNumpyMat(size, seed, isComplex)
+    A = generateRandomNumpyMat(size, isComplex, seed)
     
     for i in range(size):
         for j in range(size):

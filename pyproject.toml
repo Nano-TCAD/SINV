@@ -8,7 +8,7 @@ version = "0.1"
 authors = [{ name = "Vincent Maillou", email = "vmaillou@iis.ee.ethz.ch" }]
 description = "Implementations of selected inversion algorithms"
 readme = "README.MD"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "BSD-3-Clause"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -20,6 +20,8 @@ dependencies = [
     "scipy",
     "matplotlib",
     "mpi4py",
+    "pytest",
+    "pytest-mpi",
 ]
 
 [project.urls]

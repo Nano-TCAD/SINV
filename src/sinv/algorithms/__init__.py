@@ -1,7 +1,8 @@
 # Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
-from . import rgf 
-from . import rgf2sided as rgf2s
+from .rgf import rgf_ltr    as rgfl
+from .rgf import rgf_rtl    as rgfr 
+from .rgf import rgf_2sided as rgf2s
 
 from . import hpr_serial   as hpr_s
 from . import hpr_parallel as hpr_p

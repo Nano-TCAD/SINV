@@ -101,10 +101,10 @@ Implementations of several selected-blocks-inversion algorithms. These algorithm
   <tr>
     <td class="tg-0pky" rowspan="3">PDIV / PairWise</td>
     <td class="tg-f8tv">mincom</td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
   </tr>
   <tr>
     <td class="tg-f8tv">aggregate</td>

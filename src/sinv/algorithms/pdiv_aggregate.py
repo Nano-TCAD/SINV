@@ -115,7 +115,7 @@ def allocate_memory_for_partitions(A: np.ndarray,
                                    l_partitions_sizes: list, 
                                    n_partitions: int, 
                                    n_reduction_steps: int, 
-                                   blocksize: int) -> [np.ndarray, list]:
+                                   blocksize: int) -> [np.ndarray, list, list]:
     """ Allocate the needed memory to store the current partition of the
     system at each steps of the assembly process.
 
@@ -136,8 +136,10 @@ def allocate_memory_for_partitions(A: np.ndarray,
     -------
     K_local : numpy matrix
         local partition
-    B_local : list
-        list of the local bridges matrices
+    Bu_local : list
+        list of the local upper bridges matrices
+    Bl_local : list
+        list of the local lower bridges matrices
     """
 
     comm = MPI.COMM_WORLD
@@ -172,18 +174,20 @@ def allocate_memory_for_partitions(A: np.ndarray,
     K_local = np.zeros((K_number_of_blocks_to_allocate*blocksize, K_number_of_blocks_to_allocate*blocksize), dtype=A.dtype)
 
     # Allocate memory for the local B bridges factors
-    B_local = [np.zeros(blocksize, dtype=A.dtype) for i in range(B_number_of_blocks_to_allocate)]
+    Bu_local = [np.zeros(blocksize, dtype=A.dtype) for i in range(B_number_of_blocks_to_allocate)]
+    Bl_local = [np.zeros(blocksize, dtype=A.dtype) for i in range(B_number_of_blocks_to_allocate)]
 
-    return K_local, B_local
+    return K_local, Bu_local, Bl_local
                 
 
 
 def partition_subdomain(A: np.ndarray, 
                         l_start_blockrow: list, 
                         l_partitions_sizes: list, 
-                        blocksize: int) -> [np.ndarray, list]:
-    """ Partition the matrix A into K_i submatrices and B_i bridge matrices
-    that stores the connecting elements between the submatrices.
+                        blocksize: int) -> [np.ndarray, list, list]:
+    """ Partition the matrix A into K_i submatrices, Bu_i (upper) and Bl_i 
+    (lower) bridge matrices that stores the connecting elements between 
+    the submatrices.
     
     Parameters
     ----------
@@ -200,12 +204,15 @@ def partition_subdomain(A: np.ndarray,
     -------
     K_i : list
         list of the partitions
-    B_i : list
-        list of the bridges
+    Bu_i : list
+        list of the upper bridges matrices
+    Bl_i : list
+        list of the lower bridges matrices
     """
 
-    K_i = []
-    B_i = []
+    K_i  = []
+    Bu_i = []
+    Bl_i = []
 
     for i in range(len(l_start_blockrow)):
         start_index = l_start_blockrow[i]*blocksize
@@ -214,9 +221,10 @@ def partition_subdomain(A: np.ndarray,
         K_i.append(A[start_index:stop_index, start_index:stop_index])
 
         if i < len(l_start_blockrow)-1:
-            B_i.append(A[stop_index-blocksize:stop_index, stop_index:stop_index+blocksize])
+            Bu_i.append(A[stop_index-blocksize:stop_index, stop_index:stop_index+blocksize])
+            Bl_i.append(A[stop_index:stop_index+blocksize, stop_index-blocksize:stop_index])
 
-    return K_i, B_i
+    return K_i, Bu_i, Bl_i
 
 
 
@@ -439,7 +447,8 @@ def assemble_subpartitions(K_local: np.ndarray,
 
 
 def compute_J(K_local: np.ndarray, 
-              B: np.ndarray, 
+              Bu: np.ndarray, 
+              Bl: np.ndarray, 
               phi_1_size: int, 
               blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """ Compute the J matrix.
@@ -448,7 +457,9 @@ def compute_J(K_local: np.ndarray,
     ----------
     K_local : numpy matrix
         local partition
-    B : numpy matrix
+    Bu : numpy matrix
+        bridge matrix
+    Bl : numpy matrix
         bridge matrix
     phi_1_size : int
         size of phi_1
@@ -470,8 +481,8 @@ def compute_J(K_local: np.ndarray,
     J = np.zeros((2*blocksize, 2*blocksize), dtype=K_local.dtype)
 
     J[0:blocksize, 0:blocksize] = np.identity(blocksize, dtype=K_local.dtype)
-    J[0:blocksize, blocksize:2*blocksize] = K_local[phi_1_size:phi_1_size+blocksize , phi_1_size:phi_1_size+blocksize] @ B.T
-    J[blocksize:2*blocksize, 0:blocksize] = K_local[phi_1_size-blocksize:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B
+    J[0:blocksize, blocksize:2*blocksize] = K_local[phi_1_size:phi_1_size+blocksize , phi_1_size:phi_1_size+blocksize] @ Bl
+    J[blocksize:2*blocksize, 0:blocksize] = K_local[phi_1_size-blocksize:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu
     J[blocksize:2*blocksize, blocksize:2*blocksize] = np.identity(blocksize, dtype=K_local.dtype)
 
     J = np.linalg.inv(J)
@@ -481,12 +492,14 @@ def compute_J(K_local: np.ndarray,
     J21 = J[blocksize:2*blocksize, 0:blocksize]
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
 
+
     return J11, J12, J21, J22
 
 
 
 def compute_update_term(K_local: np.ndarray, 
-                        B_local: np.ndarray, 
+                        Bu_local: np.ndarray, 
+                        Bl_local: np.ndarray, 
                         l_partitions_sizes: list, 
                         active_process: int, 
                         current_step: int, 
@@ -497,8 +510,10 @@ def compute_update_term(K_local: np.ndarray,
     ----------
     K_local : numpy matrix
         local partition
-    B_local : numpy matrix
-        local bridges matrices
+    Bu_local : numpy matrix
+        local uppers bridges matrices
+    Bl_local : numpy matrix
+        local lower bridges matrices
     l_partitions_sizes : list
         list of processes partition size
     active_process : int
@@ -526,14 +541,15 @@ def compute_update_term(K_local: np.ndarray,
 
     U = np.zeros((assembled_system_size, assembled_system_size), dtype=K_local.dtype)
 
-    B = B_local[current_step-1]
+    Bu = Bu_local[current_step-1]
+    Bl = Bl_local[current_step-1]
 
-    J11, J12, J21, J22 = compute_J(K_local, B, phi_1_size, blocksize)
+    J11, J12, J21, J22 = compute_J(K_local, Bu, Bl, phi_1_size, blocksize)
 
-    U[0:phi_1_size, 0:phi_1_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B @ J12 @ K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size].T
-    U[0:phi_1_size, phi_1_size:assembled_system_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ B @ J11 @ K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize].T
-    U[phi_1_size:assembled_system_size, 0:phi_1_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ B.T @ J22 @ K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size].T
-    U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ B.T @ J21 @ K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize].T
+    U[0:phi_1_size, 0:phi_1_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J12 @ K_local[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
+    U[0:phi_1_size, phi_1_size:assembled_system_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J11 @ K_local[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
+    U[phi_1_size:assembled_system_size, 0:phi_1_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J22 @ K_local[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
+    U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J21 @ K_local[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
 
     return U
 
@@ -600,16 +616,18 @@ def pdiv_aggregate(A: np.ndarray,
     n_reduction_steps = int(math.log2(n_partitions))
 
     l_start_blockrow, l_partitions_sizes = divide_matrix(A, n_partitions, blocksize)
-    K_local, B_local = allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize)
+    K_local, Bu_local, Bl_local = allocate_memory_for_partitions(A, l_partitions_sizes, n_partitions, n_reduction_steps, blocksize)
 
     # Partitioning
     if comm_rank == 0:
-        K_i, B_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
+        K_i, Bu_i, Bl_i = partition_subdomain(A, l_start_blockrow, l_partitions_sizes, blocksize)
         send_partitions(K_i, K_local)
-        send_bridges(B_i, B_local, n_partitions, n_reduction_steps)
+        send_bridges(Bu_i, Bu_local, n_partitions, n_reduction_steps)
+        send_bridges(Bl_i, Bl_local, n_partitions, n_reduction_steps)
     else:
         recv_partitions(K_local, l_partitions_sizes, blocksize)
-        recv_bridges(B_local, n_partitions, n_reduction_steps)
+        recv_bridges(Bu_local, n_partitions, n_reduction_steps)
+        recv_bridges(Bl_local, n_partitions, n_reduction_steps)
 
     # Inversion of the local partition
     invert_partition(K_local, l_partitions_sizes, blocksize)
@@ -623,7 +641,7 @@ def pdiv_aggregate(A: np.ndarray,
 
             # The active processes compute the update term and update their local partition
             if comm_rank == active_process:
-                U = compute_update_term(K_local, B_local, l_partitions_sizes, active_process, current_step, blocksize)
+                U = compute_update_term(K_local, Bu_local, Bl_local, l_partitions_sizes, active_process, current_step, blocksize)
                 update_partition(K_local, U)
 
     return K_local

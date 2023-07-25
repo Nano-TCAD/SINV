@@ -3,7 +3,7 @@
 @date: 2023-07
 
 Basic tests cases for the P-Division algorithm. 
-- Reel valued matrices.
+- Complexe symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -18,6 +18,10 @@ Basic tests cases for the P-Division algorithm.
 | Test 7  |     3x3      |     1     |    3    |
 | Test 8  |     6x6      |     2     |    3    |
 | Test 9  |     9x9      |     3     |    3    |
+================================================
+| Test 10 |   128x128    |     8     |    16   |
+| Test 11 |   128x128    |     16    |    8    |
+| Test 12 |   128x128    |     32    |    4    |
 ================================================
 
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
@@ -34,10 +38,10 @@ comm = MPI.COMM_WORLD
 comm_size = comm.Get_size()
 comm_rank = comm.Get_rank()
 
-isComplex = False
+isComplex = True
 seed = 63
 
-def test_pdiv_aggregate_basic_reel_1():
+def test_pdiv_aggregate_basic_complex_1():
     matrice_size = 1
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -51,7 +55,7 @@ def test_pdiv_aggregate_basic_reel_1():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_2():
+def test_pdiv_aggregate_basic_complex_2():
     matrice_size = 2
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -65,7 +69,7 @@ def test_pdiv_aggregate_basic_reel_2():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
         
-def test_pdiv_aggregate_basic_reel_3():
+def test_pdiv_aggregate_basic_complex_3():
     matrice_size = 3
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -79,7 +83,7 @@ def test_pdiv_aggregate_basic_reel_3():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_4():
+def test_pdiv_aggregate_basic_complex_4():
     matrice_size = 2
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -93,7 +97,7 @@ def test_pdiv_aggregate_basic_reel_4():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_5():
+def test_pdiv_aggregate_basic_complex_5():
     matrice_size = 4
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -107,7 +111,7 @@ def test_pdiv_aggregate_basic_reel_5():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_6():
+def test_pdiv_aggregate_basic_complex_6():
     matrice_size = 6
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -121,7 +125,7 @@ def test_pdiv_aggregate_basic_reel_6():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_7():
+def test_pdiv_aggregate_basic_complex_7():
     matrice_size = 3
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -135,7 +139,7 @@ def test_pdiv_aggregate_basic_reel_7():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_8():
+def test_pdiv_aggregate_basic_complex_8():
     matrice_size = 6
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -149,7 +153,7 @@ def test_pdiv_aggregate_basic_reel_8():
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
-def test_pdiv_aggregate_basic_reel_9():
+def test_pdiv_aggregate_basic_complex_9():
     matrice_size = 9
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -162,4 +166,60 @@ def test_pdiv_aggregate_basic_reel_9():
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
+    
+def test_pdiv_aggregate_basic_complex_10():
+    matrice_size = 128
+    blocksize    = 8
+    nblocks      = matrice_size // blocksize
+    bandwidth    = np.ceil(blocksize/2)
+    
+    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+        A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.transMat.transformToSymmetric(A)
+        A_refsol = np.linalg.inv(A)
+        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        if comm_rank == 0:
+            assert np.allclose(A_refsol, A_pdiv_aggregate)
+        
+def test_pdiv_aggregate_basic_complex_11():
+    matrice_size = 128
+    blocksize    = 16
+    nblocks      = matrice_size // blocksize
+    bandwidth    = np.ceil(blocksize/2)
+    
+    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+        A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.transMat.transformToSymmetric(A)
+        A_refsol = np.linalg.inv(A)
+        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        if comm_rank == 0:
+            assert np.allclose(A_refsol, A_pdiv_aggregate)
             
+def test_pdiv_aggregate_basic_complex_12():
+    matrice_size = 128
+    blocksize    = 32
+    nblocks      = matrice_size // blocksize
+    bandwidth    = np.ceil(blocksize/2)
+    
+    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+        A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.transMat.transformToSymmetric(A)
+        A_refsol = np.linalg.inv(A)
+        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        if comm_rank == 0:
+            assert np.allclose(A_refsol, A_pdiv_aggregate)    
+
+if __name__ == '__main__':
+    test_pdiv_aggregate_basic_complex_1()
+    test_pdiv_aggregate_basic_complex_2()
+    test_pdiv_aggregate_basic_complex_3()
+    test_pdiv_aggregate_basic_complex_4()
+    test_pdiv_aggregate_basic_complex_5()
+    test_pdiv_aggregate_basic_complex_6()
+    test_pdiv_aggregate_basic_complex_7()
+    test_pdiv_aggregate_basic_complex_8()
+    test_pdiv_aggregate_basic_complex_9()
+    test_pdiv_aggregate_basic_complex_10()
+    test_pdiv_aggregate_basic_complex_11()
+    test_pdiv_aggregate_basic_complex_12()
+    

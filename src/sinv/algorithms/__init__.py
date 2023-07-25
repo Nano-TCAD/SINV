@@ -9,6 +9,6 @@ from . import hpr_parallel as hpr_p
 from . import bcr_serial   as bcr_s
 from . import bcr_parallel as bcr_p
 
-from . import pdiv_aggregate as pdiv_a
-from . import pdiv_localmap  as pdiv_lm
-
+from .pdiv import pdiv_mincom    as pdiv_m
+from .pdiv import pdiv_aggregate as pdiv_a
+from .pdiv import pdiv_localmap  as pdiv_lm

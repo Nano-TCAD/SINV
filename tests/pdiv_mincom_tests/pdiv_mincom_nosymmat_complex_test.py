@@ -2,8 +2,8 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-07
 
-Basic tests cases for the P-Division (aggregate) algorithm. 
-- Complexe symmetric matrices.
+Basic tests cases for the P-Division (mincom) algorithm. 
+- Complexes non-symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -49,9 +49,8 @@ def test_pdiv_aggregate_basic_complex_1():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -63,9 +62,8 @@ def test_pdiv_aggregate_basic_complex_2():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
         
@@ -77,9 +75,8 @@ def test_pdiv_aggregate_basic_complex_3():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -91,9 +88,8 @@ def test_pdiv_aggregate_basic_complex_4():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -105,9 +101,8 @@ def test_pdiv_aggregate_basic_complex_5():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -119,9 +114,8 @@ def test_pdiv_aggregate_basic_complex_6():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -133,9 +127,8 @@ def test_pdiv_aggregate_basic_complex_7():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -147,9 +140,8 @@ def test_pdiv_aggregate_basic_complex_8():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -161,9 +153,8 @@ def test_pdiv_aggregate_basic_complex_9():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
     
@@ -175,9 +166,8 @@ def test_pdiv_aggregate_basic_complex_10():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
         
@@ -189,9 +179,8 @@ def test_pdiv_aggregate_basic_complex_11():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)
             
@@ -203,9 +192,8 @@ def test_pdiv_aggregate_basic_complex_12():
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
         A = utils.genMat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.transMat.transformToSymmetric(A)
         A_refsol = np.linalg.inv(A)
-        A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
+        A_pdiv_aggregate = alg.pdiv_m.pdiv_mincom(A, blocksize)
         if comm_rank == 0:
             assert np.allclose(A_refsol, A_pdiv_aggregate)    
 

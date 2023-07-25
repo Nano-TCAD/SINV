@@ -2,7 +2,7 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-07
 
-Basic tests cases for the P-Division algorithm. 
+Basic tests cases for the P-Division (aggregate) algorithm. 
 - Reel non-symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 

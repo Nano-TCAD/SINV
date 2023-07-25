@@ -46,7 +46,7 @@ Implementations of several selected-blocks-inversion algorithms. These algorithm
 <table class="tg">
 <thead>
   <tr>
-    <th class="tg-7btt" colspan="2">Algortihms</th>
+    <th class="tg-7btt" colspan="2">Algorithms</th>
     <th class="tg-7btt">Reel-valued matrix</th>
     <th class="tg-7btt">Complex-valued matrix</th>
     <th class="tg-7btt">Symmetric matrix</th>
@@ -55,9 +55,16 @@ Implementations of several selected-blocks-inversion algorithms. These algorithm
 </thead>
 <tbody>
   <tr>
-    <td class="tg-0pky" rowspan="2">RGF</td>
-    <td class="tg-f8tv">serial</td>
+    <td class="tg-0pky" rowspan="3">RGF</td>
+    <td class="tg-f8tv">serial left-to-right</td>
     <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">⤫</td>
+  </tr>
+  <tr>
+    <td class="tg-f8tv">serial right-to-left</td>
+    <td class="tg-zw5y">✓</td>
     <td class="tg-c3ow">✓</td>
     <td class="tg-c3ow">✓</td>
     <td class="tg-c3ow">⤫</td>

@@ -31,6 +31,7 @@ from sinv import algorithms as alg
 from sinv import utils
 
 import numpy as np
+import pytest
 from mpi4py import MPI
 
 comm = MPI.COMM_WORLD
@@ -40,10 +41,10 @@ comm_rank = comm.Get_rank()
 isComplex = False
 seed = 63
 
+@pytest.mark.mpi_skip()
 def test_rgf_ltr_symmat_complex_1():
     matrice_size = 1
     blocksize    = 1
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -60,10 +61,10 @@ def test_rgf_ltr_symmat_complex_1():
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
             
+@pytest.mark.mpi_skip()
 def test_rgf_ltr_symmat_complex_2():
     matrice_size = 2
     blocksize    = 2
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -79,11 +80,11 @@ def test_rgf_ltr_symmat_complex_2():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-        
+
+@pytest.mark.mpi_skip()        
 def test_rgf_ltr_symmat_complex_3():
     matrice_size = 3
     blocksize    = 3
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -99,11 +100,11 @@ def test_rgf_ltr_symmat_complex_3():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_4():
     matrice_size = 2
     blocksize    = 1
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -119,11 +120,11 @@ def test_rgf_ltr_symmat_complex_4():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_5():
     matrice_size = 4
     blocksize    = 2
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -139,11 +140,11 @@ def test_rgf_ltr_symmat_complex_5():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_6():
     matrice_size = 6
     blocksize    = 3
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -159,11 +160,11 @@ def test_rgf_ltr_symmat_complex_6():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_7():
     matrice_size = 3
     blocksize    = 1
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -179,11 +180,11 @@ def test_rgf_ltr_symmat_complex_7():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_8():
     matrice_size = 6
     blocksize    = 2
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -199,11 +200,11 @@ def test_rgf_ltr_symmat_complex_8():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_9():
     matrice_size = 9
     blocksize    = 3
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -220,10 +221,10 @@ def test_rgf_ltr_symmat_complex_9():
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
     
+@pytest.mark.mpi_skip()
 def test_rgf_ltr_symmat_complex_10():
     matrice_size = 128
     blocksize    = 8
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -239,11 +240,11 @@ def test_rgf_ltr_symmat_complex_10():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-        
+    
+@pytest.mark.mpi_skip()    
 def test_rgf_ltr_symmat_complex_11():
     matrice_size = 128
     blocksize    = 16
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:
@@ -259,11 +260,11 @@ def test_rgf_ltr_symmat_complex_11():
         assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
                 and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
                 and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
-            
+
+@pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_12():
     matrice_size = 128
     blocksize    = 32
-    nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_rank == 0:

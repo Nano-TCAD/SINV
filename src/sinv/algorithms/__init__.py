@@ -4,7 +4,7 @@ from .rgf import rgf_ltr    as rgfl
 from .rgf import rgf_rtl    as rgfr 
 from .rgf import rgf_2sided as rgf2s
 
-from . import hpr_serial   as hpr_s
+from . import block_tridiag_lusolve as blk_trid_lusolve
 from . import hpr_parallel as hpr_p
 
 from . import bcr_serial   as bcr_s

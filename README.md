@@ -10,7 +10,7 @@ Implementations of several selected-blocks-inversion algorithms. These algorithm
 @reference: https://doi.org/10.1007/s10825-013-0458-7  
 - 2-processes parallel version of RGF.
 
-### __Block-Tridiagonal Gaussian elimination__
+### __Block-Tridiagonal LU solve__
 @reference: https://doi.org/10.1016/j.jcp.2009.03.035
 - Serial, non-pivoting, block-tridiagonal matrix selected inversion algorithm.
 
@@ -77,11 +77,11 @@ Implementations of several selected-blocks-inversion algorithms. These algorithm
     <td class="tg-c3ow">⤫</td>
   </tr>
   <tr>
-    <td class="tg-0pky" colspan="2">Block tridiagonal gaussian elimination</td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
-    <td class="tg-c3ow"></td>
+    <td class="tg-0pky" colspan="2">Block tridiagonal LU solve</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
+    <td class="tg-c3ow">✓</td>
   </tr>
   <tr>
     <td class="tg-0pky" colspan="2">PSR (Parallel Schur reduction) (ex. hybrid)</td>

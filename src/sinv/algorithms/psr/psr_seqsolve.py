@@ -8,7 +8,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 from sinv import utils
-from sinv import algorithms
+from sinv import algorithms as alg
 
 import numpy as np
 import time
@@ -141,16 +141,16 @@ def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndar
     bot_rowindice   = (bottom_blockrow-1)*blocksize
     botp1_rowindice = bottom_blockrow*blocksize
 
-    G[bot_rowindice:botp1_rowindice, botm1_rowindice:bot_rowindice] = -G[bot_rowindice:botp1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, botm1_rowindice:bot_rowindice] - G[bot_rowindice:botp1_rowindice, bot_rowindice:botp1_rowindice] @ L[bot_rowindice:botp1_rowindice, botm1_rowindice:bot_rowindice]
-    G[botm1_rowindice:bot_rowindice, bot_rowindice:botp1_rowindice] = -U[botm1_rowindice:bot_rowindice, bot_rowindice:botp1_rowindice] @ G[bot_rowindice:botp1_rowindice, bot_rowindice:botp1_rowindice] - U[botm1_rowindice:bot_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, bot_rowindice:botp1_rowindice]
+    G[bot_rowindice:botp1_rowindice, botm1_rowindice:bot_rowindice] = -1 * G[bot_rowindice:botp1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, botm1_rowindice:bot_rowindice] - G[bot_rowindice:botp1_rowindice, bot_rowindice:botp1_rowindice] @ L[bot_rowindice:botp1_rowindice, botm1_rowindice:bot_rowindice]
+    G[botm1_rowindice:bot_rowindice, bot_rowindice:botp1_rowindice] = -1 * U[botm1_rowindice:bot_rowindice, bot_rowindice:botp1_rowindice] @ G[bot_rowindice:botp1_rowindice, bot_rowindice:botp1_rowindice] - U[botm1_rowindice:bot_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, bot_rowindice:botp1_rowindice]
 
     for i in range(bottom_blockrow-2, top_blockrow, -1):
         i_rowindice   = i*blocksize
         ip1_rowindice = (i+1)*blocksize
         ip2_rowindice = (i+2)*blocksize
 
-        G[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] = -G[top_rowindice:topp1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] - G[top_rowindice:topp1_rowindice, ip1_rowindice:ip2_rowindice] @ L[ip1_rowindice:ip2_rowindice, i_rowindice:ip1_rowindice]
-        G[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] = -U[i_rowindice:ip1_rowindice, ip1_rowindice:ip2_rowindice] @ G[ip1_rowindice:ip2_rowindice, top_rowindice:topp1_rowindice] - U[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, top_rowindice:topp1_rowindice]
+        G[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] = -1 * G[top_rowindice:topp1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] - G[top_rowindice:topp1_rowindice, ip1_rowindice:ip2_rowindice] @ L[ip1_rowindice:ip2_rowindice, i_rowindice:ip1_rowindice]
+        G[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] = -1 * U[i_rowindice:ip1_rowindice, ip1_rowindice:ip2_rowindice] @ G[ip1_rowindice:ip2_rowindice, top_rowindice:topp1_rowindice] - U[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, top_rowindice:topp1_rowindice]
 
     for i in range(bottom_blockrow-2, top_blockrow+1, -1):
         im1_rowindice = (i-1)*blocksize
@@ -159,8 +159,8 @@ def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndar
         ip2_rowindice = (i+2)*blocksize
 
         G[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice] = np.linalg.inv(A[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice]) - U[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] - U[i_rowindice:ip1_rowindice, ip1_rowindice:ip2_rowindice] @ G[ip1_rowindice:ip2_rowindice, i_rowindice:ip1_rowindice] 
-        G[im1_rowindice:i_rowindice, i_rowindice:ip1_rowindice] = -U[im1_rowindice:i_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] - U[im1_rowindice:i_rowindice, i_rowindice:ip1_rowindice] @ G[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice]
-        G[i_rowindice:i_rowindice, im1_rowindice:i_rowindice]   = -G[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, im1_rowindice:i_rowindice] - G[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice] @ L[i_rowindice:ip1_rowindice, im1_rowindice:i_rowindice]
+        G[im1_rowindice:i_rowindice, i_rowindice:ip1_rowindice] = -1 * U[im1_rowindice:i_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, i_rowindice:ip1_rowindice] - U[im1_rowindice:i_rowindice, i_rowindice:ip1_rowindice] @ G[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice]
+        G[i_rowindice:i_rowindice, im1_rowindice:i_rowindice]   = -1 * G[i_rowindice:ip1_rowindice, top_rowindice:topp1_rowindice] @ L[top_rowindice:topp1_rowindice, im1_rowindice:i_rowindice] - G[i_rowindice:ip1_rowindice, i_rowindice:ip1_rowindice] @ L[i_rowindice:ip1_rowindice, im1_rowindice:i_rowindice]
 
     G[topp1_rowindice:topp2_rowindice, topp1_rowindice:topp2_rowindice] = np.linalg.inv(A[topp1_rowindice:topp2_rowindice, topp1_rowindice:topp2_rowindice]) - U[topp1_rowindice:topp2_rowindice, top_rowindice:topp1_rowindice] @ G[top_rowindice:topp1_rowindice, topp1_rowindice:topp2_rowindice] - U[topp1_rowindice:topp2_rowindice, topp2_rowindice:topp3_rowindice] @ G[topp2_rowindice:topp3_rowindice, topp1_rowindice:topp2_rowindice]
 
@@ -168,17 +168,71 @@ def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndar
 
 
 
-def inverse_hybrid(A: np.ndarray, blocksize: int):
+def divide_matrix(A: np.ndarray, 
+                  n_partitions: int, 
+                  blocksize: int) -> [list, list]:
+    """ Compute the n_partitions segments that divide the matrix A.
+
+    Parameters
+    ----------
+    A : numpy matrix            
+        matrix to divide
+    n_partitions : int
+        number of partitions
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    l_start_blockrow : list
+        list of processes starting block index
+    l_partitions_blocksizes : list
+        list of processes partition size
     """
-        Invert a matrix using the hybrid parallel reduction algorithm
-        - Work in place and will overwrite the input matrix A
+
+    nblocks = A.shape[0] // blocksize
+    partition_blocksize = nblocks // n_partitions
+    blocksize_of_first_partition = nblocks - partition_blocksize * (n_partitions-1)
+
+    # Compute the starting block row and the partition size for each process
+    l_start_blockrow        = []
+    l_partitions_blocksizes = []
+
+    for i in range(n_partitions):
+        if i == 0:
+            l_start_blockrow        = [0]
+            l_partitions_blocksizes = [blocksize_of_first_partition]
+        else:
+            l_start_blockrow.append(l_start_blockrow[i-1] + l_partitions_blocksizes[i-1])
+            l_partitions_blocksizes.append(partition_blocksize)
+
+    return l_start_blockrow, l_partitions_blocksizes
+
+
+
+def psr_seqsolve(A: np.ndarray, 
+                 blocksize: int):
+    """ Selected inversion algorithm using the parallel Schur reduction 
+    algorithm. The algorithm work in place and will overwrite the input matrix A.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        Block tridiagonal matrix
+    blocksize : int
+        Block matrice_size
+        
+    Returns 
+    -------
+    G : np.ndarray
+        Block tridiagonal selected inverse of A.
     """
+    
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
 
-    nblocks   = A.shape[0]//blocksize
-
+    nblocks = A.shape[0] // blocksize
     L = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
     U = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
     G = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A.dtype)
@@ -187,26 +241,28 @@ def inverse_hybrid(A: np.ndarray, blocksize: int):
     bottom_blockrow  = 0
 
 
+    l_start_blockrow, l_partitions_blocksizes = divide_matrix(A, comm_size, blocksize)
+
 
     # Phase 1. Schur reduction 
     if comm_rank == 0:
         # First / top process
-        top_blockrow     = 0
-        bottom_blockrow  = nblocks // comm_size
+        top_blockrow     = l_start_blockrow[comm_rank]
+        bottom_blockrow  = top_blockrow + l_partitions_blocksizes[comm_rank]
 
         A, L, U = reduce_schur_topleftcorner(A, top_blockrow, bottom_blockrow, blocksize)
 
     elif comm_rank == comm_size-1:
         # Last / bottom process
-        top_blockrow     = comm_rank * (nblocks // comm_size)
-        bottom_blockrow  = nblocks
+        top_blockrow     = l_start_blockrow[comm_rank]
+        bottom_blockrow  = top_blockrow + l_partitions_blocksizes[comm_rank]
 
         A, L, U = reduce_schur_bottomrightcorner(A, top_blockrow, bottom_blockrow, blocksize)
         
     else:
         # Middle process
-        top_blockrow     = comm_rank * (nblocks // comm_size)
-        bottom_blockrow  = (comm_rank+1) * (nblocks // comm_size)
+        top_blockrow     = l_start_blockrow[comm_rank]
+        bottom_blockrow  = top_blockrow + l_partitions_blocksizes[comm_rank]
 
         A, L, U = reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize)
 
@@ -246,7 +302,7 @@ def inverse_hybrid(A: np.ndarray, blocksize: int):
 
 
         # Compute the BCR reduction of the aggregated system
-        G_bcr = bcrs.inverse_bcr_serial(A_bcr, blocksize)
+        G_bcr = alg.bcr_s.inverse_bcr_serial(A_bcr, blocksize)
 
 
         # Communicate the inverse of the reduced system back to the processes

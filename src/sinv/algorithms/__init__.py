@@ -6,6 +6,7 @@ from .rgf import rgf_2sided as rgf2s
 
 from . import block_tridiag_lusolve as blk_trid_lusolve
 from .psr import psr_seqsolve as psr_s
+from .psr import psr_seqsolve_refactored as psr_s_r
 
 from . import bcr_serial   as bcr_s
 from . import bcr_parallel as bcr_p

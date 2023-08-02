@@ -9,6 +9,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
 from sinv import utils
 from sinv import algorithms as alg
+from sinv.algorithms.psr import psr_utils as psr_u
 
 import numpy as np
 import time
@@ -99,7 +100,13 @@ def reduce_schur_center(A: np.ndarray, top_blockrow: int, bottom_blockrow: int, 
 """ 
     Schur production functions
 """
-def produce_schur_topleftcorner(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndarray, top_blockrow: int, bottom_blockrow: int, blocksize: int):
+def produce_schur_topleftcorner(A: np.ndarray, 
+                                L: np.ndarray, 
+                                U: np.ndarray, 
+                                G: np.ndarray, 
+                                top_blockrow: int,
+                                bottom_blockrow: int, 
+                                blocksize: int):
 
     # Corner produce upwards
     for i in range(bottom_blockrow-1, top_blockrow-1, -1):
@@ -168,48 +175,6 @@ def produce_schur_center(A: np.ndarray, L: np.ndarray, U: np.ndarray, G: np.ndar
 
 
 
-def divide_matrix(A: np.ndarray, 
-                  n_partitions: int, 
-                  blocksize: int) -> [list, list]:
-    """ Compute the n_partitions segments that divide the matrix A.
-
-    Parameters
-    ----------
-    A : numpy matrix            
-        matrix to divide
-    n_partitions : int
-        number of partitions
-    blocksize : int
-        size of a block
-
-    Returns
-    -------
-    l_start_blockrow : list
-        list of processes starting block index
-    l_partitions_blocksizes : list
-        list of processes partition size
-    """
-
-    nblocks = A.shape[0] // blocksize
-    partition_blocksize = nblocks // n_partitions
-    blocksize_of_first_partition = nblocks - partition_blocksize * (n_partitions-1)
-
-    # Compute the starting block row and the partition size for each process
-    l_start_blockrow        = []
-    l_partitions_blocksizes = []
-
-    for i in range(n_partitions):
-        if i == 0:
-            l_start_blockrow        = [0]
-            l_partitions_blocksizes = [blocksize_of_first_partition]
-        else:
-            l_start_blockrow.append(l_start_blockrow[i-1] + l_partitions_blocksizes[i-1])
-            l_partitions_blocksizes.append(partition_blocksize)
-
-    return l_start_blockrow, l_partitions_blocksizes
-
-
-
 def psr_seqsolve(A: np.ndarray, 
                  blocksize: int):
     """ Selected inversion algorithm using the parallel Schur reduction 
@@ -241,7 +206,8 @@ def psr_seqsolve(A: np.ndarray,
     bottom_blockrow  = 0
 
 
-    l_start_blockrow, l_partitions_blocksizes = divide_matrix(A, comm_size, blocksize)
+    l_start_blockrow, l_partitions_blocksizes = psr_u.divide_matrix(A, comm_size, blocksize)
+    #print("Process :", comm_rank, "l_start_blockrow :", l_start_blockrow, "l_partitions_blocksizes :", l_partitions_blocksizes)
 
 
     # Phase 1. Schur reduction 
@@ -266,6 +232,7 @@ def psr_seqsolve(A: np.ndarray,
 
         A, L, U = reduce_schur_center(A, top_blockrow, bottom_blockrow, blocksize)
 
+    print("Process :", comm_rank, "top_blockrow :", top_blockrow, "bottom_blockrow :", bottom_blockrow)
 
 
     # Phase 2. BCR reduction & Production of the inverse of the reduced system
@@ -352,11 +319,14 @@ def psr_seqsolve(A: np.ndarray,
 
         start1_blockcol  = comm_rank * (nblocks // comm_size) - 1
         stop1_blockcol   = start1_blockcol + 2
+        
         start1_colindice = start1_blockcol * blocksize
         stop1_colindice  = stop1_blockcol * blocksize
 
+
         start2_blockcol = stop1_blockcol + (nblocks_process-2)
         stop2_blockcol  = start2_blockcol + 2
+        
         start2_colindice = start2_blockcol * blocksize
         stop2_colindice  = stop2_blockcol * blocksize
 

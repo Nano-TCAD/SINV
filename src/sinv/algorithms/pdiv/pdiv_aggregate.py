@@ -303,6 +303,9 @@ def pdiv_aggregate(A: np.ndarray,
 
     This implementation agregates and update the inverted sub-partitions in a 
     divide and conquer manner. 
+    
+    Limitations:
+    - The number of processes must be a power of 2.
     """
 
     # MPI initialization

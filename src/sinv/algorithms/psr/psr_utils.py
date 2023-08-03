@@ -52,10 +52,9 @@ def check_input(A: np.ndarray,
         raise ValueError("The blocksize must be greater than 0.")
     
     nblocks = A.shape[0] // blocksize
-    if nblocks < 2*comm_size:
-        raise ValueError("The number of blocks must be greater than twice the number of processes.")
-        # It's the case because the central processes need at least 2 blocks 
-        # eachs to work.
+    if nblocks < 3*comm_size:
+        raise ValueError("The number of blocks is to low. There should be at least 3 blockrows per process")
+        # Central processes need at least 3 (block) rows to work.
     
     
     
@@ -89,6 +88,7 @@ def divide_matrix(A: np.ndarray,
     # Compute the starting block row and the partition size for each process
     l_start_blockrow        = []
     l_partitions_blocksizes = []
+    
 
     for i in range(n_partitions):
         if i == 0:
@@ -97,6 +97,7 @@ def divide_matrix(A: np.ndarray,
         else:
             l_start_blockrow.append(l_start_blockrow[i-1] + l_partitions_blocksizes[i-1])
             l_partitions_blocksizes.append(partition_blocksize)
+
 
     return l_start_blockrow, l_partitions_blocksizes
 

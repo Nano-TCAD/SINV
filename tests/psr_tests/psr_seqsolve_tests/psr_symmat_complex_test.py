@@ -3,7 +3,7 @@
 @date: 2023-07
 
 Basic tests cases for the PSR algorithm. 
-- Reel symmetric matrices.
+- Complex symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -34,11 +34,11 @@ comm = MPI.COMM_WORLD
 comm_size = comm.Get_size()
 comm_rank = comm.Get_rank()
 
-isComplex = False
+isComplex = True
 seed = 63
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_1():
+def test_psr_symmat_complex_1():
     matrice_size = 9
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -60,7 +60,7 @@ def test_psr_symmat_reel_1():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
             
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_2():
+def test_psr_symmat_complex_2():
     matrice_size = 18
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -82,7 +82,7 @@ def test_psr_symmat_reel_2():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_3():
+def test_psr_symmat_complex_3():
     matrice_size = 27
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -104,7 +104,7 @@ def test_psr_symmat_reel_3():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_4():
+def test_psr_symmat_complex_4():
     matrice_size = 12
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -126,7 +126,7 @@ def test_psr_symmat_reel_4():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_5():
+def test_psr_symmat_complex_5():
     matrice_size = 24
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -148,7 +148,7 @@ def test_psr_symmat_reel_5():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_6():
+def test_psr_symmat_complex_6():
     matrice_size = 36
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -170,7 +170,7 @@ def test_psr_symmat_reel_6():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_7():
+def test_psr_symmat_complex_7():
     matrice_size = 256
     blocksize    = 8
     nblocks      = matrice_size // blocksize
@@ -192,7 +192,7 @@ def test_psr_symmat_reel_7():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)        
-def test_psr_symmat_reel_8():
+def test_psr_symmat_complex_8():
     matrice_size = 240
     blocksize    = 10
     nblocks      = matrice_size // blocksize
@@ -214,7 +214,7 @@ def test_psr_symmat_reel_8():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_9():
+def test_psr_symmat_complex_9():
     matrice_size = 144
     blocksize    = 12
     nblocks      = matrice_size // blocksize
@@ -236,13 +236,13 @@ def test_psr_symmat_reel_9():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower) 
 
 if __name__ == '__main__':
-    test_psr_symmat_reel_1()
-    test_psr_symmat_reel_2()
-    test_psr_symmat_reel_3()
-    test_psr_symmat_reel_4()
-    test_psr_symmat_reel_5()
-    test_psr_symmat_reel_6()
-    test_psr_symmat_reel_7()
-    test_psr_symmat_reel_8()
-    test_psr_symmat_reel_9()
+    test_psr_symmat_complex_1()
+    test_psr_symmat_complex_2()
+    test_psr_symmat_complex_3()
+    test_psr_symmat_complex_4()
+    test_psr_symmat_complex_5()
+    test_psr_symmat_complex_6()
+    test_psr_symmat_complex_7()
+    test_psr_symmat_complex_8()
+    test_psr_symmat_complex_9()
     

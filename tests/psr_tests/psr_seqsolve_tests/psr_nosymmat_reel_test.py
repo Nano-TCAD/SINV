@@ -3,7 +3,7 @@
 @date: 2023-07
 
 Basic tests cases for the PSR algorithm. 
-- Reel symmetric matrices.
+- Reel non-symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -38,7 +38,7 @@ isComplex = False
 seed = 63
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_1():
+def test_psr_nosymmat_reel_1():
     matrice_size = 9
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -46,7 +46,6 @@ def test_psr_symmat_reel_1():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -60,7 +59,7 @@ def test_psr_symmat_reel_1():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
             
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_2():
+def test_psr_nosymmat_reel_2():
     matrice_size = 18
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -68,7 +67,6 @@ def test_psr_symmat_reel_2():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -82,7 +80,7 @@ def test_psr_symmat_reel_2():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_3():
+def test_psr_nosymmat_reel_3():
     matrice_size = 27
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -90,7 +88,6 @@ def test_psr_symmat_reel_3():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -104,7 +101,7 @@ def test_psr_symmat_reel_3():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_4():
+def test_psr_nosymmat_reel_4():
     matrice_size = 12
     blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -112,7 +109,6 @@ def test_psr_symmat_reel_4():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -126,7 +122,7 @@ def test_psr_symmat_reel_4():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_5():
+def test_psr_nosymmat_reel_5():
     matrice_size = 24
     blocksize    = 2
     nblocks      = matrice_size // blocksize
@@ -134,7 +130,6 @@ def test_psr_symmat_reel_5():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -148,7 +143,7 @@ def test_psr_symmat_reel_5():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_6():
+def test_psr_nosymmat_reel_6():
     matrice_size = 36
     blocksize    = 3
     nblocks      = matrice_size // blocksize
@@ -156,7 +151,6 @@ def test_psr_symmat_reel_6():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -170,7 +164,7 @@ def test_psr_symmat_reel_6():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)
-def test_psr_symmat_reel_7():
+def test_psr_nosymmat_reel_7():
     matrice_size = 256
     blocksize    = 8
     nblocks      = matrice_size // blocksize
@@ -178,7 +172,6 @@ def test_psr_symmat_reel_7():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -192,7 +185,7 @@ def test_psr_symmat_reel_7():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)        
-def test_psr_symmat_reel_8():
+def test_psr_nosymmat_reel_8():
     matrice_size = 240
     blocksize    = 10
     nblocks      = matrice_size // blocksize
@@ -200,7 +193,6 @@ def test_psr_symmat_reel_8():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -214,7 +206,7 @@ def test_psr_symmat_reel_8():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)
 
 @pytest.mark.mpi(min_size=3)            
-def test_psr_symmat_reel_9():
+def test_psr_nosymmat_reel_9():
     matrice_size = 144
     blocksize    = 12
     nblocks      = matrice_size // blocksize
@@ -222,7 +214,6 @@ def test_psr_symmat_reel_9():
     
     if nblocks >= 3*comm_size:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
         A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -236,13 +227,13 @@ def test_psr_symmat_reel_9():
                 and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower) 
 
 if __name__ == '__main__':
-    test_psr_symmat_reel_1()
-    test_psr_symmat_reel_2()
-    test_psr_symmat_reel_3()
-    test_psr_symmat_reel_4()
-    test_psr_symmat_reel_5()
-    test_psr_symmat_reel_6()
-    test_psr_symmat_reel_7()
-    test_psr_symmat_reel_8()
-    test_psr_symmat_reel_9()
+    test_psr_nosymmat_reel_1()
+    test_psr_nosymmat_reel_2()
+    test_psr_nosymmat_reel_3()
+    test_psr_nosymmat_reel_4()
+    test_psr_nosymmat_reel_5()
+    test_psr_nosymmat_reel_6()
+    test_psr_nosymmat_reel_7()
+    test_psr_nosymmat_reel_8()
+    test_psr_nosymmat_reel_9()
     

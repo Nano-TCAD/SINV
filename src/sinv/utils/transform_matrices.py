@@ -28,58 +28,6 @@ def transformToSymmetric(A: np.ndarray):
 
 
 
-def distance_to_power_of_two(matrice_size: int):
-    """ Compute the distance between n and the closest power of two minus one.
-    
-    Parameters
-    ----------
-    matrice_size : int
-        Size of the matrice to generate.
-        
-    Returns
-    -------
-    distance : int
-        The distance between n and the closest power of two minus one.
-    """
-
-    p = math.ceil(math.log2(matrice_size + 1))
-
-    closest_power = 2**p - 1
-    distance = closest_power - matrice_size
-
-    return distance
-
-
-
-def identity_padding(A: np.ndarray, 
-                     padding_size: int):
-    """ Padd the A matrix with an identity matrix of size padding_size.
-    
-    Parameters
-    ----------
-    A : np.ndarray
-        The matrix to padd.
-    padding_size : int
-        The size of the padding to add.
-    
-    Returns
-    -------
-    Ap : np.ndarray
-        The padded matrix.
-    """
-
-    matrice_size = A.shape[0]
-
-    I = np.eye(padding_size)
-    Ap = np.zeros((matrice_size+padding_size, matrice_size+padding_size), dtype=A.dtype)
-
-    Ap[0:matrice_size, 0:matrice_size] = A
-    Ap[matrice_size:matrice_size+padding_size, matrice_size:matrice_size+padding_size] = I
-
-    return Ap
-
-
-
 def convertDenseToBlockTridiag(A: np.ndarray, 
                                blocksize: int):
     """ Converte a numpy dense matrix to 3 numpy arrays containing the diagonal,

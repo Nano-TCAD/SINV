@@ -12,7 +12,6 @@ from sinv import utils
 
 import numpy as np
 import math
-import time
 
 from mpi4py import MPI
 

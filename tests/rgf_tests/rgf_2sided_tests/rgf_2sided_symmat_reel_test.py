@@ -3,7 +3,7 @@
 @date: 2023-07
 
 Basic tests cases for the RGF (2 Sided) algorithm. 
-- Complexe symmetric matrices.
+- Reel symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================

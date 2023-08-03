@@ -3,7 +3,7 @@
 @date: 2023-07
 
 Basic tests cases for the RGF (leftToRight) algorithm. 
-- Complexe symmetric matrices.
+- Reel symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -47,19 +47,18 @@ def test_rgf_ltr_symmat_complex_1():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
             
 @pytest.mark.mpi_skip()
 def test_rgf_ltr_symmat_complex_2():
@@ -67,19 +66,18 @@ def test_rgf_ltr_symmat_complex_2():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()        
 def test_rgf_ltr_symmat_complex_3():
@@ -87,19 +85,18 @@ def test_rgf_ltr_symmat_complex_3():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_4():
@@ -107,19 +104,18 @@ def test_rgf_ltr_symmat_complex_4():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_5():
@@ -127,19 +123,18 @@ def test_rgf_ltr_symmat_complex_5():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_6():
@@ -147,19 +142,18 @@ def test_rgf_ltr_symmat_complex_6():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_7():
@@ -167,19 +161,18 @@ def test_rgf_ltr_symmat_complex_7():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_8():
@@ -187,19 +180,18 @@ def test_rgf_ltr_symmat_complex_8():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_9():
@@ -207,19 +199,18 @@ def test_rgf_ltr_symmat_complex_9():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
     
 @pytest.mark.mpi_skip()
 def test_rgf_ltr_symmat_complex_10():
@@ -227,19 +218,18 @@ def test_rgf_ltr_symmat_complex_10():
     blocksize    = 8
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
     
 @pytest.mark.mpi_skip()    
 def test_rgf_ltr_symmat_complex_11():
@@ -247,19 +237,18 @@ def test_rgf_ltr_symmat_complex_11():
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 @pytest.mark.mpi_skip()            
 def test_rgf_ltr_symmat_complex_12():
@@ -267,19 +256,18 @@ def test_rgf_ltr_symmat_complex_12():
     blocksize    = 32
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_rank == 0:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
-        
-        A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
-        G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
-        
-        assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
-                and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
-                and np.allclose(A_refsol_bloc_lower, G_lower_blocks)  
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
+    
+    A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
+    G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    
+    assert np.allclose(A_refsol_bloc_diag, G_diag_blocks)\
+            and np.allclose(A_refsol_bloc_upper, G_upper_blocks)\
+            and np.allclose(A_refsol_bloc_lower, G_lower_blocks)
 
 if __name__ == '__main__':
     test_rgf_ltr_symmat_complex_1()

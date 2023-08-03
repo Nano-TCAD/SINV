@@ -8,9 +8,8 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-import math
 
-from mpi4py import MPI
+
 
 def check_input(A: np.ndarray, 
                 blocksize: int, 
@@ -61,7 +60,8 @@ def check_input(A: np.ndarray,
     
 def divide_matrix(A: np.ndarray, 
                   n_partitions: int, 
-                  blocksize: int) -> [list, list]:
+                  blocksize: int) -> [list, 
+                                      list]:
     """ Compute the n_partitions segments that divide the matrix A.
 
     Parameters

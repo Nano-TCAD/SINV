@@ -291,7 +291,7 @@ def center_produce(A: np.ndarray,
 
     k_below_rowindex   = k_below * blocksize
     kp1_below_rowindex = (k_below + 1) * blocksize
-    
+
 
     G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
@@ -322,7 +322,7 @@ def center_produce(A: np.ndarray,
             - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
                 @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
                     - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
 
 
 
@@ -449,3 +449,5 @@ def bcr_serial(A: np.ndarray,
     G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
 
     return G
+
+

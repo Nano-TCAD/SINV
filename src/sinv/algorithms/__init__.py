@@ -8,7 +8,7 @@ from .tridiag_lusolve import block_tridiag_lusolve as blk_trid_lusolve
 
 from .psr import psr_seqsolve as psr_s
 
-from .bcr import bcr_serial_refactored   as bcr_s
+from .bcr import bcr_serial   as bcr_s
 from .bcr import bcr_parallel as bcr_p
 
 from .pdiv import pdiv_mincom    as pdiv_m

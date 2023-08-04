@@ -9,6 +9,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 from sinv import utils
+from sinv.algorithms.bcr import bcr_utils as bcr_u
 
 import numpy as np
 import math
@@ -17,55 +18,35 @@ from mpi4py import MPI
 
 
 
-def inverse_bcr_parallel(A, blocksize):
-    """
-        Compute the tridiagonal-selected inverse of a matrix A using block cyclic reduction
-    """
-
-    # Padd the input matrices with identity blocks to make sure the number of blocks is a 
-    # power of two - 1, condition required by the block cyclic reduction algorithm
-    nblocks_initial = A.shape[0] // blocksize
-    block_padding_distance = transMat.distance_to_power_of_two(nblocks_initial)
-
-    A = transMat.identity_padding(A, block_padding_distance*blocksize)
-
-    nblocks_padded = A.shape[0] // blocksize
-
-    L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-    U = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-    G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-
-    process_top_blockrow, process_bottom_blockrow = get_process_rows_ownership(nblocks_padded)
+def reduce(A: np.ndarray, 
+           L: np.ndarray, 
+           U: np.ndarray, 
+           row: int, 
+           level: int, 
+           i_elim: list, 
+           blocksize: int) -> None:
+    """ Operate the reduction towards the row-th row of the matrix A.
     
-
-    # 1. Block cyclic reduction
-    i_bcr = [i for i in range(nblocks_padded)]
-    final_reduction_block = 0
-
-    A, L, U, final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
-
-
-    # 2. Block cyclic production
-    invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
-    produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
-    G = agregate_result_on_root(G, nblocks_padded, process_top_blockrow, process_bottom_blockrow, blocksize)
-
-
-    # Cut the padding
-    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
-
-    return G
-
-
-
-###############################################################################
-#                                                                             #
-#                       BLOCK REDUCTIONS FUNCTIONS                            #
-#                                                                             #
-###############################################################################
-def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize):
-    """
-
+    Parameters
+    ----------
+    A : np.ndarray 
+        the matrix to reduce
+    L : np.ndarray
+        lower decomposition factors of A
+    U : np.ndarray
+        upper decomposition factors of A
+    row : int
+        the row to be reduce towards
+    level : int
+        the current level of the reduction in the reduction tree
+    i_elim : list
+        target row indices to be eliminated
+    blocksize : int
+        the size of the blocks in A
+        
+    Returns
+    -------
+    None
     """
 
     nblocks = A.shape[0] // blocksize
@@ -119,10 +100,41 @@ def reduce(A, L, U, row, level, i_elim, top_blockrow, bottom_blockrow, blocksize
 
             A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
 
-    return A, L, U
 
 
-def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
+def reduce_bcr(A: np.ndarray, 
+               L: np.ndarray, 
+               U: np.ndarray, 
+               i_bcr: list, 
+               top_blockrow, 
+               bottom_blockrow, 
+               blocksize: int) -> int:
+    """ Performs block cyclic reduction in parallel on the matrix A. Computing 
+    during the process the LU decomposition of the matrix A. The matrix A is 
+    overwritten.
+    
+    Parameters
+    ----------
+    A : np.ndarray 
+        the matrix to reduce
+    L : np.ndarray
+        lower decomposition factors of A
+    U : np.ndarray
+        upper decomposition factors of A
+    i_bcr : list
+        blockrows to perform the reduction on      
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process  
+    blocksize : int
+        size of the blocks in the matrix A
+    
+    Returns
+    -------
+    last_reduction_row : int
+        the index of the last row that was reduced
+    """
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -130,7 +142,7 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
     last_reduction_block = 0
 
     for level_blockindex in range(height):
-        i_elim = compute_i_from(level_blockindex, nblocks)
+        i_elim = bcr_u.compute_i_from(level_blockindex, nblocks)
 
         number_of_reduction = 0
         for i in range(len(i_elim)):
@@ -150,7 +162,7 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
 
         if number_of_reduction != 0:
             for row in range(indice_process_start_reduction, indice_process_stop_reduction + 1):
-                A, L, U = reduce(A, L, U, row, level_blockindex, i_elim, top_blockrow, bottom_blockrow, blocksize)
+                reduce(A, L, U, row, level_blockindex, i_elim, blocksize)
 
         # Here each process should communicate the last row of the reduction to the next process
         if level_blockindex != height - 1:
@@ -160,18 +172,232 @@ def reduce_bcr(A, L, U, i_bcr, top_blockrow, bottom_blockrow, blocksize):
         if len(i_elim) > 0:
             last_reduction_block = i_elim[-1]
 
-    return A, L, U, last_reduction_block
+    return last_reduction_block
 
 
 
-###############################################################################
-#                                                                             #
-#                         BLOCK PRODUCTION FUNCTIONS                          #
-#                                                                             #
-###############################################################################
-def corner_produce(A, L, U, G, k_from, k_to, blocksize):
+def send_reducprod(A: np.ndarray, 
+                   L: np.ndarray, 
+                   U: np.ndarray, 
+                   i_from: list, 
+                   indice_process_start_reduction: int, 
+                   indice_process_stop_reduction: int, 
+                   blocksize: int) -> None:
+    """ Sends the last produced row to the next process.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    i_from : list
+        list of the active blockrow at the current level
+    indice_process_start_reduction : int
+        index of the first blockrow to reduce
+    indice_process_stop_reduction : int
+        index of the last blockrow to reduce
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None 
     """
-        Corner process block production
+
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+    if comm_rank == 0:
+        # Only need to send to 1 bottom process
+        # Send i_from[indice_process_stop_reduction]
+        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
+        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
+        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
+
+    elif comm_rank == comm_size - 1:
+        # Only need to send to 1 top process
+        # Send i_from[indice_process_start_reduction]
+
+        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
+        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
+        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
+
+    else:
+        # Need to send to 1 top process and 1 bottom process
+        # Send i_from[indice_process_start_reduction] and i_from[indice_process_stop_reduction]
+
+        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
+        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
+        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
+
+        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
+        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
+
+        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
+        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
+        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
+
+
+
+def recv_reducprod(A: np.array, 
+                   L: np.array, 
+                   U: np.array, 
+                   i_to: list, 
+                   indice_process_start_reduction: int, 
+                   indice_process_stop_reduction: int, 
+                   blocksize: int) -> None:
+    """ Receive the last produced row from the others processes.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    i_to : list
+        list of the active blockrow at the current level
+    indice_process_start_reduction : int
+        index of the first blockrow to reduce
+    indice_process_stop_reduction : int
+        index of the last blockrow to reduce
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None 
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+
+    if comm_rank == 0:
+        # Only need to recv from 1 bottom process
+        # Recv: i_to[indice_process_stop_reduction+1]
+
+        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
+        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
+        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+
+    elif comm_rank == comm_size - 1:
+        # Only need to recv from 1 top process
+        # Recv i_to[indice_process_start_reduction-1]
+
+        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
+        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
+        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
+
+    else:
+        # Need to recv from 1 top process and 1 bottom process
+        # Recv i_to[indice_process_start_reduction-1] and i_to[indice_process_stop_reduction+1]
+
+        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
+        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize 
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
+        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
+
+        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
+        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
+
+        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
+        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
+        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+
+
+
+def invert_block(A: np.ndarray, 
+                 G: np.ndarray, 
+                 target_block: int, 
+                 top_blockrow: int, 
+                 bottom_blockrow: int, 
+                 blocksize: int) -> None:
+    """ Produce the first block of the inverse of A after having perfomed the 
+    cyclic reduction.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    target_block : int
+        index of the block to invert
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process 
+    blocksize : int
+        size of the blocks
+    
+    Returns
+    -------
+    None
+    """
+    
+    if target_block >= top_blockrow and target_block < bottom_blockrow:
+        target_row    = target_block * blocksize
+        target_row_p1 = (target_block + 1) * blocksize
+
+        G[target_row: target_row_p1, target_row: target_row_p1] =\
+            np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
+            
+
+
+def corner_produce(A: np.ndarray, 
+                   L: np.ndarray, 
+                   U: np.ndarray, 
+                   G: np.ndarray, 
+                   k_from: int, 
+                   k_to: int, 
+                   blocksize: int) -> None:
+    """ BCR production procedure associated with the corner production case.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition factors of A
+    L : np.ndarray
+        lower decomposition factors of A
+    U : np.ndarray
+        upper decomposition factors of A
+    G : np.ndarray
+        output matrix to be produced
+    k_from : int
+        index of the block row to produce from
+    k_to : int
+        index of the block row to produce to
+    blocksize : int
+        size of the blocks in the matrix A
+        
+    Returns
+    -------
+    None
     """
     
     k_from_rowindex   = k_from * blocksize
@@ -181,16 +407,53 @@ def corner_produce(A, L, U, G, k_from, k_to, blocksize):
     kp1_to_rowindex   = (k_to + 1) * blocksize
 
 
-    G[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex] @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
-    G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] @ G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex]
-    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]     = np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]) - G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
+    G[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex] =\
+        -1 * G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex]\
+            @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
+            
+    G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex] =\
+        - U[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex]\
+            @ G[k_from_rowindex:kp1_from_rowindex, k_from_rowindex:kp1_from_rowindex]
+            
+    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
+        np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
+            - G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex]\
+                @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
+    
 
-    return G
 
-
-def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
-    """
-        Center process block production
+def center_produce(A: np.ndarray, 
+                   L: np.ndarray, 
+                   U: np.ndarray, 
+                   G: np.ndarray,
+                   k_above: int, 
+                   k_to: int, 
+                   k_below: int, 
+                   blocksize: int) -> None:
+    """ BCR production procedure associated with the center production case.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition factors of A
+    L : np.ndarray
+        lower decomposition factors of A
+    U : np.ndarray
+        upper decomposition factors of A
+    G : np.ndarray
+        output matrix to be produced
+    k_above : int
+        index of the block row above to produce from
+    k_to : int
+        index of the block row to produce
+    k_below : int
+        index of the block row below to produce from
+    blocksize : int
+        size of the blocks in the matrix A
+        
+    Returns
+    -------
+    None
     """
     
     k_above_rowindex   = k_above * blocksize
@@ -201,25 +464,80 @@ def center_produce(A, L, U, G, k_above, k_to, k_below, blocksize):
 
     k_below_rowindex   = k_below * blocksize
     kp1_below_rowindex = (k_below + 1) * blocksize
+
+
+    G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] =\
+        - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
+            @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+                    
+    G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] =\
+        - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]\
+            @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+                    
+    G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] =\
+        - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
+            @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
+                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                    @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
+                    
+    G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] =\
+        - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
+            @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                    @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
+                    
+    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
+        np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
+            - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
+                @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                    - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+
+
+
+def produce(A: np.ndarray, 
+            L: np.ndarray, 
+            U: np.ndarray, 
+            G: np.ndarray, 
+            i_bcr: list, 
+            i_prod: list, 
+            stride_blockindex, 
+            top_blockrow, 
+            bottom_blockrow, 
+            blocksize: int) -> None:
+    """ Call the appropriate production function for each block that needs to 
+    be produced.
     
-
-    G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                                                                                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
-    G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                                                                                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
-    G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                                                                                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
-    G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                                                                                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
-    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]       = np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]) - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                                                                                - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
-    
-    return G
-
-
-def produce(A, L, U, G, i_bcr, i_prod, stride_blockindex, top_blockrow, bottom_blockrow, blocksize):
-    """
-        Call the appropriate production function for each block that needs to be produced
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    i_bcr : list
+        blockrows to perform the production on
+    i_prod : list
+        blockrows to produce
+    stride_blockindex : int
+        the stride between the blockrows to produce
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process 
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
     """
 
     for i_prod_blockindex in range(len(i_prod)):
@@ -232,20 +550,20 @@ def produce(A, L, U, G, i_bcr, i_prod, stride_blockindex, top_blockrow, bottom_b
                 # It only gets values from the below row 
                 k_from = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                corner_produce(A, L, U, G, k_from, k_to, blocksize)
 
             if i_prod_blockindex != 0 and i_prod_blockindex == len(i_prod) - 1:
                 if i_prod[-1] <= len(i_bcr) - stride_blockindex -1:
                     k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                     k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                    G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                    center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
                 else:
                     # Production row is the last row within the stride_blockindex range
                     # It only gets values from the above row 
                     k_from = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 
-                    G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                    corner_produce(A, L, U, G, k_from, k_to, blocksize)
             
             if i_prod_blockindex != 0 and i_prod_blockindex != len(i_prod) - 1:
                 # Production row is in the middle of the stride_blockindex range
@@ -253,18 +571,54 @@ def produce(A, L, U, G, i_bcr, i_prod, stride_blockindex, top_blockrow, bottom_b
                 k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                G = center_produce(A, L, U, G, k_above, k_to, k_below,  blocksize)
+                center_produce(A, L, U, G, k_above, k_to, k_below,  blocksize)
 
 
-def comm_to_produce(A, L, U, G, i_from, i_prod, stride_blockindex, top_blockrow, bottom_blockrow, blocksize):
-    """
-        Determine the blocks-row that need to be communicated/received to/from other processes in order
-        for each process to be able to locally produce the blocks-row it is responsible for
+
+def comm_to_produce(A: np.ndarray, 
+                    L: np.ndarray, 
+                    U: np.ndarray, 
+                    G: np.ndarray, 
+                    i_from: list, 
+                    i_prod: list, 
+                    stride_blockindex: int, 
+                    top_blockrow: int, 
+                    bottom_blockrow: int, 
+                    blocksize: int) -> None:
+    """ Determine the blocks-row that need to be communicated/received to/from 
+    other processes in order for each process to be able to locally produce the 
+    blocks-row it is responsible for.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    i_from : list
+        blockrows to communicate/receive
+    i_prod : list
+        blockrows to produce
+    stride_blockindex : int
+        the stride between the blockrows to produce
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process 
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-
 
     # Determine what belongs to the current process
     current_process_i_from = []
@@ -289,26 +643,18 @@ def comm_to_produce(A, L, U, G, i_from, i_prod, stride_blockindex, top_blockrow,
         kp1_from_rowindex = k_from_rowindex + blocksize
         
         if k_to_above < top_blockrow and k_to_above >= 0:
-            #k_to_above_rowindex   = k_to_above * blocksize
-            #kp1_to_above_rowindex = k_to_above_rowindex + blocksize 
 
             comm.send(A[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank-1, tag=0)
             comm.send(L[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank-1, tag=1)
             comm.send(U[:, k_from_rowindex:kp1_from_rowindex], dest=comm_rank-1, tag=2)
             comm.send(G[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank-1, tag=3)
-            
-            #print("Process: ", comm_rank, " send ", k_from, " to produce: ", k_to_above)
 
         if k_to_below >= bottom_blockrow and k_to_below < n_blocks:
-            #k_to_below_rowindex   = k_to_below * blocksize
-            #kp1_to_below_rowindex = k_to_below_rowindex + blocksize 
 
             comm.send(A[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank+1, tag=0)
             comm.send(L[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank+1, tag=1)
             comm.send(U[:, k_from_rowindex:kp1_from_rowindex], dest=comm_rank+1, tag=2)
             comm.send(G[k_from_rowindex:kp1_from_rowindex, :], dest=comm_rank+1, tag=3)
-
-            #print("Process: ", comm_rank, " send ", k_from, " to produce: ", k_to_below)
 
 
     # Determine what needs to be received from other processes
@@ -334,9 +680,36 @@ def comm_to_produce(A, L, U, G, i_from, i_prod, stride_blockindex, top_blockrow,
             G[k_from_below_rowindex:kp1_from_below_rowindex, :] = comm.recv(source=comm_rank+1, tag=3)
 
 
-def comm_produced(G, i_prod, i_from, stride_blockindex, top_blockrow, bottom_blockrow, blocksize):
-    """
-        Communicate part of the produced row back to the original process
+
+def comm_produced(G: np.ndarray, 
+                  i_prod: list, 
+                  i_from: list, 
+                  stride_blockindex: int, 
+                  top_blockrow: int, 
+                  bottom_blockrow: int, 
+                  blocksize: int) -> None:
+    """ Communicate part of the produced row back to the original process.
+    
+    Parameters
+    ----------
+    G : np.ndarray
+        output inverse matrix
+    i_prod : list
+        blockrows to produce
+    i_from : list
+        blockrows to communicate/receive
+    stride_blockindex : int
+        the stride between the blockrows to produce
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process 
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
     """
 
     comm = MPI.COMM_WORLD
@@ -400,9 +773,39 @@ def comm_produced(G, i_prod, i_from, stride_blockindex, top_blockrow, bottom_blo
             G[k_to_rowindex:kp1_to_rowindex, k_from_below_colindex:kp1_from_below_colindex] = comm.recv(source=comm_rank+1, tag=3)
 
 
-def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
-    """
-        Produce the inverse of the A matrix inside of G
+
+def produce_bcr(A: np.ndarray, 
+                L: np.ndarray, 
+                U: np.ndarray, 
+                G: np.ndarray, 
+                i_bcr: list, 
+                top_blockrow: int, 
+                bottom_blockrow: int, 
+                blocksize: int) -> None:
+    """ Performs the block cyclic production.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    i_bcr : list
+        blockrows to perform the production on
+    top_blockrow : int
+        the first blockrow that belong to the current process
+    bottom_blockrow : int
+        the last blockrow that belong to the current process 
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
     """
 
     nblocks = len(i_bcr)
@@ -412,8 +815,8 @@ def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
         stride_blockindex = int(math.pow(2, level_blockindex))
 
         # Determine the blocks-row to be produced
-        i_from = compute_i_from(level_blockindex, nblocks)
-        i_prod = compute_i_prod(i_from, stride_blockindex)
+        i_from = bcr_u.compute_i_from(level_blockindex, nblocks)
+        i_prod = bcr_u.compute_i_prod(i_from, stride_blockindex)
 
         comm_to_produce(A, L, U, G, i_from, i_prod, stride_blockindex, top_blockrow, bottom_blockrow, blocksize)
 
@@ -423,67 +826,41 @@ def produce_bcr(A, L, U, G, i_bcr, top_blockrow, bottom_blockrow, blocksize):
 
 
 
-###############################################################################
-#                                                                             #
-#                                   UTILS                                     #
-#                                                                             #
-###############################################################################
-def get_process_rows_ownership(n_blocks):
+def send_to_produce(A: np.ndarray, 
+                    L: np.ndarray, 
+                    U: np.ndarray, 
+                    G: np.ndarray, 
+                    i_from: list, 
+                    indice_process_start_reduction: int, 
+                    indice_process_stop_reduction: int, 
+                    blocksize: int) -> None:
+    """ Send the needed blockrow to other processes to produce the current 
+    blockrow.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    i_to : list
+        list of the indices of the blockrows to produce
+    indice_process_start_reduction : int
+        indice of the first blockrow needed to produce the current blockrow
+    indice_process_stop_reduction : int
+        indice of the last blockrow needed to produce the current blockrow
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
     """
-        Determine the rows owned by each process
-    """
-
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
-
-    process_top_blockrow     = 0
-    process_bottom_blockrow  = 0
-
-    if comm_rank == 0:
-        # First / top process
-        process_top_blockrow     = 0
-        process_bottom_blockrow  = n_blocks // comm_size
-    elif comm_rank == comm_size-1:
-        # Last / bottom process
-        process_top_blockrow     = comm_rank * (n_blocks // comm_size)
-        process_bottom_blockrow  = n_blocks
-    else:
-        # Middle process
-        process_top_blockrow     = comm_rank * (n_blocks // comm_size)
-        process_bottom_blockrow  = (comm_rank+1) * (n_blocks // comm_size)
-
-    return process_top_blockrow, process_bottom_blockrow
-
-
-def compute_i_from(level, nblocks):
-    """
-        Compute the blocks-row that will be used to produce blocks-row at the current level of the production tree
-    """
-
-    return [i for i in range(int(math.pow(2, level + 1)) - 1, nblocks, int(math.pow(2, level + 1)))]
-
-
-def compute_i_prod(i_from, stride_blockindex):
-    """
-        Compute the blocks-row to be produced at the current level of the production tree
-    """
-
-    i_prod = []
-    for i in range(len(i_from)):
-        if i == 0:
-            i_prod.append(i_from[i] - stride_blockindex)
-            i_prod.append(i_from[i] + stride_blockindex)
-        else:
-            if i_prod[i] != i_from[i] - stride_blockindex:
-                i_prod.append(i_from[i] - stride_blockindex)
-            i_prod.append(i_from[i] + stride_blockindex)
-
-    return i_prod    
-
-
-def send_reducprod(A, L, U, i_from, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
-
+    
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
@@ -498,6 +875,7 @@ def send_reducprod(A, L, U, i_from, indice_process_start_reduction, indice_proce
         comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
         comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
         comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
+        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
 
     elif comm_rank == comm_size - 1:
         # Only need to send to 1 top process
@@ -509,6 +887,7 @@ def send_reducprod(A, L, U, i_from, indice_process_start_reduction, indice_proce
         comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
         comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
         comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
+        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=3)
 
     else:
         # Need to send to 1 top process and 1 bottom process
@@ -520,6 +899,7 @@ def send_reducprod(A, L, U, i_from, indice_process_start_reduction, indice_proce
         comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
         comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
         comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
+        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=3)
 
         i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
         ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
@@ -527,9 +907,44 @@ def send_reducprod(A, L, U, i_from, indice_process_start_reduction, indice_proce
         comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
         comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
         comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
+        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
 
 
-def recv_reducprod(A, L, U, i_to, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
+
+def rcve_to_produce(A: np.ndarray, 
+                    L: np.ndarray, 
+                    U: np.ndarray, 
+                    G: np.ndarray, 
+                    i_to: list, 
+                    indice_process_start_reduction: int, 
+                    indice_process_stop_reduction: int, 
+                    blocksize: int) -> None:
+    """ Receive the needed blockrow from other processes to produce the blockrow 
+    of the current process.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    i_to : list
+        list of the indices of the blockrows to produce
+    indice_process_start_reduction : int
+        indice of the first blockrow needed to produce the current blockrow
+    indice_process_stop_reduction : int
+        indice of the last blockrow needed to produce the current blockrow
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None
+    """
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
@@ -538,36 +953,33 @@ def recv_reducprod(A, L, U, i_to, indice_process_start_reduction, indice_process
 
     if comm_rank == 0:
         # Only need to recv from 1 bottom process
-        # Recv: i_to[indice_process_stop_reduction+1]
-
         i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
         ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
 
         A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
         L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
         U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
 
     elif comm_rank == comm_size - 1:
         # Only need to recv from 1 top process
-        # Recv i_to[indice_process_start_reduction-1]
-
         i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
         ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize
 
         A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
         L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
         U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
+        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=3)
 
     else:
         # Need to recv from 1 top process and 1 bottom process
-        # Recv i_to[indice_process_start_reduction-1] and i_to[indice_process_stop_reduction+1]
-
         i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
         ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize 
 
         A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
         L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
         U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
+        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=3)
 
         i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
         ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
@@ -575,9 +987,31 @@ def recv_reducprod(A, L, U, i_to, indice_process_start_reduction, indice_process
         A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
         L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
         U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
 
 
-def agregate_result_on_root(G, nblocks_padded, top_blockrow, bottom_blockrow, blocksize):
+
+def agregate_result_on_root(G: np.ndarray, 
+                            l_start_blockrow: list, 
+                            l_partitions_blocksizes: list, 
+                            blocksize: int) -> None:
+    """ Agregate the distributed results on the root process
+    
+    Parameters
+    ----------
+    G : np.ndarray
+        inverted matrix to agregate
+    l_start_blockrow : list
+        list of the start blockrow of each process
+    l_partitions_blocksizes : list
+        list of the partitions blocksize of each process
+    blocksize : int
+        blocksize of the matrix
+        
+    Returns
+    -------
+    None
+    """
 
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
@@ -586,138 +1020,73 @@ def agregate_result_on_root(G, nblocks_padded, top_blockrow, bottom_blockrow, bl
     if comm_rank == 0:
         # Root process that need to agregate all the results
 
-        for i in range(1, comm_size-1):
+        for process_i in range(1, comm_size):
             # Receive from all the central processes
-            top_blockrow_pi     = i * (nblocks_padded // comm_size)
-            bottom_blockrow_pi  = (i+1) * (nblocks_padded // comm_size)
+            top_blockrow_pi     = l_start_blockrow[process_i]
+            bottom_blockrow_pi  = top_blockrow_pi + l_partitions_blocksizes[process_i]
 
             top_rowindice_pi    = top_blockrow_pi * blocksize
             bottom_rowindice_pi = bottom_blockrow_pi * blocksize
 
-            G[top_rowindice_pi:bottom_rowindice_pi, :] = comm.recv(source=i, tag=0)
-
-        # Receive from the last process
-        top_blockrow_pi     = (comm_size-1) * (nblocks_padded // comm_size)
-        bottom_blockrow_pi  = nblocks_padded
-
-        top_rowindice_pi    = top_blockrow_pi * blocksize
-        bottom_rowindice_pi = bottom_blockrow_pi * blocksize
-
-        G[top_rowindice_pi:bottom_rowindice_pi, :] = comm.recv(source=comm_size-1, tag=0)
+            G[top_rowindice_pi:bottom_rowindice_pi, :] = comm.recv(source=process_i, tag=0)
 
     else:
-        top_rowindice    = top_blockrow * blocksize
-        bottom_rowindice = bottom_blockrow * blocksize
+        top_rowindice    = l_start_blockrow[comm_rank] * blocksize
+        bottom_rowindice = top_rowindice + l_partitions_blocksizes[comm_rank] * blocksize
 
         comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
 
-    return G
 
 
-def invert_block(A, G, target_block, top_blockrow, bottom_blockrow, blocksize):
+def bcr_parallel(A: np.ndarray, 
+                 blocksize: int) -> np.ndarray:
+    """ Performe the tridiagonal selected inversion using a parallel version of
+    the block cyclic reduction algorithm.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        matrix to invert
+    blocksize : int
+        size of a block of the matrix A
+        
+    Returns
+    -------
+    G : np.ndarray
+        inverse of the matrix A
     """
-        Invert a block of the matrix A and store it in G
-    """
-    if target_block >= top_blockrow and target_block < bottom_blockrow:
-        target_row    = target_block * blocksize
-        target_row_p1 = (target_block + 1) * blocksize
-
-        G[target_row: target_row_p1, target_row: target_row_p1] = np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
-
-
-def send_to_produce(A, L, U, G, i_from, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
-
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
-
-
-    if comm_rank == 0:
-        # Only need to send to 1 bottom process
-        # Send i_from[indice_process_stop_reduction]
-        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
-        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
-
-    elif comm_rank == comm_size - 1:
-        # Only need to send to 1 top process
-        # Send i_from[indice_process_start_reduction]
-
-        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
-        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=3)
-
-    else:
-        # Need to send to 1 top process and 1 bottom process
-        # Send i_from[indice_process_start_reduction] and i_from[indice_process_stop_reduction]
-
-        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
-        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=3)
-
-        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
-        comm.send(G[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=3)
-
-
-def rcve_to_produce(A, L, U, G, i_to, indice_process_start_reduction, indice_process_stop_reduction, blocksize):
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
 
+    nblocks_initial = A.shape[0] // blocksize
+    
+    # First the input matrix may need to be 0-padded to a power of 2 number of blocks
+    block_padding_distance = bcr_u.distance_to_power_of_two(nblocks_initial)
+    A = bcr_u.identity_padding(A, block_padding_distance*blocksize)
 
-    if comm_rank == 0:
-        # Only need to recv from 1 bottom process
-        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
-        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
+    nblocks_padded = A.shape[0] // blocksize
 
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
-        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
+    L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
+    U = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
+    G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
 
-    elif comm_rank == comm_size - 1:
-        # Only need to recv from 1 top process
-        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
-        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize
+    # Get the starting and ending blockrow indices for each process
+    l_start_blockrow, l_partitions_blocksizes = bcr_u.divide_matrix(nblocks_padded, comm_size)
+    process_top_blockrow, process_bottom_blockrow = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank], l_partitions_blocksizes[comm_rank])
 
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
-        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=3)
+    # 1. Block cyclic reduction
+    i_bcr = [i for i in range(nblocks_padded)]
+    final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
 
-    else:
-        # Need to recv from 1 top process and 1 bottom process
-        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
-        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize 
+    # 2. Block cyclic production
+    invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
+    produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
+    agregate_result_on_root(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
 
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
-        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=3)
+    # Cut the padding
+    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
 
-        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
-        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
-
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
-        G[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=3)
+    return G
 

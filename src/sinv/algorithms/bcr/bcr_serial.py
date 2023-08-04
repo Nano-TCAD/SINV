@@ -187,7 +187,6 @@ def invert_block(A: np.ndarray,
     None
     """
     
-    
     target_row    = target_block * blocksize
     target_row_p1 = (target_block + 1) * blocksize
     

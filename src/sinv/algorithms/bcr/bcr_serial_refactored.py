@@ -116,7 +116,7 @@ def reduce(A: np.ndarray,
             A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] =\
                 - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex]\
                     @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
-                    
+
 
 
 def reduce_bcr(A: np.ndarray, 
@@ -164,38 +164,6 @@ def reduce_bcr(A: np.ndarray,
 
 
 
-def invert_block(A: np.ndarray, 
-                 G: np.ndarray, 
-                 target_block: int, 
-                 blocksize: int) -> None:
-    """ Produce the first block of the inverse of A after having perfomed the 
-    cyclic reduction.
-    
-    Parameters
-    ----------
-    A : np.ndarray
-        diagonal decomposition of A
-    G : np.ndarray
-        output inverse matrix
-    target_block : int
-        index of the block to invert
-    blocksize : int
-        size of the blocks
-    
-    Returns
-    -------
-    None
-    """
-    
-    
-    target_row    = target_block * blocksize
-    target_row_p1 = (target_block + 1) * blocksize
-    
-    G[target_row: target_row_p1, target_row: target_row_p1] =\
-        np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
-        
-
-
 def corner_produce(A: np.ndarray, 
                    L: np.ndarray, 
                    U: np.ndarray, 
@@ -226,7 +194,6 @@ def corner_produce(A: np.ndarray,
     -------
     None
     """
-    
     k_from_rowindex   = k_from * blocksize
     kp1_from_rowindex = (k_from + 1) * blocksize
 
@@ -246,7 +213,7 @@ def corner_produce(A: np.ndarray,
         np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
             - G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex]\
                 @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
-    
+
 
 
 def center_produce(A: np.ndarray, 
@@ -256,33 +223,10 @@ def center_produce(A: np.ndarray,
                    k_above: int, 
                    k_to: int, 
                    k_below: int, 
-                   blocksize: int) -> None:
-    """ BCR production procedure associated with the center production case.
-    
-    Parameters
-    ----------
-    A : np.ndarray
-        diagonal decomposition factors of A
-    L : np.ndarray
-        lower decomposition factors of A
-    U : np.ndarray
-        upper decomposition factors of A
-    G : np.ndarray
-        output matrix to be produced
-    k_above : int
-        index of the block row above to produce from
-    k_to : int
-        index of the block row to produce
-    k_below : int
-        index of the block row below to produce from
-    blocksize : int
-        size of the blocks in the matrix A
-        
-    Returns
-    -------
-    None
+                   blocksize: int) -> np.ndarray:
     """
-    
+        Center process block production
+    """
     k_above_rowindex   = k_above * blocksize
     kp1_above_rowindex = (k_above + 1) * blocksize
 
@@ -291,38 +235,51 @@ def center_produce(A: np.ndarray,
 
     k_below_rowindex   = k_below * blocksize
     kp1_below_rowindex = (k_below + 1) * blocksize
-    
 
-    G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] =\
-        - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
-            @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
-                    
-    G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] =\
-        - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]\
-            @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
-                    
-    G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] =\
-        - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
-            @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
-                    
-    G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] =\
-        - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
-            @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
-                    
-    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
-        np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
-            - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                    - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]\
+    G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                                                                                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+    G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] = - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                                                                                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+    G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
+                                                                                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
+    G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] = - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                                                                                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
+    G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]       = np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex]) - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+                                                                                - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]\
+
+    return G
+
+
+
+def invert_block(A: np.ndarray, 
+                 G: np.ndarray, 
+                 target_block: int, 
+                 blocksize: int) -> None:
+    """ Produce the first block of the inverse of A after having perfomed the 
+    cyclic reduction.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    G : np.ndarray
+        output inverse matrix
+    target_block : int
+        index of the block to invert
+    blocksize : int
+        size of the blocks
+    
+    Returns
+    -------
+    None
+    """
+    
+    
+    target_row    = target_block * blocksize
+    target_row_p1 = (target_block + 1) * blocksize
+    
+    G[target_row: target_row_p1, target_row: target_row_p1] =\
+        np.linalg.inv(A[target_row: target_row_p1, target_row: target_row_p1])
 
 
 
@@ -332,27 +289,6 @@ def produce_bcr(A: np.ndarray,
                 G: np.ndarray, 
                 i_bcr: np.ndarray, 
                 blocksize: int) -> None:
-    """ Performs the block cyclic production.
-    
-    Parameters
-    ----------
-    A : np.ndarray
-        diagonal decomposition of A
-    L : np.ndarray
-        lower decomposition of A
-    U : np.ndarray
-        upper decomposition of A
-    G : np.ndarray
-        output inverse matrix
-    i_bcr : np.ndarray
-        blockrows to perform the production on
-    blocksize : int
-        size of the blocks
-        
-    Returns
-    -------
-    None
-    """
 
     nblocks = len(i_bcr)
     height  = int(math.log2(nblocks))
@@ -382,20 +318,20 @@ def produce_bcr(A: np.ndarray,
                 # It only gets values from the below row 
                 k_from = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
 
             if i_prod_blockindex != 0 and i_prod_blockindex == len(i_prod) - 1:
                 if i_prod[-1] <= len(i_bcr) - stride_blockindex -1:
                     k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                     k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                    center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                    G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
                 else:
                     # Production row is the last row within the stride_blockindex range
                     # It only gets values from the above row 
                     k_from = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                    
-                    corner_produce(A, L, U, G, k_from, k_to, blocksize)
+                    G = corner_produce(A, L, U, G, k_from, k_to, blocksize)
             
             if i_prod_blockindex != 0 and i_prod_blockindex != len(i_prod) - 1:
                 # Production row is in the middle of the stride_blockindex range
@@ -403,7 +339,7 @@ def produce_bcr(A: np.ndarray,
                 k_above = i_bcr[i_prod[i_prod_blockindex] - stride_blockindex]
                 k_below = i_bcr[i_prod[i_prod_blockindex] + stride_blockindex]
 
-                center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
+                G = center_produce(A, L, U, G, k_above, k_to, k_below, blocksize)
 
 
 

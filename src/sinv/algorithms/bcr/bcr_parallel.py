@@ -321,7 +321,7 @@ def send_down(A: np.ndarray,
               L: np.ndarray, 
               U: np.ndarray,  
               blockrow_idx: int,
-              bloksize: int) -> None:
+              blocksize: int) -> None:
     """ Send downward the last produced row of the current level to the next 
     process.
     
@@ -360,7 +360,7 @@ def recv_up(A: np.ndarray,
             L: np.ndarray, 
             U: np.ndarray,  
             blockrow_idx: int,
-            bloksize: int) -> None:
+            blocksize: int) -> None:
     """ Receive upward the last produced row of the current level from the 
     previous process.
     
@@ -399,7 +399,7 @@ def send_up(A: np.ndarray,
             L: np.ndarray, 
             U: np.ndarray,  
             blockrow_idx: int,
-            bloksize: int) -> None:
+            blocksize: int) -> None:
     """ Send upward the last produced row of the current level to the previous
     process.
     
@@ -438,7 +438,7 @@ def recv_down(A: np.ndarray,
               L: np.ndarray, 
               U: np.ndarray,  
               blockrow_idx: int,
-              bloksize: int) -> None:
+              blocksize: int) -> None:
     """ Receive downward the last produced row of the current level from the
     next process.
     

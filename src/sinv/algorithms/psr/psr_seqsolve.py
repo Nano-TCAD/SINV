@@ -18,7 +18,7 @@ from mpi4py import MPI
 
 
 def psr_seqsolve(A: np.ndarray, 
-                            blocksize: int):
+                 blocksize: int):
     """ Selected inversion algorithm using the parallel Schur reduction 
     algorithm. The algorithm work in place and will overwrite the input matrix A.
 

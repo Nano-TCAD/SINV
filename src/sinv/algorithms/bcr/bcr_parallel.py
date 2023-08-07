@@ -18,6 +18,60 @@ from mpi4py import MPI
 
 
 
+def bcr_parallel(A: np.ndarray, 
+                 blocksize: int) -> np.ndarray:
+    """ Performe the tridiagonal selected inversion using a parallel version of
+    the block cyclic reduction algorithm.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        matrix to invert
+    blocksize : int
+        size of a block of the matrix A
+        
+    Returns
+    -------
+    G : np.ndarray
+        inverse of the matrix A
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    nblocks_initial = A.shape[0] // blocksize
+    
+    # First the input matrix may need to be 0-padded to a power of 2 number of blocks
+    block_padding_distance = bcr_u.distance_to_power_of_two(nblocks_initial)
+    A = bcr_u.identity_padding(A, block_padding_distance*blocksize)
+
+    nblocks_padded = A.shape[0] // blocksize
+
+    L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
+    U = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
+    G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
+
+    # Get the starting and ending blockrow indices for each process
+    l_start_blockrow, l_partitions_blocksizes = bcr_u.divide_matrix(nblocks_padded, comm_size)
+    process_top_blockrow, process_bottom_blockrow = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank], l_partitions_blocksizes[comm_rank])
+
+    # 1. Block cyclic reduction
+    i_bcr = [i for i in range(nblocks_padded)]
+    final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
+
+    # 2. Block cyclic production
+    invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
+    produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
+    agregate_result_on_root(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
+
+    # Cut the padding
+    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
+
+    return G
+
+
+
 def reduce(A: np.ndarray, 
            L: np.ndarray, 
            U: np.ndarray, 
@@ -1035,58 +1089,3 @@ def agregate_result_on_root(G: np.ndarray,
         bottom_rowindice = top_rowindice + l_partitions_blocksizes[comm_rank] * blocksize
 
         comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
-
-
-
-def bcr_parallel(A: np.ndarray, 
-                 blocksize: int) -> np.ndarray:
-    """ Performe the tridiagonal selected inversion using a parallel version of
-    the block cyclic reduction algorithm.
-    
-    Parameters
-    ----------
-    A : np.ndarray
-        matrix to invert
-    blocksize : int
-        size of a block of the matrix A
-        
-    Returns
-    -------
-    G : np.ndarray
-        inverse of the matrix A
-    """
-    
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
-
-    nblocks_initial = A.shape[0] // blocksize
-    
-    # First the input matrix may need to be 0-padded to a power of 2 number of blocks
-    block_padding_distance = bcr_u.distance_to_power_of_two(nblocks_initial)
-    A = bcr_u.identity_padding(A, block_padding_distance*blocksize)
-
-    nblocks_padded = A.shape[0] // blocksize
-
-    L = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-    U = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-    G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
-
-    # Get the starting and ending blockrow indices for each process
-    l_start_blockrow, l_partitions_blocksizes = bcr_u.divide_matrix(nblocks_padded, comm_size)
-    process_top_blockrow, process_bottom_blockrow = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank], l_partitions_blocksizes[comm_rank])
-
-    # 1. Block cyclic reduction
-    i_bcr = [i for i in range(nblocks_padded)]
-    final_reduction_block = reduce_bcr(A, L, U, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
-
-    # 2. Block cyclic production
-    invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
-    produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
-    agregate_result_on_root(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-
-    # Cut the padding
-    G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
-
-    return G
-

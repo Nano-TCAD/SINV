@@ -21,6 +21,79 @@ from mpi4py import MPI
 
 
 
+def pdiv_aggregate(A: np.ndarray, 
+                   blocksize: int) -> np.ndarray:
+    """ Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
+        
+    Parameters
+    ----------
+    A : numpy matrix
+        matrix to invert
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    K_local : numpy matrix
+        inverted matrix aggregated on process 0
+
+    Notes
+    -----
+    The PDIV (Pairwise) algorithm is a divide and conquer approch to compute
+    the inverse of a matrix. The matrix is divided into submatrices, distributed
+    among the processes, inverted locally and updated thourgh a series of reduction.
+
+    This implementation agregates and update the inverted sub-partitions in a 
+    divide and conquer manner. 
+    
+    Limitations:
+    - The number of processes must be a power of 2.
+    """
+
+    # MPI initialization
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+
+    pdiv_u.check_input(A, blocksize, comm_size)
+    
+    # Preprocessing
+    n_partitions      = comm_size
+    n_reduction_steps = int(math.log2(n_partitions))
+
+    l_start_blockrow, l_partitions_blocksizes = pdiv_u.divide_matrix(A, n_partitions, blocksize)
+    K_local, Bu_local, Bl_local = allocate_memory_for_partitions(A, l_partitions_blocksizes, n_partitions, n_reduction_steps, blocksize)
+
+    # Partitioning
+    if comm_rank == 0:
+        K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
+        pdiv_u.send_partitions(K_i, K_local)
+        send_bridges(Bu_i, Bu_local, n_partitions, n_reduction_steps)
+        send_bridges(Bl_i, Bl_local, n_partitions, n_reduction_steps)
+    else:
+        pdiv_u.recv_partitions(K_local, l_partitions_blocksizes, blocksize)
+        recv_bridges(Bu_local, n_partitions, n_reduction_steps)
+        recv_bridges(Bl_local, n_partitions, n_reduction_steps)
+
+    # Inversion of the local partition
+    pdiv_u.invert_partition(K_local, l_partitions_blocksizes, blocksize)
+
+    # Reduction steps
+    for current_step in range(1, n_reduction_steps+1):
+        for active_process in range(0, n_partitions, int(math.pow(2, current_step))):
+
+            # Processes recv and send their subpartitions
+            assemble_subpartitions(K_local, l_partitions_blocksizes, active_process, current_step, blocksize)
+
+            # The active processes compute the update term and update their local partition
+            if comm_rank == active_process:
+                U = compute_update_term(K_local, Bu_local, Bl_local, l_partitions_blocksizes, active_process, current_step, blocksize)
+                pdiv_u.update_partition(K_local, U)
+
+    return K_local
+
+
+
 def allocate_memory_for_partitions(A: np.ndarray, 
                                    l_partitions_blocksizes: list, 
                                    n_partitions: int, 
@@ -276,77 +349,4 @@ def compute_update_term(K_local: np.ndarray,
     U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J21 @ K_local[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
 
     return U
-
-
-
-def pdiv_aggregate(A: np.ndarray, 
-                   blocksize: int) -> np.ndarray:
-    """ Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
-        
-    Parameters
-    ----------
-    A : numpy matrix
-        matrix to invert
-    blocksize : int
-        size of a block
-
-    Returns
-    -------
-    K_local : numpy matrix
-        inverted matrix aggregated on process 0
-
-    Notes
-    -----
-    The PDIV (Pairwise) algorithm is a divide and conquer approch to compute
-    the inverse of a matrix. The matrix is divided into submatrices, distributed
-    among the processes, inverted locally and updated thourgh a series of reduction.
-
-    This implementation agregates and update the inverted sub-partitions in a 
-    divide and conquer manner. 
-    
-    Limitations:
-    - The number of processes must be a power of 2.
-    """
-
-    # MPI initialization
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
-
-    pdiv_u.check_input(A, blocksize, comm_size)
-    
-    # Preprocessing
-    n_partitions      = comm_size
-    n_reduction_steps = int(math.log2(n_partitions))
-
-    l_start_blockrow, l_partitions_blocksizes = pdiv_u.divide_matrix(A, n_partitions, blocksize)
-    K_local, Bu_local, Bl_local = allocate_memory_for_partitions(A, l_partitions_blocksizes, n_partitions, n_reduction_steps, blocksize)
-
-    # Partitioning
-    if comm_rank == 0:
-        K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        pdiv_u.send_partitions(K_i, K_local)
-        send_bridges(Bu_i, Bu_local, n_partitions, n_reduction_steps)
-        send_bridges(Bl_i, Bl_local, n_partitions, n_reduction_steps)
-    else:
-        pdiv_u.recv_partitions(K_local, l_partitions_blocksizes, blocksize)
-        recv_bridges(Bu_local, n_partitions, n_reduction_steps)
-        recv_bridges(Bl_local, n_partitions, n_reduction_steps)
-
-    # Inversion of the local partition
-    pdiv_u.invert_partition(K_local, l_partitions_blocksizes, blocksize)
-
-    # Reduction steps
-    for current_step in range(1, n_reduction_steps+1):
-        for active_process in range(0, n_partitions, int(math.pow(2, current_step))):
-
-            # Processes recv and send their subpartitions
-            assemble_subpartitions(K_local, l_partitions_blocksizes, active_process, current_step, blocksize)
-
-            # The active processes compute the update term and update their local partition
-            if comm_rank == active_process:
-                U = compute_update_term(K_local, Bu_local, Bl_local, l_partitions_blocksizes, active_process, current_step, blocksize)
-                pdiv_u.update_partition(K_local, U)
-
-    return K_local
 

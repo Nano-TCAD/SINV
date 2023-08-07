@@ -17,6 +17,60 @@ from mpi4py import MPI
 
 
 
+def psr_seqsolve(A: np.ndarray, 
+                            blocksize: int):
+    """ Selected inversion algorithm using the parallel Schur reduction 
+    algorithm. The algorithm work in place and will overwrite the input matrix A.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        block tridiagonal matrix
+    blocksize : int
+        block matrice_size
+        
+    Returns 
+    -------
+    G : np.ndarray
+        block tridiagonal selected inverse of A.
+        
+    Notes
+    -----
+    Limitations:
+    - The numbers of blocks must be greater than 3 times the number of processes.
+        The central processes need at least 3 block-rows to work.
+    - The minimal number of processes is 3.
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+    
+    psr_u.check_input(A, blocksize, comm_size)
+    
+    l_start_blockrow, l_partitions_blocksizes = psr_u.divide_matrix(A, comm_size, blocksize)
+    A, L, U = reduce_schur(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
+
+    
+    G = np.zeros(A.shape, dtype=A.dtype)
+    
+    if comm_rank == 0:
+        A_schur = aggregate_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
+        G_schur = inverse_reduced_system(A_schur, blocksize)
+        sendback_inverted_reduced_system(G_schur, G, l_start_blockrow, l_partitions_blocksizes, blocksize)
+    else:
+        send_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
+        receiveback_inverted_reduced_system(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
+
+    
+    produce_schur(A, L, U, G, l_start_blockrow, l_partitions_blocksizes, blocksize)
+    aggregate_results(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
+        
+    
+    return G
+
+
+
 def reduce_schur(A: np.ndarray, 
                  l_start_blockrow: list,
                  l_partitions_blocksizes: list,
@@ -858,56 +912,3 @@ def aggregate_results(G: np.ndarray,
         
         comm.send(G[start_rowindex:stop_rowindex, :], dest=0, tag=0)
         
-                      
-                            
-def psr_seqsolve(A: np.ndarray, 
-                            blocksize: int):
-    """ Selected inversion algorithm using the parallel Schur reduction 
-    algorithm. The algorithm work in place and will overwrite the input matrix A.
-
-    Parameters
-    ----------
-    A : np.ndarray
-        block tridiagonal matrix
-    blocksize : int
-        block matrice_size
-        
-    Returns 
-    -------
-    G : np.ndarray
-        block tridiagonal selected inverse of A.
-        
-    Notes
-    -----
-    Limitations:
-    - The numbers of blocks must be greater than 3 times the number of processes.
-        The central processes need at least 3 block-rows to work.
-    - The minimal number of processes is 3.
-    """
-    
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
-    
-    psr_u.check_input(A, blocksize, comm_size)
-    
-    l_start_blockrow, l_partitions_blocksizes = psr_u.divide_matrix(A, comm_size, blocksize)
-    A, L, U = reduce_schur(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-
-    
-    G = np.zeros(A.shape, dtype=A.dtype)
-    
-    if comm_rank == 0:
-        A_schur = aggregate_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        G_schur = inverse_reduced_system(A_schur, blocksize)
-        sendback_inverted_reduced_system(G_schur, G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-    else:
-        send_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        receiveback_inverted_reduced_system(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-
-    
-    produce_schur(A, L, U, G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-    aggregate_results(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        
-    
-    return G

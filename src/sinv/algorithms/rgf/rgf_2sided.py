@@ -16,6 +16,67 @@ from mpi4py import MPI
 
 
 
+def rgf_2sided(A_bloc_diag: np.ndarray, 
+               A_bloc_upper: np.ndarray, 
+               A_bloc_lower: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
+    """ Exstension of the RGF algorithm that uses two processes that meet in the
+    middle of the matrix. The array traversal is done from both sides to the
+    middle. Rank 0 will aggregate the final result.
+    
+    Parameters
+    ----------
+    A_bloc_diag : np.ndarray
+        Diagonal blocks of the matrix A.
+    A_bloc_upper : np.ndarray
+        Upper off-diagonal blocks of the matrix A.
+    A_bloc_lower : np.ndarray
+        Lower off-diagonal blocks of the matrix A.
+        
+    Returns
+    -------
+    G_diag_blocks : np.ndarray
+        Diagonal blocks of the matrix G.
+    G_upper_blocks : np.ndarray
+        Upper off-diagonal blocks of the matrix G.
+    G_lower_blocks : np.ndarray
+        Lower off-diagonal blocks of the matrix G.
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    nblocks   = A_bloc_diag.shape[0]
+    nblocks_2 = int(nblocks/2)
+    blockSize = A_bloc_diag.shape[1]
+
+    G_diag_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
+    G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
+    G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
+
+
+    if comm_rank == 0:
+        G_diag_blocks[0:nblocks_2, ]\
+        , G_upper_blocks[0:nblocks_2, ]\
+        , G_lower_blocks[0:nblocks_2, ] = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
+
+        G_diag_blocks[nblocks_2:, ]  = comm.recv(source=1, tag=0)
+        G_upper_blocks[nblocks_2:, ] = comm.recv(source=1, tag=1)
+        G_lower_blocks[nblocks_2:, ] = comm.recv(source=1, tag=2)
+
+    elif comm_rank == 1:
+        G_diag_blocks[nblocks_2:, ]\
+        , G_upper_blocks[nblocks_2-1:, ]\
+        , G_lower_blocks[nblocks_2-1:, ] = rgf_rightprocess(A_bloc_diag[nblocks_2:, ], A_bloc_upper[nblocks_2-1:, ], A_bloc_lower[nblocks_2-1:, ])
+        
+        comm.send(G_diag_blocks[nblocks_2:, ], dest=0, tag=0)
+        comm.send(G_upper_blocks[nblocks_2:, ], dest=0, tag=1)
+        comm.send(G_lower_blocks[nblocks_2:, ], dest=0, tag=2)
+    
+
+    return G_diag_blocks, G_upper_blocks, G_lower_blocks
+
+
+
 def rgf_leftprocess(A_bloc_diag_leftprocess: np.ndarray, 
                     A_bloc_upper_leftprocess: np.ndarray, 
                     A_bloc_lower_leftprocess: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
@@ -149,65 +210,4 @@ def rgf_rightprocess(A_bloc_diag_rightprocess: np.ndarray,
 
 
     return G_diag_blocks_rightprocess, G_upper_blocks_rightprocess, G_lower_blocks_rightprocess
-
-
-
-def rgf_2sided(A_bloc_diag: np.ndarray, 
-               A_bloc_upper: np.ndarray, 
-               A_bloc_lower: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Exstension of the RGF algorithm that uses two processes that meet in the
-    middle of the matrix. The array traversal is done from both sides to the
-    middle. Rank 0 will aggregate the final result.
-    
-    Parameters
-    ----------
-    A_bloc_diag : np.ndarray
-        Diagonal blocks of the matrix A.
-    A_bloc_upper : np.ndarray
-        Upper off-diagonal blocks of the matrix A.
-    A_bloc_lower : np.ndarray
-        Lower off-diagonal blocks of the matrix A.
-        
-    Returns
-    -------
-    G_diag_blocks : np.ndarray
-        Diagonal blocks of the matrix G.
-    G_upper_blocks : np.ndarray
-        Upper off-diagonal blocks of the matrix G.
-    G_lower_blocks : np.ndarray
-        Lower off-diagonal blocks of the matrix G.
-    """
-    
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-
-    nblocks   = A_bloc_diag.shape[0]
-    nblocks_2 = int(nblocks/2)
-    blockSize = A_bloc_diag.shape[1]
-
-    G_diag_blocks = np.zeros((nblocks, blockSize, blockSize), dtype=A_bloc_diag.dtype)
-    G_upper_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_upper.dtype)
-    G_lower_blocks = np.zeros((nblocks-1, blockSize, blockSize), dtype=A_bloc_lower.dtype)
-
-
-    if comm_rank == 0:
-        G_diag_blocks[0:nblocks_2, ]\
-        , G_upper_blocks[0:nblocks_2, ]\
-        , G_lower_blocks[0:nblocks_2, ] = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
-
-        G_diag_blocks[nblocks_2:, ]  = comm.recv(source=1, tag=0)
-        G_upper_blocks[nblocks_2:, ] = comm.recv(source=1, tag=1)
-        G_lower_blocks[nblocks_2:, ] = comm.recv(source=1, tag=2)
-
-    elif comm_rank == 1:
-        G_diag_blocks[nblocks_2:, ]\
-        , G_upper_blocks[nblocks_2-1:, ]\
-        , G_lower_blocks[nblocks_2-1:, ] = rgf_rightprocess(A_bloc_diag[nblocks_2:, ], A_bloc_upper[nblocks_2-1:, ], A_bloc_lower[nblocks_2-1:, ])
-        
-        comm.send(G_diag_blocks[nblocks_2:, ], dest=0, tag=0)
-        comm.send(G_upper_blocks[nblocks_2:, ], dest=0, tag=1)
-        comm.send(G_lower_blocks[nblocks_2:, ], dest=0, tag=2)
-    
-
-    return G_diag_blocks, G_upper_blocks, G_lower_blocks
 

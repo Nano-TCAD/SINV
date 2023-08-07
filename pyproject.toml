@@ -23,6 +23,7 @@ dependencies = [
     "pytest",
     "pytest-mpi",
     "pytest-cov",
+    "coverage",
 ]
 
 [project.urls]

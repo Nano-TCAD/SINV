@@ -2,7 +2,7 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-07
 
-Basic tests cases for the BSR parallel algorithm. 
+Basic tests cases for the BCR parallel algorithm. 
 - Reel symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 

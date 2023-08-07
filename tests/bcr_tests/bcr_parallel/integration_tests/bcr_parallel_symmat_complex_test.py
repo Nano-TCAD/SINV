@@ -2,8 +2,8 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-07
 
-Basic tests cases for the BSR parallel algorithm. 
-- Reel un-symmetric matrices.
+Basic tests cases for the BCR parallel algorithm. 
+- Complex symmetric matrices.
 ================================================
 | Test n  | Matrice size | Blocksize | nblocks | 
 ================================================
@@ -33,16 +33,17 @@ comm = MPI.COMM_WORLD
 comm_size = comm.Get_size()
 comm_rank = comm.Get_rank()
 
-isComplex = False
+isComplex = True
 seed = 63
 
 @pytest.mark.mpi(min_size=2)
-def test_bcr_parallel_nosymmat_reel_1():
+def test_bcr_parallel_symmat_complex_1():
     matrice_size = 2
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -56,12 +57,13 @@ def test_bcr_parallel_nosymmat_reel_1():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
             
 @pytest.mark.mpi(min_size=2)
-def test_bcr_parallel_nosymmat_reel_2():
+def test_bcr_parallel_symmat_complex_2():
     matrice_size = 4
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -75,12 +77,13 @@ def test_bcr_parallel_nosymmat_reel_2():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)
-def test_bcr_parallel_nosymmat_reel_3():
+def test_bcr_parallel_symmat_complex_3():
     matrice_size = 6
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -94,12 +97,13 @@ def test_bcr_parallel_nosymmat_reel_3():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)            
-def test_bcr_parallel_nosymmat_reel_4():
+def test_bcr_parallel_symmat_complex_4():
     matrice_size = 3
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -113,12 +117,13 @@ def test_bcr_parallel_nosymmat_reel_4():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)            
-def test_bcr_parallel_nosymmat_reel_5():
+def test_bcr_parallel_symmat_complex_5():
     matrice_size = 6
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -132,12 +137,13 @@ def test_bcr_parallel_nosymmat_reel_5():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)            
-def test_bcr_parallel_nosymmat_reel_6():
+def test_bcr_parallel_symmat_complex_6():
     matrice_size = 9
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -151,12 +157,13 @@ def test_bcr_parallel_nosymmat_reel_6():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)
-def test_bcr_parallel_nosymmat_reel_7():
+def test_bcr_parallel_symmat_complex_7():
     matrice_size = 128
     blocksize    = 8
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -170,12 +177,13 @@ def test_bcr_parallel_nosymmat_reel_7():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 @pytest.mark.mpi(min_size=2)        
-def test_bcr_parallel_nosymmat_reel_8():
+def test_bcr_parallel_symmat_complex_8():
     matrice_size = 128
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
     A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
@@ -189,12 +197,12 @@ def test_bcr_parallel_nosymmat_reel_8():
             and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
 
 if __name__ == '__main__':
-    test_bcr_parallel_nosymmat_reel_1()
-    test_bcr_parallel_nosymmat_reel_2()
-    test_bcr_parallel_nosymmat_reel_3()
-    test_bcr_parallel_nosymmat_reel_4()
-    test_bcr_parallel_nosymmat_reel_5()
-    test_bcr_parallel_nosymmat_reel_6()
-    test_bcr_parallel_nosymmat_reel_7()
-    test_bcr_parallel_nosymmat_reel_8()
+    test_bcr_parallel_symmat_complex_1()
+    test_bcr_parallel_symmat_complex_2()
+    test_bcr_parallel_symmat_complex_3()
+    test_bcr_parallel_symmat_complex_4()
+    test_bcr_parallel_symmat_complex_5()
+    test_bcr_parallel_symmat_complex_6()
+    test_bcr_parallel_symmat_complex_7()
+    test_bcr_parallel_symmat_complex_8()
     

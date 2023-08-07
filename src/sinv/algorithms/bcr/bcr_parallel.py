@@ -52,9 +52,10 @@ def bcr_parallel(A: np.ndarray,
     U = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
     G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
 
-    # Get the starting and ending blockrow indices for each process
+    # Partitionning
     l_start_blockrow, l_partitions_blocksizes = bcr_u.divide_matrix(nblocks_padded, comm_size)
     process_top_blockrow, process_bottom_blockrow = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank], l_partitions_blocksizes[comm_rank])
+
 
     # 1. Block cyclic reduction
     i_bcr = [i for i in range(nblocks_padded)]
@@ -63,9 +64,10 @@ def bcr_parallel(A: np.ndarray,
     # 2. Block cyclic production
     invert_block(A, G, final_reduction_block, process_top_blockrow, process_bottom_blockrow, blocksize)
     produce_bcr(A, L, U, G, i_bcr, process_top_blockrow, process_bottom_blockrow, blocksize)
+    
+    
+    # Formating result    
     agregate_result_on_root(G, l_start_blockrow, l_partitions_blocksizes, blocksize)
-
-    # Cut the padding
     G = G[:nblocks_initial*blocksize, :nblocks_initial*blocksize]
 
     return G
@@ -220,8 +222,7 @@ def reduce_bcr(A: np.ndarray,
 
         # Here each process should communicate the last row of the reduction to the next process
         if level_blockindex != height - 1:
-            send_reducprod(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
-            recv_reducprod(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
+            communicate_reducprod(A, L, U, i_elim, indice_process_start_reduction, indice_process_stop_reduction, blocksize)
 
         if len(i_elim) > 0:
             last_reduction_block = i_elim[-1]
@@ -230,14 +231,15 @@ def reduce_bcr(A: np.ndarray,
 
 
 
-def send_reducprod(A: np.ndarray, 
-                   L: np.ndarray, 
-                   U: np.ndarray, 
-                   i_from: list, 
-                   indice_process_start_reduction: int, 
-                   indice_process_stop_reduction: int, 
-                   blocksize: int) -> None:
-    """ Sends the last produced row to the next process.
+def communicate_reducprod(A: np.ndarray, 
+                          L: np.ndarray, 
+                          U: np.ndarray, 
+                          i_from: list, 
+                          indice_process_start_reduction: int, 
+                          indice_process_stop_reduction: int, 
+                          blocksize: int) -> None:
+    """ Communicate the last produced row of the current level to the surrounding
+    processes. They may need this value to produce at the next level.
     
     Parameters
     ----------
@@ -260,61 +262,68 @@ def send_reducprod(A: np.ndarray,
     -------
     None 
     """
-
+    
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
-
-
+    
     if comm_rank == 0:
-        # Only need to send to 1 bottom process
-        # Send i_from[indice_process_stop_reduction]
-        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
-
+        blockrow_idx = i_from[indice_process_stop_reduction]
+        send_down(A, L, U, blockrow_idx, blocksize)
+        
+        blockrow_idx = i_from[indice_process_stop_reduction+1]
+        recv_down(A, L, U, blockrow_idx, blocksize)
+        
     elif comm_rank == comm_size - 1:
-        # Only need to send to 1 top process
-        # Send i_from[indice_process_start_reduction]
-
-        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
-
+        blockrow_idx = i_from[indice_process_start_reduction-1]
+        recv_up(A, L, U, blockrow_idx, blocksize)
+        
+        blockrow_idx = i_from[indice_process_start_reduction]
+        send_up(A, L, U, blockrow_idx, blocksize)
     else:
-        # Need to send to 1 top process and 1 bottom process
-        # Send i_from[indice_process_start_reduction] and i_from[indice_process_stop_reduction]
+        # Even ranks communicates first
+        if comm_rank % 2 == 0:
+            # Downward communication
+            blockrow_idx = i_from[indice_process_stop_reduction]
+            send_down(A, L, U, blockrow_idx, blocksize)
+            
+            blockrow_idx = i_from[indice_process_start_reduction-1]
+            recv_up(A, L, U, blockrow_idx, blocksize)
+            
+            
+            # Upward communication
+            blockrow_idx = i_from[indice_process_start_reduction]
+            send_up(A, L, U, blockrow_idx, blocksize)
+            
+            blockrow_idx = i_from[indice_process_stop_reduction+1]
+            recv_down(A, L, U, blockrow_idx, blocksize)
+            
+        # Odd rank communicates second
+        else:
+            # Downward communication
+            blockrow_idx = i_from[indice_process_start_reduction-1]
+            recv_up(A, L, U, blockrow_idx, blocksize)
+            
+            blockrow_idx = i_from[indice_process_stop_reduction]
+            send_down(A, L, U, blockrow_idx, blocksize)
+            
+            
+            # Upward communication
+            blockrow_idx = i_from[indice_process_stop_reduction+1]
+            recv_down(A, L, U, blockrow_idx, blocksize)
+            
+            blockrow_idx = i_from[indice_process_start_reduction]
+            send_up(A, L, U, blockrow_idx, blocksize)
+        
 
-        i_rowindice   = i_from[indice_process_start_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_start_reduction]+1) * blocksize
 
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
-
-        i_rowindice   = i_from[indice_process_stop_reduction] * blocksize
-        ip1_rowindice = (i_from[indice_process_stop_reduction]+1) * blocksize
-
-        comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
-        comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
-        comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
-
-
-
-def recv_reducprod(A: np.array, 
-                   L: np.array, 
-                   U: np.array, 
-                   i_to: list, 
-                   indice_process_start_reduction: int, 
-                   indice_process_stop_reduction: int, 
-                   blocksize: int) -> None:
-    """ Receive the last produced row from the others processes.
+def send_down(A: np.ndarray,
+              L: np.ndarray, 
+              U: np.ndarray,  
+              blockrow_idx: int,
+              bloksize: int) -> None:
+    """ Send downward the last produced row of the current level to the next 
+    process.
     
     Parameters
     ----------
@@ -324,12 +333,8 @@ def recv_reducprod(A: np.array,
         lower decomposition of A
     U : np.ndarray
         upper decomposition of A
-    i_to : list
-        list of the active blockrow at the current level
-    indice_process_start_reduction : int
-        index of the first blockrow to reduce
-    indice_process_stop_reduction : int
-        index of the last blockrow to reduce
+    blockrow_idx : int
+        index of the blockrow to communicate
     blocksize : int
         size of the blocks
         
@@ -341,49 +346,132 @@ def recv_reducprod(A: np.array,
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
+    
+    i_rowindice   = blockrow_idx * blocksize
+    ip1_rowindice = (blockrow_idx+1) * blocksize
+    
+    comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=0)
+    comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank+1, tag=1)
+    comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank+1, tag=2)
 
 
-    if comm_rank == 0:
-        # Only need to recv from 1 bottom process
-        # Recv: i_to[indice_process_stop_reduction+1]
 
-        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
-        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
-
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
-
-    elif comm_rank == comm_size - 1:
-        # Only need to recv from 1 top process
-        # Recv i_to[indice_process_start_reduction-1]
-
-        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
-        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize
-
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
-
-    else:
-        # Need to recv from 1 top process and 1 bottom process
-        # Recv i_to[indice_process_start_reduction-1] and i_to[indice_process_stop_reduction+1]
-
-        i_rowindice   = i_to[indice_process_start_reduction-1] * blocksize
-        ip1_rowindice = (i_to[indice_process_start_reduction-1]+1) * blocksize 
-
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
-
-        i_rowindice   = i_to[indice_process_stop_reduction+1] * blocksize
-        ip1_rowindice = (i_to[indice_process_stop_reduction+1]+1) * blocksize
-
-        A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
-        L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
-        U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+def recv_up(A: np.ndarray,
+            L: np.ndarray, 
+            U: np.ndarray,  
+            blockrow_idx: int,
+            bloksize: int) -> None:
+    """ Receive upward the last produced row of the current level from the 
+    previous process.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    blockrow_idx : int
+        index of the blockrow to communicate
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None 
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+    
+    i_rowindice   = blockrow_idx * blocksize
+    ip1_rowindice = (blockrow_idx+1) * blocksize
+    
+    A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=0)
+    L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank-1, tag=1)
+    U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank-1, tag=2)
 
 
+
+def send_up(A: np.ndarray,
+            L: np.ndarray, 
+            U: np.ndarray,  
+            blockrow_idx: int,
+            bloksize: int) -> None:
+    """ Send upward the last produced row of the current level to the previous
+    process.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    blockrow_idx : int
+        index of the blockrow to communicate
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None 
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+    
+    i_rowindice   = blockrow_idx * blocksize
+    ip1_rowindice = (blockrow_idx+1) * blocksize
+    
+    comm.send(A[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=0)
+    comm.send(L[i_rowindice:ip1_rowindice, :], dest=comm_rank-1, tag=1)
+    comm.send(U[:, i_rowindice:ip1_rowindice], dest=comm_rank-1, tag=2)
+
+
+
+def recv_down(A: np.ndarray,
+              L: np.ndarray, 
+              U: np.ndarray,  
+              blockrow_idx: int,
+              bloksize: int) -> None:
+    """ Receive downward the last produced row of the current level from the
+    next process.
+    
+    Parameters
+    ----------
+    A : np.ndarray
+        diagonal decomposition of A
+    L : np.ndarray
+        lower decomposition of A
+    U : np.ndarray
+        upper decomposition of A
+    blockrow_idx : int
+        index of the blockrow to communicate
+    blocksize : int
+        size of the blocks
+        
+    Returns
+    -------
+    None 
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
+    
+    i_rowindice   = blockrow_idx * blocksize
+    ip1_rowindice = (blockrow_idx+1) * blocksize
+    
+    A[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=0)
+    L[i_rowindice:ip1_rowindice, :] = comm.recv(source=comm_rank+1, tag=1)
+    U[:, i_rowindice:ip1_rowindice] = comm.recv(source=comm_rank+1, tag=2)
+    
+    
 
 def invert_block(A: np.ndarray, 
                  G: np.ndarray, 
@@ -1089,3 +1177,31 @@ def agregate_result_on_root(G: np.ndarray,
         bottom_rowindice = top_rowindice + l_partitions_blocksizes[comm_rank] * blocksize
 
         comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
+
+
+
+if __name__ == '__main__':
+    comm = MPI.COMM_WORLD
+    comm_size = comm.Get_size()
+    comm_rank = comm.Get_rank()
+
+    isComplex = True
+    seed = 63
+    
+    matrice_size = 100
+    blocksize    = 10
+    bandwidth    = np.ceil(blocksize/2)
+    
+    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    
+    A_refsol = np.linalg.inv(A)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+
+    G_bcr_p = bcr_parallel(A, blocksize)
+    G_bcr_p_bloc_diag, G_bcr_p_bloc_upper, G_bcr_p_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G_bcr_p, blocksize)
+    
+    if comm_rank == 0:
+        utils.vizu.compareDenseMatrix(A_refsol, "A_refsol", G_bcr_p, "G_bcr_p")
+        assert np.allclose(A_refsol_bloc_diag, G_bcr_p_bloc_diag)\
+            and np.allclose(A_refsol_bloc_upper, G_bcr_p_bloc_upper)\
+            and np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)

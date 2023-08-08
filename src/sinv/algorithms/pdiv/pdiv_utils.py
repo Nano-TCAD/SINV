@@ -12,6 +12,31 @@ import math
 
 from mpi4py import MPI
 
+
+
+def check_multiprocessing(comm_size: int):
+    """ Check if the number of processes is a power of 2.
+
+    Parameters
+    ----------
+    comm_size : int
+        number of processes
+    
+    Returns
+    -------
+    None
+    
+    Raises
+    ------
+    ValueError
+        The number of processes must be a power of 2.
+    """
+    
+    if not math.log2(comm_size).is_integer():
+        raise ValueError("The number of processes must be a power of 2.")
+
+
+
 def check_input(A: np.ndarray, 
                 blocksize: int, 
                 comm_size: int):
@@ -33,8 +58,6 @@ def check_input(A: np.ndarray,
     Raises
     ------
     ValueError
-        The number of processes must be a power of 2.
-    ValueError
         The matrix size must be a multiple of the blocksize.
     ValueError
         The blocksize must be smaller than the matrix size.
@@ -43,9 +66,6 @@ def check_input(A: np.ndarray,
     ValueError
         The number of blocks must be greater than the number of processes.
     """
-
-    if not math.log2(comm_size).is_integer():
-        raise ValueError("The number of processes must be a power of 2.")
     
     if A.shape[0] % blocksize != 0:
         raise ValueError("The matrix size must be a multiple of the blocksize.")
@@ -239,6 +259,51 @@ def invert_partition(K_local: np.ndarray,
 
 
 
+def compute_full_update_term(K: np.ndarray, 
+                             Bu: np.ndarray, 
+                             Bl: np.ndarray, 
+                             phi_1_size: int,
+                             phi_2_size: int,
+                             blocksize: int) -> np.ndarray:
+    """ Compute the full update term between the two partitions.
+
+    Parameters
+    ----------
+    K : numpy matrix
+        local partition to update
+    Bu : numpy matrix
+        upper bridge matrix
+    Bl : numpy matrix
+        lower bridge matrix
+    phi_1_size : int
+        size of the first partition (rowindex)
+    phi_2_size : int
+        size of the second partition (rowindex)
+    blocksize : int
+        size of a block
+
+    Returns
+    -------
+    U : numpy matrix
+        update term
+    """
+    
+    assembled_system_size = phi_1_size + phi_2_size
+    
+    U = np.zeros((assembled_system_size, assembled_system_size), dtype=K.dtype)
+
+    J11, J12, J21, J22 = compute_J(K, Bu, Bl, phi_1_size, blocksize)
+
+    U[0:phi_1_size, 0:phi_1_size] = -1 * K[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J12 @ K[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
+    U[0:phi_1_size, phi_1_size:assembled_system_size] = -1 * K[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J11 @ K[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
+    U[phi_1_size:assembled_system_size, 0:phi_1_size] = -1 * K[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J22 @ K[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
+    U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J21 @ K[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
+
+    return U
+    
+    
+    
+    
 def compute_J(K_local: np.ndarray, 
               Bu: np.ndarray, 
               Bl: np.ndarray, 

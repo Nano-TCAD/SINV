@@ -13,7 +13,7 @@ import numpy as np
 
 
 def block_tridiag_lusolve(A: np.ndarray, 
-                            blocksize: int) -> np.ndarray:
+                          blocksize: int) -> np.ndarray:
     """ Block tridiagonal solver using non pivoting LU decomposition/solving.
 
     Parameters

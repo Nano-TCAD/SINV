@@ -303,7 +303,6 @@ def compute_full_update_term(K: np.ndarray,
     
     
     
-    
 def compute_J(K_local: np.ndarray, 
               Bu: np.ndarray, 
               Bl: np.ndarray, 

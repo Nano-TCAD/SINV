@@ -230,13 +230,12 @@ if __name__ == '__main__':
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    #if comm_size <= nblocks and math.log2(comm_size).is_integer():
     if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = pdiv_mincom(A, blocksize)
-        utils.vizu.compareDenseMatrix(A_refsol, "A_refsol", A_pdiv_mincom, "A_pdiv_mincom")
         if comm_rank == 0:
+            utils.vizu.compareDenseMatrix(A_refsol, "A_refsol", A_pdiv_mincom, "A_pdiv_mincom")
             assert np.allclose(A_refsol, A_pdiv_mincom)
                 
                 

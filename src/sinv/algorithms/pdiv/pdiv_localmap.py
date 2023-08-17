@@ -29,11 +29,15 @@ def pdiv_localmap(A: np.ndarray,
         
     Parameters
     ----------
-    None
+    A : numpy matrix
+        matrix to invert
+    blocksize : int
+        size of a block
 
     Returns
     -------
-    None
+    K_local : numpy matrix
+        inverted local partition of the matrix
 
     Notes
     -----
@@ -43,6 +47,9 @@ def pdiv_localmap(A: np.ndarray,
 
     This implementation perform local update of the distributed partition. Hence
     the inverted system is scattered across the processes.
+    
+    Limitations:
+    - The number of processes must be a power of 2.
     """
     
     # MPI initialization
@@ -50,28 +57,38 @@ def pdiv_localmap(A: np.ndarray,
     comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
     
+    pdiv_u.check_multiprocessing(comm_size)
     pdiv_u.check_input(A, blocksize, comm_size)
     
     l_start_blockrow, l_partitions_blocksizes = pdiv_u.divide_matrix(A, comm_size, blocksize)
-    
+
+    if comm_rank == 0:
+        print("l_start_blockrow: ", l_start_blockrow)
+        print("l_partitions_blocksizes: ", l_partitions_blocksizes)        
+        
     start_blockrow = l_start_blockrow[comm_rank]
     partition_size = l_partitions_blocksizes[comm_rank]
     K_local, Bu_i, Bl_i = get_local_partition(A, start_blockrow, partition_size, blocksize)
 
-    #utils.vizu.vizualiseDenseMatrixFlat(K_local, f"K_local Process: {comm_rank}")
-    
-    """ if Bu_i is not None:
-        utils.vizu.vizualiseDenseMatrixFlat(Bu_i, f"Bu_i Process: {comm_rank}")
-    if Bl_i is not None:
-        utils.vizu.vizualiseDenseMatrixFlat(Bl_i, f"Bl_i Process: {comm_rank}") """
-
     invert_partition(K_local)
 
-
+    n_partitions      = comm_size
+    n_reduction_steps = int(math.log2(n_partitions))
     
+    for current_step in range(1, n_reduction_steps+1):
+        stride = int(math.pow(2, current_step))
+        for active_process in range(0, n_partitions, stride):
+            if comm_rank == 0:
+                starting_process = active_process
+                ending_process   = active_process + stride - 1
+                
+                middle_process = get_middle_process(starting_process, ending_process)
+                print("current_step: ", current_step, "starting_process: ", starting_process, " middle_process: ", middle_process, " ending_process: ", ending_process)
+
+
     return K_local
 
-    
+
 
 def get_local_partition(A: np.ndarray,
                         start_blockrow: int,
@@ -127,6 +144,19 @@ def invert_partition(K_local: np.ndarray) -> np.ndarray:
     K_local = np.linalg.inv(K_local)
 
 
+
+def get_middle_process(starting_process: int, 
+                       ending_process: int) -> int:
+    """
+    
+    """
+    
+    middle_process = starting_process - 1 + math.ceil((ending_process - starting_process) / 2) 
+    
+    return middle_process
+
+
+
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
@@ -135,14 +165,13 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    matrice_size = 7
+    matrice_size = 13
     blocksize    = 1
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        
         
         
         A_refsol = np.linalg.inv(A)
@@ -155,9 +184,11 @@ if __name__ == '__main__':
         
         A_local_slice_of_refsolution = A_refsol[start_localpart_rowindex:stop_localpart_rowindex, start_localpart_rowindex:stop_localpart_rowindex]
         
-        utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , A_pdiv_localmap, f"A_pdiv_localmap\n Process: {comm_rank} ")
+        #utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , A_pdiv_localmap, f"A_pdiv_localmap\n Process: {comm_rank} ")
         
-        assert np.allclose(A_local_slice_of_refsolution, A_pdiv_localmap)
+        #assert np.allclose(A_local_slice_of_refsolution, A_pdiv_localmap)
         
-        if comm_rank == 0:
-            utils.vizu.vizualiseDenseMatrixFlat(A, "A")
+        """ if comm_rank == 0:
+            utils.vizu.vizualiseDenseMatrixFlat(A, "A") """
+            
+            

@@ -76,13 +76,14 @@ def pdiv_localmap(A: np.ndarray,
     n_reduction_steps = int(math.log2(n_partitions))
     
     for current_step in range(1, n_reduction_steps+1):
-        stride = int(math.pow(2, current_step))
-        for active_process in range(0, n_partitions, stride):
-            if comm_rank == 0:
-                starting_process = active_process
-                ending_process   = active_process + stride - 1
+        processes_stride = int(math.pow(2, current_step))
+        for active_process in range(0, n_partitions, processes_stride):
+            starting_process = active_process
+            ending_process   = starting_process + processes_stride - 1
+            
+            middle_process = get_middle_process(starting_process, ending_process)
                 
-                middle_process = get_middle_process(starting_process, ending_process)
+            if comm_rank == 0:
                 print("current_step: ", current_step, "starting_process: ", starting_process, " middle_process: ", middle_process, " ending_process: ", ending_process)
 
 

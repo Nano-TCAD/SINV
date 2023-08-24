@@ -655,6 +655,43 @@ def update_matrixmap(l_M: list[np.ndarray],
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     
+    if comm_rank <= middle_process:
+        l_M = update_matrixmap_upper(l_M, l_U, Bu_mid, Bl_mid, J, blocksize)
+    else:
+        l_M = update_matrixmap_lower(l_M, l_U, Bu_mid, Bl_mid, J, blocksize)
+    
+    return l_M
+
+    
+def update_matrixmap_upper(l_M: list[np.ndarray], 
+                           l_U: list[np.ndarray],
+                           Bu_mid: np.ndarray, 
+                           Bl_mid: np.ndarray, 
+                           J: np.ndarray,
+                           blocksize: int) -> list[np.ndarray]:
+    """ Formula to update the matrix maps associated with the upper partition.
+    
+    Parameters
+    ----------
+    l_M : list of numpy matrix
+        list of the matrix maps
+    l_U : list of numpy matrix
+        list of the U factors
+    Bu_mid : numpy matrix
+        upper bridge of the middle process
+    Bl_mid : numpy matrix
+        lower bridge of the middle process
+    J : numpy matrix
+        J matrix
+    blocksize : int
+        size of a block    
+        
+    Returns
+    -------
+    l_M : list of numpy matrix
+        list of the updated matrix maps    
+    """
+    
     UUR = l_U[0]
     DUR = l_U[4]
     ULL = l_U[1]
@@ -662,57 +699,7 @@ def update_matrixmap(l_M: list[np.ndarray],
     
     J11 = J[0:blocksize, 0:blocksize]
     J12 = J[0:blocksize, blocksize:2*blocksize]
-    J21 = J[blocksize:2*blocksize, 0:blocksize]
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
-    
-    if comm_rank <= middle_process:
-        l_M = update_matrixmap_upper(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J12, J22)
-    else:
-        l_M = update_matrixmap_lower(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J21, J22)
-    
-    return l_M
-
-    
-def update_matrixmap_upper(l_M: list[np.ndarray], 
-                           UUR: np.ndarray, 
-                           DUR: np.ndarray, 
-                           ULL: np.ndarray, 
-                           DLL: np.ndarray, 
-                           Bu_mid: np.ndarray, 
-                           Bl_mid: np.ndarray, 
-                           J11: np.ndarray, 
-                           J12: np.ndarray, 
-                           J22: np.ndarray) -> list[np.ndarray]:
-    """ Formula to update the matrix maps associated with the upper partition.
-    
-    Parameters
-    ----------
-    l_M : list of numpy matrix
-        list of the matrix maps
-    UUR : numpy matrix 
-        Upper Right block of the Upper partition
-    DUR : numpy matrix
-        Upper Right block of the Down partition
-    ULL : numpy matrix
-        Lower Left block of the Upper partition
-    DLL : numpy matrix
-        Lower Left block of the Down partition
-    Bu_mid : numpy matrix
-        upper bridge of the middle process
-    Bl_mid : numpy matrix
-        lower bridge of the middle process
-    J11 : numpy matrix
-        J11 block of the J matrix
-    J12 : numpy matrix
-        J12 block of the J matrix
-    J22 : numpy matrix
-        J22 block of the J matrix
-        
-    Returns
-    -------
-    l_M : list of numpy matrix
-        list of the updated matrix maps    
-    """
     
     l_M[0] += UUR @ Bu_mid @ J12 @ l_M[6]
     l_M[1] += UUR @ Bu_mid @ J12 @ l_M[7]
@@ -735,39 +722,27 @@ def update_matrixmap_upper(l_M: list[np.ndarray],
 
 
 def update_matrixmap_lower(l_M: list[np.ndarray], 
-                           UUR: np.ndarray, 
-                           DUR: np.ndarray, 
-                           ULL: np.ndarray, 
-                           DLL: np.ndarray, 
+                           l_U: list[np.ndarray],
                            Bu_mid: np.ndarray, 
                            Bl_mid: np.ndarray, 
-                           J11: np.ndarray, 
-                           J21: np.ndarray, 
-                           J22: np.ndarray):
+                           J: np.ndarray,
+                           blocksize: int) -> list[np.ndarray]:
     """ Formula to update the matrix maps associated with the lower partition.
     
     Parameters
     ----------
     l_M : list of numpy matrix
         list of the matrix maps
-    UUR : numpy matrix 
-        Upper Right block of the Upper partition
-    DUR : numpy matrix
-        Upper Right block of the Down partition
-    ULL : numpy matrix
-        Lower Left block of the Upper partition
-    DLL : numpy matrix
-        Lower Left block of the Down partition
+    l_U : list of numpy matrix
+        list of the U factors
     Bu_mid : numpy matrix
         upper bridge of the middle process
     Bl_mid : numpy matrix
         lower bridge of the middle process
-    J11 : numpy matrix
-        J11 block of the J matrix
-    J21 : numpy matrix
-        J21 block of the J matrix
-    J22 : numpy matrix
-        J22 block of the J matrix
+    J : numpy matrix
+        J matrix
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -775,6 +750,15 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
         list of the updated matrix maps    
     """
    
+    UUR = l_U[0]
+    DUR = l_U[4]
+    ULL = l_U[1]
+    DLL = l_U[5]
+    
+    J11 = J[0:blocksize, 0:blocksize]
+    J21 = J[blocksize:2*blocksize, 0:blocksize]
+    J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
+    
     l_M[0] = UUR @ Bu_mid @ J11 @ l_M[0]
     l_M[1] = UUR @ Bu_mid @ J11 @ l_M[1]
     

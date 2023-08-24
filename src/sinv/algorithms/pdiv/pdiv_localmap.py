@@ -82,7 +82,7 @@ def pdiv_localmap(K_local: np.ndarray,
 
     return K_local, l_upperbridges, l_lowerbridges
 
-    
+
 def invert_partition(K_local: np.ndarray) -> np.ndarray:
     """ Invert the local partition of the matrix.
     
@@ -218,11 +218,12 @@ def update_maps(l_M: np.ndarray,
 
             #utils.vizu.vizualiseDenseMatrixFlat(J, f"J\n Process: {comm_rank}")
             
+            l_C = update_crossmap(l_C, l_M, Bu_mid, Bl_mid, J, middle_process, blocksize)
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
             
             
             
-            #update_crossmap(l_C, l_M, Bu_mid, Bl_mid, J, middle_process, blocksize)
+            
             
 
         if comm_rank == 0:        
@@ -458,8 +459,140 @@ def get_J(l_U: list[np.ndarray],
     
     J = np.linalg.inv(J)
     
-    
     return J
+
+
+def update_crossmap(l_C: list[np.ndarray],
+                    l_M: list[np.ndarray],
+                    Bu_mid: np.ndarray,
+                    Bl_mid: np.ndarray,
+                    J: np.ndarray, 
+                    middle_process: int, 
+                    blocksize: int):
+    """
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+
+    
+    l_M_ip1 = get_nextprocess_matrixmap(l_M, middle_process)
+
+    if comm_rank < middle_process:
+        l_C = update_crossmap_upper(l_M, l_M_ip1, l_C, Bu_mid, J)
+        
+    elif comm_rank == middle_process:
+        l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
+    
+    else:
+        l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J)
+
+    return l_C
+
+
+def get_nextprocess_matrixmap(l_M: list[np.ndarray],
+                              middle_process: int) -> list[np.ndarray]:
+    """
+    """
+    pass
+
+
+def update_crossmap_upper(l_M: list[np.ndarray],
+                          l_M_ip1: list[np.ndarray],
+                          l_C: list[np.ndarray], 
+                          Bu_mid: np.ndarray,
+                          J: np.ndarray) -> list[np.ndarray]:
+    """
+    """
+    
+    M3 = l_M[2]
+    M4 = l_M[3]
+    M7 = l_M[6]
+    M8 = l_M[7]
+    
+    M3_ip1 = l_M_ip1[2]
+    M4_ip1 = l_M_ip1[3]
+    M7_ip1 = l_M_ip1[6]
+    M8_ip1 = l_M_ip1[7]
+    
+    J12 = J[0:blocksize, blocksize:2*blocksize]
+    
+    l_C[0] += M3 @ Bu_mid @ J12 @ M7_ip1
+    l_C[1] += M3 @ Bu_mid @ J12 @ M8_ip1
+    l_C[2] += M4 @ Bu_mid @ J12 @ M7_ip1
+    l_C[3] += M4 @ Bu_mid @ J12 @ M8_ip1
+    l_C[4] += M3_ip1 @ Bu_mid @ J12 @ M7
+    l_C[5] += M3_ip1 @ Bu_mid @ J12 @ M8
+    l_C[6] += M4_ip1 @ Bu_mid @ J12 @ M7
+    l_C[7] += M4_ip1 @ Bu_mid @ J12 @ M8
+    
+    return l_C
+
+
+def update_crossmap_middle(l_M: list[np.ndarray],
+                           l_M_ip1: list[np.ndarray],
+                           l_C: list[np.ndarray], 
+                           Bu_mid: np.ndarray,
+                           Bl_mid: np.ndarray,
+                           J: np.ndarray) -> list[np.ndarray]:
+    """
+    """
+    
+    M3 = l_M[2]
+    M4 = l_M[3]
+    M7 = l_M[6]
+    M8 = l_M[7]
+    
+    M1_ip1 = l_M_ip1[0]
+    M2_ip1 = l_M_ip1[1]
+    M5_ip1 = l_M_ip1[4]
+    M6_ip1 = l_M_ip1[5]
+    
+    J11 = J[0:blocksize, 0:blocksize]
+    J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
+    
+    l_C[0] += M3 @ Bu_mid @ J11 @ M1_ip1
+    l_C[1] += M3 @ Bu_mid @ J11 @ M2_ip1
+    l_C[2] += M4 @ Bu_mid @ J11 @ M1_ip1
+    l_C[3] += M4 @ Bu_mid @ J11 @ M2_ip1
+    l_C[4] += M5_ip1 @ Bl_mid @ J22 @ M7
+    l_C[5] += M5_ip1 @ Bl_mid @ J22 @ M8
+    l_C[6] += M6_ip1 @ Bl_mid @ J22 @ M7
+    l_C[7] += M6_ip1 @ Bl_mid @ J22 @ M8
+    
+    return l_C
+
+
+def update_crossmap_lower(l_M: list[np.ndarray],
+                          l_M_ip1: list[np.ndarray],
+                          l_C: list[np.ndarray], 
+                          Bl_mid: np.ndarray,
+                          J: np.ndarray) -> list[np.ndarray]:
+    """
+    """
+    
+    M1 = l_M[0]
+    M2 = l_M[1]
+    M5 = l_M[4]
+    M6 = l_M[5]
+    
+    M1_ip1 = l_M_ip1[0]
+    M2_ip1 = l_M_ip1[1]
+    M5_ip1 = l_M_ip1[4]
+    M6_ip1 = l_M_ip1[5]
+    
+    J21 = J[blocksize:2*blocksize, 0:blocksize]
+    
+    l_C[0] += M5 @ Bl_mid @ J21 @ M1_ip1
+    l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1 # MAY BE WRONG HERE
+    l_C[2] += M6 @ Bl_mid @ J21 @ M1_ip1
+    l_C[3] += M6 @ Bl_mid @ J21 @ M2_ip1
+    l_C[4] += M5_ip1 @ Bl_mid @ J21 @ M1
+    l_C[5] += M5_ip1 @ Bl_mid @ J21 @ M2
+    l_C[6] += M6_ip1 @ Bl_mid @ J21 @ M1
+    l_C[7] += M6_ip1 @ Bl_mid @ J21 @ M2
+    
+    return l_C
 
 
 def update_matrixmap(l_M: list[np.ndarray], 
@@ -637,19 +770,6 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
     return l_M
 
     
-def update_crossmap(l_C: list[np.ndarray],
-                    l_M: list[np.ndarray],
-                    Bu_mid: np.ndarray,
-                    Bl_mid: np.ndarray,
-                    J: np.ndarray, 
-                    middle_process: int, 
-                    blocksize: int):
-    """
-    """
-    pass
-
-
-
 
 
 if __name__ == '__main__':

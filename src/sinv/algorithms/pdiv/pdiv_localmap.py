@@ -73,11 +73,12 @@ def pdiv_localmap(K_local: np.ndarray,
     K_local = invert_partition(K_local)
 
     l_M = initialize_matrixmaps(K_local, blocksize)
+    l_M_ip1 = initialize_crossmaps(K_local, blocksize)
     l_C = initialize_crossmaps(K_local, blocksize)
 
     n_reduction_steps = int(math.log2(comm_size))
     for current_step in range(1, n_reduction_steps + 1):
-        update_maps(l_M, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
+        update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
     #produce_partition(K_local, l_M, l_C, l_upperbridges, l_lowerbridges, blocksize)
 
     return K_local, l_upperbridges, l_lowerbridges
@@ -164,6 +165,7 @@ def initialize_crossmaps(K_local: np.ndarray,
 
 
 def update_maps(l_M: np.ndarray,
+                l_M_ip1: np.ndarray,
                 l_C: np.ndarray,
                 K_local: np.ndarray,
                 l_upperbridges: np.ndarray,
@@ -176,6 +178,8 @@ def update_maps(l_M: np.ndarray,
     ----------
     l_M : list of numpy matrix
         list of the matrix maps
+    l_M_ip1 : list of numpy matrix
+        list of the matrix maps of the next process
     l_C : list of numpy matrix
         list of the cross maps
     K_local : numpy matrix
@@ -218,7 +222,8 @@ def update_maps(l_M: np.ndarray,
 
             #utils.vizu.vizualiseDenseMatrixFlat(J, f"J\n Process: {comm_rank}")
             
-            l_C = update_crossmap(l_C, l_M, Bu_mid, Bl_mid, J, middle_process, blocksize)
+            l_M_ip1 = get_nextprocess_matrixmap(l_M, l_M_ip1, starting_process, middle_process, ending_process)
+            l_C = update_crossmap(l_C, l_M, l_M_ip1, Bu_mid, Bl_mid, J, starting_process, middle_process, ending_process)
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
             
             
@@ -462,21 +467,47 @@ def get_J(l_U: list[np.ndarray],
     return J
 
 
-def update_crossmap(l_C: list[np.ndarray],
-                    l_M: list[np.ndarray],
-                    Bu_mid: np.ndarray,
-                    Bl_mid: np.ndarray,
-                    J: np.ndarray, 
-                    middle_process: int, 
-                    blocksize: int):
+def get_nextprocess_matrixmap(l_M: list[np.ndarray],
+                              l_M_ip1: list[np.ndarray],
+                              starting_process: int,
+                              middle_process: int,
+                              ending_process: int) -> list[np.ndarray]:
     """
     """
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-
     
-    l_M_ip1 = get_nextprocess_matrixmap(l_M, middle_process)
+    
+    """ if comm_rank == starting_process:
+        # 1st process only receive.
+        l_M_ip1 = comm.recv(source=starting_process+1, tag=0)
+    if comm_rank == ending_process:
+        # Last process only send.
+        comm.send(l_M, dest=ending_process-1, tag=0)
+    else:
+        # Other processes send top upper process and receive from lower one.
+        comm.send(l_M, dest=comm_rank-1, tag=0)
+        l_M_ip1 = comm.recv(source=comm_rank+1, tag=0) """
+        
+    return l_M_ip1
+
+
+def update_crossmap(l_C: list[np.ndarray],
+                    l_M: list[np.ndarray],
+                    l_M_ip1: list[np.ndarray],
+                    Bu_mid: np.ndarray,
+                    Bl_mid: np.ndarray,
+                    J: np.ndarray, 
+                    starting_process: int,
+                    middle_process: int,
+                    ending_process: int):
+    """
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    
 
     if comm_rank < middle_process:
         l_C = update_crossmap_upper(l_M, l_M_ip1, l_C, Bu_mid, J)
@@ -484,17 +515,11 @@ def update_crossmap(l_C: list[np.ndarray],
     elif comm_rank == middle_process:
         l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
     
-    else:
+    elif comm_rank < ending_process:
+        # Last process doesn't need to update the crossmap.
         l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J)
 
     return l_C
-
-
-def get_nextprocess_matrixmap(l_M: list[np.ndarray],
-                              middle_process: int) -> list[np.ndarray]:
-    """
-    """
-    pass
 
 
 def update_crossmap_upper(l_M: list[np.ndarray],

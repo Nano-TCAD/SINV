@@ -292,7 +292,6 @@ def get_U(K_local: np.ndarray,
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
     
     
     UUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype) 
@@ -303,57 +302,47 @@ def get_U(K_local: np.ndarray,
     DLL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
     
     
-    # Deal with UUR and ULL
-    if comm_rank == starting_process:
-        UUR, ULL = produce_UUR_ULL(K_local, l_M, blocksize)
-        
-        for process in range(starting_process + 1, ending_process + 1):
-            comm.send(UUR, dest=process, tag=0)
-            comm.send(ULL, dest=process, tag=1)
-    elif comm_rank > starting_process and comm_rank <= ending_process:
-        UUR = comm.recv(source=starting_process, tag=0)
-        ULL = comm.recv(source=starting_process, tag=1)
-
-
-    # Deal with ULR
+    # Produce UUR, UUL and ULR on the middle process and communicate 
+    # them to the other processes.
     if comm_rank == middle_process:
-        ULR = produce_ULR(K_local, l_M, blocksize)
+        UUR, ULL, ULR = produce_UUR_ULL_ULR(K_local, l_M, blocksize)
         
         for process in range(starting_process, ending_process + 1):
             if process != middle_process:
+                comm.send(UUR, dest=process, tag=0)
+                comm.send(ULL, dest=process, tag=1)
                 comm.send(ULR, dest=process, tag=2)
-    elif comm_rank >= starting_process and comm_rank <= ending_process:
+    # Receive UUR, UUL and ULR from the middle process
+    else:
+        UUR = comm.recv(source=middle_process, tag=0)
+        ULL = comm.recv(source=middle_process, tag=1)
         ULR = comm.recv(source=middle_process, tag=2)
+        
     
-    
-    # Deal with DUL
+    # Produce DUL, DUR and DLL on the middle+1 process and communicate 
+    # them to the other processes.
     if comm_rank == middle_process+1:
-        DUL = produce_DUL(K_local, l_M, blocksize)
+        DUL, DUR, DLL = produce_DUL_DUR_DLL(K_local, l_M, blocksize)
         
         for process in range(starting_process, ending_process + 1):
             if process != middle_process+1:
                 comm.send(DUL, dest=process, tag=3)
-    elif comm_rank >= starting_process and comm_rank <= ending_process:
+                comm.send(DUR, dest=process, tag=4)
+                comm.send(DLL, dest=process, tag=5)
+    # Receive DUL, DUR and DLL from the middle+1 process
+    else:
         DUL = comm.recv(source=middle_process+1, tag=3)
-    
-    
-    # Deal with DUR and DLL
-    if comm_rank == ending_process:
-        DUR, DLL = produce_DUR_DLL(K_local, l_M, blocksize)
-        
-        for process in range(starting_process, ending_process):
-            comm.send(DUR, dest=process, tag=4)
-            comm.send(DLL, dest=process, tag=5)
-    elif comm_rank >= starting_process and comm_rank < ending_process:
-        DUR = comm.recv(source=ending_process, tag=4)
-        DLL = comm.recv(source=ending_process, tag=5)
+        DUR = comm.recv(source=middle_process+1, tag=4)
+        DLL = comm.recv(source=middle_process+1, tag=5)
                 
     
     return [UUR, ULL, ULR, DUL, DUR, DLL]
-    
-    
-def produce_UUR_ULL(K_local, l_M, blocksize) -> [np.ndarray, np.ndarray]:
-    """ Produce the UUR and ULL blocks.
+
+
+def produce_UUR_ULL_ULR(K_local: np.ndarray, 
+                        l_M: list[np.ndarray], 
+                        blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
+    """ Produce the UUR, ULL and ULR blocks.
     
     Parameters
     ----------
@@ -370,6 +359,8 @@ def produce_UUR_ULL(K_local, l_M, blocksize) -> [np.ndarray, np.ndarray]:
         Upper Right block of the Upper partition
     ULL : numpy matrix
         Lower Left block of the Upper partition
+    ULR : numpy matrix
+        Lower Right block of the Upper partition
     """
     
     start_lastblock = K_local.shape[0] - blocksize
@@ -381,45 +372,20 @@ def produce_UUR_ULL(K_local, l_M, blocksize) -> [np.ndarray, np.ndarray]:
     ULL = K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[4]\
             +  K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[5]
     
-
-    return UUR, ULL
-
-
-def produce_ULR(K_local, l_M, blocksize) -> np.ndarray:
-    """ Produce the ULR block.
-    
-    Parameters
-    ----------
-    K_local : numpy matrix
-        local inverted partition of the matrix
-    l_M : list of numpy matrix
-        list of the matrix maps
-    blocksize : int
-        size of a block
-        
-    Returns
-    -------
-    ULR : numpy matrix
-        Lower Right block of the Upper partition
-    """
-    
-    start_lastblock = K_local.shape[0] - blocksize
-    end_lastblock   = K_local.shape[0]
-    
     ULR = K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]\
             + K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[8] @ K_local[0:blocksize, start_lastblock:end_lastblock]\
             + K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[9] @ K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]\
             + K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[10] @ K_local[0:blocksize, start_lastblock:end_lastblock]\
             + K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[11] @ K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]
     
-    #utils.vizu.compareDenseMatrix(K_local, "K_local", ULR, f"ULR\n Process: {comm_rank}")
-    
-    
-    return ULR
+
+    return UUR, ULL, ULR
 
 
-def produce_DUL(K_local, l_M, blocksize) -> np.ndarray:
-    """ Produce the DUL block.
+def produce_DUL_DUR_DLL(K_local: np.ndarray, 
+                        l_M: list[np.ndarray], 
+                        blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
+    """ Produce the DUL, DUR and DLL block.
     
     Parameters
     ----------
@@ -434,7 +400,12 @@ def produce_DUL(K_local, l_M, blocksize) -> np.ndarray:
     -------
     DUL : numpy matrix
         Upper Left block of the Down partition
+    DUR : numpy matrix
+        Upper Right block of the Down partition
+    DLL : numpy matrix
+        Lower Left block of the Down partition
     """
+    
     
     start_lastblock = K_local.shape[0] - blocksize
     end_lastblock   = K_local.shape[0]
@@ -445,47 +416,15 @@ def produce_DUL(K_local, l_M, blocksize) -> np.ndarray:
             + K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[10] @ K_local[0:blocksize, 0:blocksize]\
             + K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[11] @ K_local[start_lastblock:end_lastblock, 0:blocksize]
     
-    #utils.vizu.compareDenseMatrix(K_local, "K_local", DUL, f"DUL\n Process: {comm_rank}")
-    
-    
-    return DUL
-
-
-def produce_DUR_DLL(K_local, l_M, blocksize) -> [np.ndarray, np.ndarray]:
-    """ Produce the DUR and DLL blocks.
-    
-    Parameters
-    ----------
-    K_local : numpy matrix
-        local inverted partition of the matrix
-    l_M : list of numpy matrix
-        list of the matrix maps
-    blocksize : int
-        size of a block
-        
-    Returns
-    -------
-    DUR : numpy matrix
-        Upper Right block of the Down partition
-    DLL : numpy matrix
-        Lower Left block of the Down partition
-    """
-    
-    start_lastblock = K_local.shape[0] - blocksize
-    end_lastblock   = K_local.shape[0]
-    
     DUR = K_local[0:blocksize, 0:blocksize] @ l_M[2]\
             +  K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[3]
             
     DLL = l_M[6] @ K_local[0:blocksize, 0:blocksize]\
             + l_M[7] @ K_local[start_lastblock:end_lastblock, 0:blocksize]
     
-    #utils.vizu.compareDenseMatrix(K_local, "K_local", DUR, f"DUR\n Process: {comm_rank}")
-    #utils.vizu.compareDenseMatrix(K_local, "K_local", DLL, f"DLL\n Process: {comm_rank}")
     
-    
-    return DUR, DLL
-    
+    return DUL, DUR, DLL
+
     
 def get_J(l_U: list[np.ndarray],
           Bu_mid: np.ndarray,

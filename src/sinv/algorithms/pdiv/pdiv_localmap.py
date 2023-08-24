@@ -72,8 +72,8 @@ def pdiv_localmap(K_local: np.ndarray,
     
     K_local = invert_partition(K_local)
 
-    l_M = initialize_matrixmaps(blocksize)
-    l_C = initialize_crossmaps(blocksize)
+    l_M = initialize_matrixmaps(K_local, blocksize)
+    l_C = initialize_crossmaps(K_local, blocksize)
 
     n_reduction_steps = int(math.log2(comm_size))
     for current_step in range(1, n_reduction_steps + 1):
@@ -104,7 +104,8 @@ def invert_partition(K_local: np.ndarray) -> np.ndarray:
     return np.linalg.inv(K_local)
 
 
-def initialize_matrixmaps(blocksize: int) -> list[np.ndarray]:
+def initialize_matrixmaps(K_local: np.ndarray,
+                          blocksize: int) -> list[np.ndarray]:
     """ Initialize the matrix maps. The matrix maps are used to update the
     local partition of the matrix without having to rupdate the entire matrix
     at each step.
@@ -127,16 +128,17 @@ def initialize_matrixmaps(blocksize: int) -> list[np.ndarray]:
     l_M = []
 
     for i in range(12):
-        # Matrix maps numbers: 1, 4, 5, 7 are initialize to identity
+        # Matrix maps numbers: 1, 4, 5, 8 are initialize to identity
         if i == 0 or i == 3 or i == 4 or i == 7:
-            l_M.append(np.identity(blocksize))
+            l_M.append(np.identity((blocksize), dtype=K_local.dtype))
         else:
-            l_M.append(np.zeros((blocksize, blocksize)))
+            l_M.append(np.zeros((blocksize, blocksize), dtype=K_local.dtype))
             
     return l_M
 
 
-def initialize_crossmaps(blocksize: int) -> list[np.ndarray]:
+def initialize_crossmaps(K_local: np.ndarray,
+                         blocksize: int) -> list[np.ndarray]:
     """ Initialize the cross maps. The cross maps are used to update the
     local partition of the matrix without having to rupdate the entire matrix
     at each step.
@@ -156,7 +158,7 @@ def initialize_crossmaps(blocksize: int) -> list[np.ndarray]:
     The cross maps deals with the update of the bridges.
     """
 
-    l_C = [np.zeros((blocksize, blocksize)) for i in range(12)]
+    l_C = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(12)]
     
     return l_C
 
@@ -216,7 +218,7 @@ def update_maps(l_M: np.ndarray,
 
             #utils.vizu.vizualiseDenseMatrixFlat(J, f"J\n Process: {comm_rank}")
             
-            update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
+            l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
             
             
             
@@ -523,12 +525,34 @@ def get_J(l_U: list[np.ndarray],
 
 def update_matrixmap(l_M: list[np.ndarray], 
                      l_U: list[np.ndarray], 
-                     Bu_mid, 
-                     Bl_mid, 
-                     J, 
-                     middle_process, 
-                     blocksize):
-    """
+                     Bu_mid: np.ndarray, 
+                     Bl_mid: np.ndarray, 
+                     J: np.ndarray, 
+                     middle_process: int, 
+                     blocksize: int):
+    """ Update the matrix maps.
+    
+    Parameters
+    ----------
+    l_M : list of numpy matrix
+        list of the matrix maps
+    l_U : list of numpy matrix
+        list of the U factors
+    Bu_mid : numpy matrix
+        upper bridge of the middle process
+    Bl_mid : numpy matrix
+        lower bridge of the middle process
+    J : numpy matrix
+        J matrix
+    middle_process : int
+        index of the middle process of the current reduction step
+    blocksize : int
+        size of a block
+        
+    Returns
+    -------
+    l_M : list of numpy matrix
+        list of the updated matrix maps
     """
     
     comm = MPI.COMM_WORLD
@@ -545,10 +569,12 @@ def update_matrixmap(l_M: list[np.ndarray],
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
     
     if comm_rank <= middle_process:
-        update_matrixmap_upper(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J12, J22, blocksize)
+        l_M = update_matrixmap_upper(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J12, J22)
     else:
-        update_matrixmap_lower(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J21, J22, blocksize)
+        l_M = update_matrixmap_lower(l_M, UUR, DUR, ULL, DLL, Bu_mid, Bl_mid, J11, J21, J22)
     
+    return l_M
+
     
 def update_matrixmap_upper(l_M: list[np.ndarray], 
                            UUR: np.ndarray, 
@@ -559,8 +585,36 @@ def update_matrixmap_upper(l_M: list[np.ndarray],
                            Bl_mid: np.ndarray, 
                            J11: np.ndarray, 
                            J12: np.ndarray, 
-                           J22: np.ndarray):
-    """
+                           J22: np.ndarray) -> list[np.ndarray]:
+    """ Formula to update the matrix maps associated with the upper partition.
+    
+    Parameters
+    ----------
+    l_M : list of numpy matrix
+        list of the matrix maps
+    UUR : numpy matrix 
+        Upper Right block of the Upper partition
+    DUR : numpy matrix
+        Upper Right block of the Down partition
+    ULL : numpy matrix
+        Lower Left block of the Upper partition
+    DLL : numpy matrix
+        Lower Left block of the Down partition
+    Bu_mid : numpy matrix
+        upper bridge of the middle process
+    Bl_mid : numpy matrix
+        lower bridge of the middle process
+    J11 : numpy matrix
+        J11 block of the J matrix
+    J12 : numpy matrix
+        J12 block of the J matrix
+    J22 : numpy matrix
+        J22 block of the J matrix
+        
+    Returns
+    -------
+    l_M : list of numpy matrix
+        list of the updated matrix maps    
     """
     
     l_M[0] += UUR @ Bu_mid @ J12 @ l_M[6]
@@ -579,7 +633,8 @@ def update_matrixmap_upper(l_M: list[np.ndarray],
     l_M[9] += l_M[2] @ Bu_mid @ J12 @ l_M[7]
     l_M[10] += l_M[3] @ Bu_mid @ J12 @ l_M[6]
     l_M[11] += l_M[3] @ Bu_mid @ J12 @ l_M[7]
-
+    
+    return l_M
 
 
 def update_matrixmap_lower(l_M: list[np.ndarray], 
@@ -592,13 +647,56 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
                            J11: np.ndarray, 
                            J21: np.ndarray, 
                            J22: np.ndarray):
-    """
+    """ Formula to update the matrix maps associated with the lower partition.
+    
+    Parameters
+    ----------
+    l_M : list of numpy matrix
+        list of the matrix maps
+    UUR : numpy matrix 
+        Upper Right block of the Upper partition
+    DUR : numpy matrix
+        Upper Right block of the Down partition
+    ULL : numpy matrix
+        Lower Left block of the Upper partition
+    DLL : numpy matrix
+        Lower Left block of the Down partition
+    Bu_mid : numpy matrix
+        upper bridge of the middle process
+    Bl_mid : numpy matrix
+        lower bridge of the middle process
+    J11 : numpy matrix
+        J11 block of the J matrix
+    J21 : numpy matrix
+        J21 block of the J matrix
+    J22 : numpy matrix
+        J22 block of the J matrix
+        
+    Returns
+    -------
+    l_M : list of numpy matrix
+        list of the updated matrix maps    
     """
    
-    pass
-    # CONTINUE HERE
-
+    l_M[0] = UUR @ Bu_mid @ J11 @ l_M[0]
+    l_M[1] = UUR @ Bu_mid @ J11 @ l_M[1]
     
+    l_M[2] += l_M[4] @ Bl_mid @ J21 @ DUR
+    l_M[3] += l_M[5] @ Bl_mid @ J21 @ DUR
+    
+    l_M[4] = l_M[5] @ Bl_mid @ J22 @ ULL 
+    l_M[5] = l_M[4] @ Bl_mid @ J22 @ ULL
+    
+    l_M[6] += DLL @ Bl_mid @ J21 @ l_M[0]
+    l_M[7] += DLL @ Bl_mid @ J21 @ l_M[1]
+
+    l_M[8] += l_M[4] @ Bl_mid @ J21 @ l_M[0]
+    l_M[9] += l_M[4] @ Bl_mid @ J21 @ l_M[1]
+    l_M[10] += l_M[5] @ Bl_mid @ J21 @ l_M[0]
+    l_M[11] += l_M[5] @ Bl_mid @ J21 @ l_M[1]
+    
+    return l_M
+
     
 def update_crossmap(l_C: list[np.ndarray],
                     l_M: list[np.ndarray],

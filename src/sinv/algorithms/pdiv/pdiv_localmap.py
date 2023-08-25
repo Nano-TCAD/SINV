@@ -943,6 +943,7 @@ def update_matrixmap_upper(l_M: list[np.ndarray],
     return l_M
 
 
+
 def update_matrixmap_lower(l_M: list[np.ndarray], 
                            l_U: list[np.ndarray],
                            Bu_mid: np.ndarray, 
@@ -1045,6 +1046,7 @@ def produce_partition(K_local,
 
 
     return K_inv
+
 
 
 def produce_matrix_elements(row: int, 

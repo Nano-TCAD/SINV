@@ -378,25 +378,12 @@ def produce_UUR_ULL_ULR(K_local: np.ndarray,
         Lower Right block of the Upper partition
     """
     
-    blockrow_index = K_local.shape[0] // blocksize - 1
+    row_blockindex = K_local.shape[0] // blocksize - 1
+    col_blockindex = K_local.shape[0] // blocksize - 1
     
-    start_lastblock = blockrow_index * blocksize
-    end_lastblock   = start_lastblock + blocksize
-    
-    UUR = l_M[0] @ K_local[0:blocksize, start_lastblock:end_lastblock]\
-            + l_M[1] @ K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]
-    
-    ULL = K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[4]\
-            +  K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[5]
-    
-    """ UUR = K_local[0:blocksize, 0:blocksize] @ l_M[2]\
-            +  K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[3]
-    
-    ULL = l_M[6] @ K_local[0:blocksize, 0:blocksize]\
-            + l_M[7] @ K_local[start_lastblock:end_lastblock, 0:blocksize] """
-    
-    ULR = produce_matrix_elements(blockrow_index, blockrow_index, K_local, l_M)
-    
+    UUR = produce_toprow_element(col_blockindex, K_local, l_M)
+    ULL = produce_rightcol_element(row_blockindex, K_local, l_M)
+    ULR = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
 
     return UUR, ULL, ULR
 
@@ -426,24 +413,12 @@ def produce_DUL_DUR_DLL(K_local: np.ndarray,
         Lower Left block of the Down partition
     """
     
-    blockrow_index = 0
+    row_blockindex = 0
+    col_blockindex = 0
     
-    start_lastblock = K_local.shape[0] - blocksize
-    end_lastblock   = K_local.shape[0]
-    
-    DUL = produce_matrix_elements(blockrow_index, blockrow_index, K_local, l_M)
-    
-    DUR = K_local[0:blocksize, 0:blocksize] @ l_M[2]\
-            +  K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[3]
-            
-    DLL = l_M[6] @ K_local[0:blocksize, 0:blocksize]\
-            + l_M[7] @ K_local[start_lastblock:end_lastblock, 0:blocksize]
-    
-    """ DUR = l_M[0] @ K_local[0:blocksize, start_lastblock:end_lastblock]\
-            + l_M[1] @ K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]
-            
-    DLL = K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[4]\
-            +  K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[5] """
+    DUL = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
+    DUR = produce_rightcol_element(row_blockindex, K_local, l_M)
+    DLL = produce_botrow_element(col_blockindex, K_local, l_M)
     
     return DUL, DUR, DLL
 

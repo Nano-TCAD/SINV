@@ -270,8 +270,8 @@ def get_U(K_local: np.ndarray,
           middle_process: int,
           ending_process: int,
           blocksize: int) -> list[np.ndarray]:
-    """ Compute the U factors. U factors are a collection of 6 blocks of the
-    current partition to be combined.
+    """ Compute the U factors. U factors are a collection of 6 corner matrices
+    that will be needed on every process to update their local partition.
     
     Parameters
     ----------
@@ -357,7 +357,7 @@ def get_U(K_local: np.ndarray,
 def produce_UUR_ULL_ULR(K_local: np.ndarray, 
                         l_M: list[np.ndarray], 
                         blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Produce the UUR, ULL and ULR blocks.
+    """ Produce the UUR, ULL and ULR corner matrices.
     
     Parameters
     ----------
@@ -389,6 +389,12 @@ def produce_UUR_ULL_ULR(K_local: np.ndarray,
     ULL = K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[4]\
             +  K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[5]
     
+    """ UUR = K_local[0:blocksize, 0:blocksize] @ l_M[2]\
+            +  K_local[0:blocksize, start_lastblock:end_lastblock] @ l_M[3]
+    
+    ULL = l_M[6] @ K_local[0:blocksize, 0:blocksize]\
+            + l_M[7] @ K_local[start_lastblock:end_lastblock, 0:blocksize] """
+    
     ULR = produce_matrix_elements(blockrow_index, blockrow_index, K_local, l_M)
     
 
@@ -399,7 +405,7 @@ def produce_UUR_ULL_ULR(K_local: np.ndarray,
 def produce_DUL_DUR_DLL(K_local: np.ndarray, 
                         l_M: list[np.ndarray], 
                         blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Produce the DUL, DUR and DLL block.
+    """ Produce the DUL, DUR and DLL corner matrices.
     
     Parameters
     ----------
@@ -433,6 +439,11 @@ def produce_DUL_DUR_DLL(K_local: np.ndarray,
     DLL = l_M[6] @ K_local[0:blocksize, 0:blocksize]\
             + l_M[7] @ K_local[start_lastblock:end_lastblock, 0:blocksize]
     
+    """ DUR = l_M[0] @ K_local[0:blocksize, start_lastblock:end_lastblock]\
+            + l_M[1] @ K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock]
+            
+    DLL = K_local[start_lastblock:end_lastblock, 0:blocksize] @ l_M[4]\
+            +  K_local[start_lastblock:end_lastblock, start_lastblock:end_lastblock] @ l_M[5] """
     
     return DUL, DUR, DLL
 
@@ -1049,8 +1060,140 @@ def produce_partition(K_local,
 
 
 
-def produce_matrix_elements(row: int, 
-                            col: int, 
+def produce_toprow_element(col_blockindex: int, 
+                           K_local: np.ndarray, 
+                           l_M: list[np.ndarray]) -> np.ndarray:
+    """ Produce an element of the top row of the partition.
+    
+    Parameters
+    ----------
+    col_blockindex : int
+        column index of the block to produce
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+        
+    Returns
+    -------
+    elem : numpy matrix
+        produced element of the top row of the partition
+    """
+    
+    start_colindex = col_blockindex * blocksize
+    end_colindex   = start_colindex + blocksize
+    
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
+    
+    elem = l_M[0] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + l_M[1] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]
+
+    return elem
+
+
+
+def produce_rightcol_element(row_blockindex: int, 
+                             K_local: np.ndarray, 
+                             l_M: list[np.ndarray]) -> np.ndarray:
+    """ Produce an element of the right column of the partition.
+    
+    Parameters
+    ----------
+    row_blockindex : int
+        row index of the block to produce
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+        
+    Returns
+    -------
+    elem : numpy matrix
+        produced element of the right column of the partition
+    """
+    
+    start_rowindex = row_blockindex * blocksize
+    end_rowindex   = start_rowindex + blocksize
+    
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
+    
+    elem = K_local[start_rowindex:end_rowindex, 0:blocksize] @ l_M[2]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex] @ l_M[3]
+
+    return elem
+    
+    
+
+def produce_leftcol_element(row_blockindex: int, 
+                            K_local: np.ndarray, 
+                            l_M: list[np.ndarray]) -> np.ndarray:
+    """ Produce an element of the left column of the partition.
+
+    Parameters
+    ----------
+    row_blockindex : int
+        row index of the block to produce
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+
+    Returns
+    -------
+    elem : numpy matrix
+        produced element of the left column of the partition
+    """
+    
+    start_rowindex = row_blockindex * blocksize
+    end_rowindex   = start_rowindex + blocksize
+    
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
+    
+    elem = K_local[start_rowindex:end_rowindex, 0:blocksize] @ l_M[4]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex] @ l_M[5]
+
+    return elem
+
+
+
+def produce_botrow_element(col_blockindex: int, 
+                           K_local: np.ndarray, 
+                           l_M: list[np.ndarray]) -> np.ndarray:
+    """ Produce an element of the bottom row of the partition.
+    
+    Parameters
+    ----------
+    col_blockindex : int
+        column index of the block to produce
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+
+    Returns
+    -------
+    elem : numpy matrix
+        produced element of the bottom row of the partition
+    """
+    
+    start_colindex = col_blockindex * blocksize
+    end_colindex   = start_colindex + blocksize
+    
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
+    
+    elem = l_M[6] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + l_M[7] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]
+
+    return elem
+
+
+
+def produce_matrix_elements(row_blockindex: int, 
+                            col_blockindex: int, 
                             K_local: np.ndarray, 
                             l_M: list[np.ndarray]) -> np.ndarray:
     """ Produce a selected block of the given partition.
@@ -1072,26 +1215,26 @@ def produce_matrix_elements(row: int,
         selected block of the given partition
     """
     
-    start_row_blk = row * blocksize
-    end_row_blk   = start_row_blk + blocksize
+    start_rowindex = row_blockindex * blocksize
+    end_rowindex   = start_rowindex + blocksize
     
-    start_col_blk = col * blocksize
-    end_col_blk   = start_col_blk + blocksize
+    start_colindex = col_blockindex * blocksize
+    end_colindex   = start_colindex + blocksize
     
-    start_lastblock = K_local.shape[0] - blocksize
-    end_lastblock   = K_local.shape[0]
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
     
-    BLK = K_local[start_row_blk:end_row_blk, start_col_blk:end_col_blk]\
-            + K_local[start_row_blk:end_row_blk, 0:blocksize] @ l_M[8] @ K_local[0:blocksize, start_col_blk:end_col_blk]\
-            + K_local[start_row_blk:end_row_blk, 0:blocksize] @ l_M[9] @ K_local[start_lastblock:end_lastblock, start_col_blk:end_col_blk]\
-            + K_local[start_row_blk:end_row_blk, start_lastblock:end_lastblock] @ l_M[10] @ K_local[0:blocksize, start_col_blk:end_col_blk]\
-            + K_local[start_row_blk:end_row_blk, start_lastblock:end_lastblock] @ l_M[11] @ K_local[start_lastblock:end_lastblock, start_col_blk:end_col_blk]
+    elem = K_local[start_rowindex:end_rowindex, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[8] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[9] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[10] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[11] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]
     
-    return BLK
-
-
-
-
+    return elem
 
 
 

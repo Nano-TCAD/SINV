@@ -23,10 +23,12 @@ from mpi4py import MPI
 
 
 
-def pdiv_localmap(K_local: np.ndarray,
-                  l_upperbridges: np.ndarray,
-                  l_lowerbridges: np.ndarray, 
-                  blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
+def pdiv_localmap(
+    K_local: np.ndarray,
+    l_upperbridges: np.ndarray,
+    l_lowerbridges: np.ndarray, 
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
         
     Parameters
@@ -67,7 +69,6 @@ def pdiv_localmap(K_local: np.ndarray,
     
     # MPI initialization
     comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
     comm_size = comm.Get_size()
     
     K_local = invert_partition(K_local)
@@ -86,7 +87,9 @@ def pdiv_localmap(K_local: np.ndarray,
 
 
 
-def invert_partition(K_local: np.ndarray) -> np.ndarray:
+def invert_partition(
+    K_local: np.ndarray
+) -> np.ndarray:
     """ Invert the local partition of the matrix.
     
     Parameters
@@ -108,8 +111,10 @@ def invert_partition(K_local: np.ndarray) -> np.ndarray:
 
 
 
-def initialize_matrixmaps(K_local: np.ndarray,
-                          blocksize: int) -> list[np.ndarray]:
+def initialize_matrixmaps(
+    K_local: np.ndarray,
+    blocksize: int
+) -> list[np.ndarray]:
     """ Initialize the matrix maps. The matrix maps are used to update the
     local partition of the matrix without having to rupdate the entire matrix
     at each step.
@@ -142,8 +147,10 @@ def initialize_matrixmaps(K_local: np.ndarray,
 
 
 
-def initialize_crossmaps(K_local: np.ndarray,
-                         blocksize: int) -> list[np.ndarray]:
+def initialize_crossmaps(
+    K_local: np.ndarray,
+    blocksize: int
+) -> list[np.ndarray]:
     """ Initialize the cross maps. The cross maps are used to update the
     local partition of the matrix without having to rupdate the entire matrix
     at each step.
@@ -169,14 +176,16 @@ def initialize_crossmaps(K_local: np.ndarray,
 
 
 
-def update_maps(l_M: np.ndarray,
-                l_M_ip1: np.ndarray,
-                l_C: np.ndarray,
-                K_local: np.ndarray,
-                l_upperbridges: np.ndarray,
-                l_lowerbridges: np.ndarray,
-                current_step: int,
-                blocksize: int) -> [np.ndarray, np.ndarray]:
+def update_maps(
+    l_M: np.ndarray,
+    l_M_ip1: np.ndarray,
+    l_C: np.ndarray,
+    K_local: np.ndarray,
+    l_upperbridges: np.ndarray,
+    l_lowerbridges: np.ndarray,
+    current_step: int,
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
     """ Update the matrix maps and the cross maps.
     
     Parameters
@@ -224,35 +233,18 @@ def update_maps(l_M: np.ndarray,
             Bu_mid = l_upperbridges[middle_process]
             Bl_mid = l_lowerbridges[middle_process]
             J = get_J(l_U, Bu_mid, Bl_mid, blocksize)
-
-            #utils.vizu.vizualiseDenseMatrixFlat(J, f"J\n Process: {comm_rank}")
             
             l_M_ip1 = get_nextprocess_matrixmap(l_M, l_M_ip1, starting_process, middle_process, ending_process)
             l_C = update_crossmap(l_C, l_M, l_M_ip1, Bu_mid, Bl_mid, J, middle_process, ending_process)
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
-            
-            """ utils.vizu.vizualiseDenseMatrixFlat(l_M[0], f"l_M[0]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[1], f"l_M[1]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[2], f"l_M[2]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[3], f"l_M[3]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[4], f"l_M[4]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[5], f"l_M[5]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[6], f"l_M[6]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[7], f"l_M[7]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[8], f"l_M[8]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[9], f"l_M[9]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[10], f"l_M[10]\n Process: {comm_rank}")
-            utils.vizu.vizualiseDenseMatrixFlat(l_M[11], f"l_M[11]\n Process: {comm_rank}")
-             """
-            
-        if comm_rank == 0:        
-            print("current_step: ", current_step, " active_process: ", active_process, " starting_process: ", starting_process, " ending_process: ", ending_process, " middle_process: ", middle_process)
 
     return l_M, l_C
 
 
-def get_middle_process(starting_process: int, 
-                       ending_process: int) -> int:
+def get_middle_process(
+    starting_process: int, 
+    ending_process: int
+) -> int:
     """ Compute the index of middle process of the current reduction step.
     
     Parameters
@@ -274,12 +266,14 @@ def get_middle_process(starting_process: int,
 
 
 
-def get_U(K_local: np.ndarray,
-          l_M: np.ndarray,
-          starting_process: int,
-          middle_process: int,
-          ending_process: int,
-          blocksize: int) -> list[np.ndarray]:
+def get_U(
+    K_local: np.ndarray,
+    l_M: np.ndarray,
+    starting_process: int,
+    middle_process: int,
+    ending_process: int,
+    blocksize: int
+) -> list[np.ndarray]:
     """ Compute the U factors. U factors are a collection of 6 corner matrices
     that will be needed on every process to update their local partition.
     
@@ -345,7 +339,7 @@ def get_U(K_local: np.ndarray,
     # Produce DUL, DUR and DLL on the middle+1 process and communicate 
     # them to the other processes.
     if comm_rank == middle_process+1:
-        DUL, DUR, DLL = produce_DUL_DUR_DLL(K_local, l_M, blocksize)
+        DUL, DUR, DLL = produce_DUL_DUR_DLL(K_local, l_M)
         
         for process in range(starting_process, ending_process + 1):
             if process != middle_process+1:
@@ -358,20 +352,15 @@ def get_U(K_local: np.ndarray,
         DUR = comm.recv(source=middle_process+1, tag=4)
         DLL = comm.recv(source=middle_process+1, tag=5)
                 
-    """ utils.vizu.compareDenseMatrix(K_local, "K_local", UUR, "UUR\n Process: " + str(comm_rank))
-    utils.vizu.compareDenseMatrix(K_local, "K_local", ULL, "ULL\n Process: " + str(comm_rank))
-    utils.vizu.compareDenseMatrix(K_local, "K_local", ULR, "ULR\n Process: " + str(comm_rank))
-    utils.vizu.compareDenseMatrix(K_local, "K_local", DUL, "DUL\n Process: " + str(comm_rank))
-    utils.vizu.compareDenseMatrix(K_local, "K_local", DUR, "DUR\n Process: " + str(comm_rank))
-    utils.vizu.compareDenseMatrix(K_local, "K_local", DLL, "DLL\n Process: " + str(comm_rank)) """
-    
     return [UUR, ULL, ULR, DUL, DUR, DLL]
 
 
 
-def produce_UUR_ULL_ULR(K_local: np.ndarray, 
-                        l_M: list[np.ndarray], 
-                        blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
+def produce_UUR_ULL_ULR(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Produce the UUR, ULL and ULR corner matrices.
     
     Parameters
@@ -404,9 +393,10 @@ def produce_UUR_ULL_ULR(K_local: np.ndarray,
 
 
 
-def produce_DUL_DUR_DLL(K_local: np.ndarray, 
-                        l_M: list[np.ndarray], 
-                        blocksize: int) -> [np.ndarray, np.ndarray, np.ndarray]:
+def produce_DUL_DUR_DLL(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray] 
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Produce the DUL, DUR and DLL corner matrices.
     
     Parameters
@@ -415,8 +405,6 @@ def produce_DUL_DUR_DLL(K_local: np.ndarray,
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-    blocksize : int
-        size of a block
         
     Returns
     -------
@@ -439,10 +427,12 @@ def produce_DUL_DUR_DLL(K_local: np.ndarray,
 
     
     
-def get_J(l_U: list[np.ndarray],
-          Bu_mid: np.ndarray,
-          Bl_mid: np.ndarray,
-          blocksize: np.ndarray) -> np.ndarray:
+def get_J(
+    l_U: list[np.ndarray],
+    Bu_mid: np.ndarray,
+    Bl_mid: np.ndarray,
+    blocksize: np.ndarray
+) -> np.ndarray:
     """ Compute the J matrix.
     
     Parameters
@@ -475,11 +465,13 @@ def get_J(l_U: list[np.ndarray],
 
 
 
-def get_nextprocess_matrixmap(l_M: list[np.ndarray],
-                              l_M_ip1: list[np.ndarray],
-                              starting_process: int,
-                              middle_process: int,
-                              ending_process: int) -> list[np.ndarray]:
+def get_nextprocess_matrixmap(
+    l_M: list[np.ndarray],
+    l_M_ip1: list[np.ndarray],
+    starting_process: int,
+    middle_process: int,
+    ending_process: int
+) -> list[np.ndarray]:
     """ Receive the matrix maps of the next process to prepare the computation
     of the cross maps.
     
@@ -534,7 +526,9 @@ def get_nextprocess_matrixmap(l_M: list[np.ndarray],
 
 
 
-def upperprocess_recv(l_M_ip1: list[np.ndarray]) -> list[np.ndarray]:
+def upperprocess_recv(
+    l_M_ip1: list[np.ndarray]
+) -> list[np.ndarray]:
     """ Upper process receive the matrix maps from the next process.
     
     Parameters
@@ -560,7 +554,9 @@ def upperprocess_recv(l_M_ip1: list[np.ndarray]) -> list[np.ndarray]:
 
 
 
-def lower_or_middle_process_recv(l_M_ip1: list[np.ndarray]) -> list[np.ndarray]:
+def lower_or_middle_process_recv(
+    l_M_ip1: list[np.ndarray]
+) -> list[np.ndarray]:
     """ Lower or middle process receive the matrix maps from the next process.
     
     Parameters
@@ -586,7 +582,9 @@ def lower_or_middle_process_recv(l_M_ip1: list[np.ndarray]) -> list[np.ndarray]:
 
 
 
-def send_to_upper_process(l_M_ip1: list[np.ndarray]):
+def send_to_upper_process(
+    l_M_ip1: list[np.ndarray]
+) -> None:
     """ Middle or upper process send the matrix maps to the previous process.
     
     Parameters
@@ -609,7 +607,9 @@ def send_to_upper_process(l_M_ip1: list[np.ndarray]):
     
     
 
-def send_to_lower_or_middle_process(l_M_ip1: list[np.ndarray]):
+def send_to_lower_or_middle_process(
+    l_M_ip1: list[np.ndarray]
+) -> None:
     """ Lower process send the matrix maps to the previous process.
     
     Parameters
@@ -632,14 +632,16 @@ def send_to_lower_or_middle_process(l_M_ip1: list[np.ndarray]):
     
 
 
-def update_crossmap(l_C: list[np.ndarray],
-                    l_M: list[np.ndarray],
-                    l_M_ip1: list[np.ndarray],
-                    Bu_mid: np.ndarray,
-                    Bl_mid: np.ndarray,
-                    J: np.ndarray, 
-                    middle_process: int,
-                    ending_process: int):
+def update_crossmap(
+    l_C: list[np.ndarray],
+    l_M: list[np.ndarray],
+    l_M_ip1: list[np.ndarray],
+    Bu_mid: np.ndarray,
+    Bl_mid: np.ndarray,
+    J: np.ndarray, 
+    middle_process: int,
+    ending_process: int
+) -> list[np.ndarray]:
     """ Update the cross maps.
     
     Parameters
@@ -686,11 +688,13 @@ def update_crossmap(l_C: list[np.ndarray],
 
 
 
-def update_crossmap_upper(l_M: list[np.ndarray],
-                          l_M_ip1: list[np.ndarray],
-                          l_C: list[np.ndarray], 
-                          Bu_mid: np.ndarray,
-                          J: np.ndarray) -> list[np.ndarray]:
+def update_crossmap_upper(
+    l_M: list[np.ndarray],
+    l_M_ip1: list[np.ndarray],
+    l_C: list[np.ndarray], 
+    Bu_mid: np.ndarray,
+    J: np.ndarray
+) -> list[np.ndarray]:
     """ Cross maps update formula for the upper processes.
     
     Parameters
@@ -737,12 +741,14 @@ def update_crossmap_upper(l_M: list[np.ndarray],
 
 
 
-def update_crossmap_middle(l_M: list[np.ndarray],
-                           l_M_ip1: list[np.ndarray],
-                           l_C: list[np.ndarray], 
-                           Bu_mid: np.ndarray,
-                           Bl_mid: np.ndarray,
-                           J: np.ndarray) -> list[np.ndarray]:
+def update_crossmap_middle(
+    l_M: list[np.ndarray],
+    l_M_ip1: list[np.ndarray],
+    l_C: list[np.ndarray], 
+    Bu_mid: np.ndarray,
+    Bl_mid: np.ndarray,
+    J: np.ndarray
+) -> list[np.ndarray]:
     """ Cross maps update formula for the middle process.
     
     Parameters
@@ -792,11 +798,13 @@ def update_crossmap_middle(l_M: list[np.ndarray],
 
 
 
-def update_crossmap_lower(l_M: list[np.ndarray],
-                          l_M_ip1: list[np.ndarray],
-                          l_C: list[np.ndarray], 
-                          Bl_mid: np.ndarray,
-                          J: np.ndarray) -> list[np.ndarray]:
+def update_crossmap_lower(
+    l_M: list[np.ndarray],
+    l_M_ip1: list[np.ndarray],
+    l_C: list[np.ndarray], 
+    Bl_mid: np.ndarray,
+    J: np.ndarray
+) -> list[np.ndarray]:
     """ Cross maps update formula for the lower processes.
     
     Parameters
@@ -831,7 +839,7 @@ def update_crossmap_lower(l_M: list[np.ndarray],
     J21 = J[blocksize:2*blocksize, 0:blocksize]
     
     l_C[0] += M5 @ Bl_mid @ J21 @ M1_ip1
-    l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1 # MAY BE WRONG HERE
+    l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1
     l_C[2] += M6 @ Bl_mid @ J21 @ M1_ip1
     l_C[3] += M6 @ Bl_mid @ J21 @ M2_ip1
     l_C[4] += M5_ip1 @ Bl_mid @ J21 @ M1
@@ -843,13 +851,15 @@ def update_crossmap_lower(l_M: list[np.ndarray],
 
 
 
-def update_matrixmap(l_M: list[np.ndarray], 
-                     l_U: list[np.ndarray], 
-                     Bu_mid: np.ndarray, 
-                     Bl_mid: np.ndarray, 
-                     J: np.ndarray, 
-                     middle_process: int, 
-                     blocksize: int):
+def update_matrixmap(
+    l_M: list[np.ndarray], 
+    l_U: list[np.ndarray], 
+    Bu_mid: np.ndarray, 
+    Bl_mid: np.ndarray, 
+    J: np.ndarray, 
+    middle_process: int, 
+    blocksize: int
+) -> list[np.ndarray]:
     """ Update the matrix maps.
     
     Parameters
@@ -887,12 +897,14 @@ def update_matrixmap(l_M: list[np.ndarray],
 
 
     
-def update_matrixmap_upper(l_M: list[np.ndarray], 
-                           l_U: list[np.ndarray],
-                           Bu_mid: np.ndarray, 
-                           Bl_mid: np.ndarray, 
-                           J: np.ndarray,
-                           blocksize: int) -> list[np.ndarray]:
+def update_matrixmap_upper(
+    l_M: list[np.ndarray], 
+    l_U: list[np.ndarray],
+    Bu_mid: np.ndarray, 
+    Bl_mid: np.ndarray, 
+    J: np.ndarray,
+    blocksize: int
+) -> list[np.ndarray]:
     """ Formula to update the matrix maps associated with the upper partition.
     
     Parameters
@@ -925,33 +937,36 @@ def update_matrixmap_upper(l_M: list[np.ndarray],
     J12 = J[0:blocksize, blocksize:2*blocksize]
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
     
-    l_M[0] += UUR @ Bu_mid @ J12 @ l_M[6]
-    l_M[1] += UUR @ Bu_mid @ J12 @ l_M[7]
-    
-    l_M[2] = l_M[2] @ Bu_mid @ J11 @ DUR
-    l_M[3] = l_M[3] @ Bu_mid @ J11 @ DUR
-    
-    l_M[4] += l_M[2] @ Bu_mid @ J12 @ ULL 
-    l_M[5] += l_M[3] @ Bu_mid @ J12 @ ULL
-    
-    l_M[6] = DLL @ Bl_mid @ J22 @ l_M[6]
-    l_M[7] = DLL @ Bl_mid @ J22 @ l_M[7]
-
+    # Attention: order of the updates is important.
     l_M[8] += l_M[2] @ Bu_mid @ J12 @ l_M[6]
     l_M[9] += l_M[2] @ Bu_mid @ J12 @ l_M[7]
     l_M[10] += l_M[3] @ Bu_mid @ J12 @ l_M[6]
     l_M[11] += l_M[3] @ Bu_mid @ J12 @ l_M[7]
     
+    l_M[0] += UUR @ Bu_mid @ J12 @ l_M[6]
+    l_M[1] += UUR @ Bu_mid @ J12 @ l_M[7]
+    
+    l_M[4] += l_M[2] @ Bu_mid @ J12 @ ULL 
+    l_M[5] += l_M[3] @ Bu_mid @ J12 @ ULL
+    
+    l_M[2] = l_M[2] @ Bu_mid @ J11 @ DUR
+    l_M[3] = l_M[3] @ Bu_mid @ J11 @ DUR
+    
+    l_M[6] = DLL @ Bl_mid @ J22 @ l_M[6]
+    l_M[7] = DLL @ Bl_mid @ J22 @ l_M[7]
+    
     return l_M
 
 
 
-def update_matrixmap_lower(l_M: list[np.ndarray], 
-                           l_U: list[np.ndarray],
-                           Bu_mid: np.ndarray, 
-                           Bl_mid: np.ndarray, 
-                           J: np.ndarray,
-                           blocksize: int) -> list[np.ndarray]:
+def update_matrixmap_lower(
+    l_M: list[np.ndarray], 
+    l_U: list[np.ndarray],
+    Bu_mid: np.ndarray, 
+    Bl_mid: np.ndarray, 
+    J: np.ndarray,
+    blocksize: int
+) -> list[np.ndarray]:
     """ Formula to update the matrix maps associated with the lower partition.
     
     Parameters
@@ -983,6 +998,12 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
     J11 = J[0:blocksize, 0:blocksize]
     J21 = J[blocksize:2*blocksize, 0:blocksize]
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
+
+    # Attention: order of the updates is important.
+    l_M[8] += l_M[4] @ Bl_mid @ J21 @ l_M[0]
+    l_M[9] += l_M[4] @ Bl_mid @ J21 @ l_M[1]
+    l_M[10] += l_M[5] @ Bl_mid @ J21 @ l_M[0]
+    l_M[11] += l_M[5] @ Bl_mid @ J21 @ l_M[1]
     
     l_M[0] = UUR @ Bu_mid @ J11 @ l_M[0]
     l_M[1] = UUR @ Bu_mid @ J11 @ l_M[1]
@@ -995,22 +1016,19 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
     
     l_M[6] += DLL @ Bl_mid @ J21 @ l_M[0]
     l_M[7] += DLL @ Bl_mid @ J21 @ l_M[1]
-
-    l_M[8] += l_M[4] @ Bl_mid @ J21 @ l_M[0]
-    l_M[9] += l_M[4] @ Bl_mid @ J21 @ l_M[1]
-    l_M[10] += l_M[5] @ Bl_mid @ J21 @ l_M[0]
-    l_M[11] += l_M[5] @ Bl_mid @ J21 @ l_M[1]
     
     return l_M
 
     
     
-def produce_partition(K_local, 
-                      l_M, 
-                      l_C, 
-                      l_upperbridges, 
-                      l_lowerbridges, 
-                      blocksize) -> np.ndarray:
+def produce_partition(
+    K_local, 
+    l_M, 
+    l_C, 
+    l_upperbridges, 
+    l_lowerbridges, 
+    blocksize
+) -> np.ndarray:
     """ Produce the partition of the matrix.
     
     Parameters
@@ -1035,18 +1053,14 @@ def produce_partition(K_local,
     """
     
     K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
-    K_update = np.zeros(K_local.shape, dtype=K_local.dtype)
     
     # 1. Produce the tridiag part of the partition.
     partition_blocksize = K_local.shape[0] // blocksize
     
     for row in range(0, partition_blocksize, 1):
         for col in range(max(0, row-1), min(partition_blocksize, row+2), 1):
-            K_update[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
-                = produce_update_matrix_elements(row, col, K_local, l_M)
-    
-    utils.vizu.compareDenseMatrix(K_local, "K_local", K_update, "K_update")
-    K_inv = K_local + K_update
+            K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
+                = produce_matrix_elements(row, col, K_local, l_M)
     
     # 2. Produce the bridge part of the partition.
     # TODO
@@ -1056,9 +1070,11 @@ def produce_partition(K_local,
 
 
 
-def produce_toprow_element(col_blockindex: int, 
-                           K_local: np.ndarray, 
-                           l_M: list[np.ndarray]) -> np.ndarray:
+def produce_toprow_element(
+    col_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce an element of the top row of the partition.
     
     Parameters
@@ -1089,9 +1105,11 @@ def produce_toprow_element(col_blockindex: int,
 
 
 
-def produce_rightcol_element(row_blockindex: int, 
-                             K_local: np.ndarray, 
-                             l_M: list[np.ndarray]) -> np.ndarray:
+def produce_rightcol_element(
+    row_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce an element of the right column of the partition.
     
     Parameters
@@ -1122,9 +1140,11 @@ def produce_rightcol_element(row_blockindex: int,
     
     
 
-def produce_leftcol_element(row_blockindex: int, 
-                            K_local: np.ndarray, 
-                            l_M: list[np.ndarray]) -> np.ndarray:
+def produce_leftcol_element(
+    row_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce an element of the left column of the partition.
 
     Parameters
@@ -1155,9 +1175,11 @@ def produce_leftcol_element(row_blockindex: int,
 
 
 
-def produce_botrow_element(col_blockindex: int, 
-                           K_local: np.ndarray, 
-                           l_M: list[np.ndarray]) -> np.ndarray:
+def produce_botrow_element(
+    col_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce an element of the bottom row of the partition.
     
     Parameters
@@ -1188,10 +1210,12 @@ def produce_botrow_element(col_blockindex: int,
 
 
 
-def produce_matrix_elements(row_blockindex: int, 
-                            col_blockindex: int, 
-                            K_local: np.ndarray, 
-                            l_M: list[np.ndarray]) -> np.ndarray:
+def produce_matrix_elements(
+    row_blockindex: int, 
+    col_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce a selected block of the given partition.
     
     Parameters
@@ -1207,7 +1231,7 @@ def produce_matrix_elements(row_blockindex: int,
 
     Returns
     -------
-    BLK : numpy matrix
+    elem : numpy matrix
         selected block of the given partition
     """
     
@@ -1234,10 +1258,12 @@ def produce_matrix_elements(row_blockindex: int,
 
 
 
-def produce_update_matrix_elements(row_blockindex: int, 
-                                   col_blockindex: int, 
-                                   K_local: np.ndarray, 
-                                   l_M: list[np.ndarray]) -> np.ndarray:
+def produce_update_matrix_elements(
+    row_blockindex: int, 
+    col_blockindex: int, 
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray]
+) -> np.ndarray:
     """ Produce the update of a selected block of the given partition.
     
     Parameters
@@ -1253,8 +1279,8 @@ def produce_update_matrix_elements(row_blockindex: int,
 
     Returns
     -------
-    BLK : numpy matrix
-        selected block of the given partition
+    elem_update : numpy matrix
+        update for the selected block of the given partition
     """
     
     start_rowindex = row_blockindex * blocksize
@@ -1266,17 +1292,7 @@ def produce_update_matrix_elements(row_blockindex: int,
     start_lastblockindex = K_local.shape[0] - blocksize
     end_lastblockindex   = K_local.shape[0]
     
-    """ elem = K_local[start_rowindex:end_rowindex, start_colindex:end_colindex]\
-            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
-                @ l_M[8] @ K_local[0:blocksize, start_colindex:end_colindex]\
-            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
-                @ l_M[9] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]\
-            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
-                @ l_M[10] @ K_local[0:blocksize, start_colindex:end_colindex]\
-            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
-                @ l_M[11] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex] """
-    
-    elem = K_local[start_rowindex:end_rowindex, 0:blocksize]\
+    elem_update = K_local[start_rowindex:end_rowindex, 0:blocksize]\
                 @ l_M[8] @ K_local[0:blocksize, start_colindex:end_colindex]\
             + K_local[start_rowindex:end_rowindex, 0:blocksize]\
                 @ l_M[9] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]\
@@ -1285,7 +1301,7 @@ def produce_update_matrix_elements(row_blockindex: int,
             + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
                 @ l_M[11] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]
     
-    return elem
+    return elem_update
 
 
 
@@ -1294,13 +1310,13 @@ if __name__ == '__main__':
     comm_size = comm.Get_size()
     comm_rank = comm.Get_rank()
 
-    isComplex = True
+    isComplex = False
     seed = 63
 
-    #matrice_size = 26
-    #blocksize    = 2
-    matrice_size = 8
-    blocksize    = 1
+    matrice_size = 26
+    blocksize    = 2
+    #matrice_size = 8
+    #blocksize    = 1
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     

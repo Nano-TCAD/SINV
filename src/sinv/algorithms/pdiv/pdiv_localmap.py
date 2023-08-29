@@ -8,6 +8,7 @@ PDIV (P-Division) algorithm:
 
 Pairwise algorithm:
 @reference: https://doi.org/10.1007/978-3-319-78024-5_55
+@reference: https://doi.org/10.1002/cpe.4918
 
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
@@ -81,9 +82,9 @@ def pdiv_localmap(
     for current_step in range(1, n_reduction_steps + 1):
         l_M, l_C = update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
     
-    K_inv = produce_partition(K_local, l_M, l_C, l_upperbridges, l_lowerbridges, blocksize)
+    K_inv, Bu_inv, Bl_inv = produce_partition(K_local, l_M, l_C, l_upperbridges, l_lowerbridges, blocksize)
 
-    return K_inv, l_upperbridges, l_lowerbridges
+    return K_inv, Bu_inv, Bl_inv
 
 
 
@@ -1052,9 +1053,8 @@ def produce_partition(
         local inverted partition of the matrix
     """
     
-    K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
-    
     # 1. Produce the tridiag part of the partition.
+    K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
     partition_blocksize = K_local.shape[0] // blocksize
     
     for row in range(0, partition_blocksize, 1):
@@ -1062,11 +1062,18 @@ def produce_partition(
             K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
                 = produce_matrix_elements(row, col, K_local, l_M)
     
+    
     # 2. Produce the bridge part of the partition.
-    # TODO
+    comm = MPI.COMM_WORLD
+    comm_size = comm.Get_size()
+    
+    Bu_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    Bl_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    
+    for process_i in range(0, comm_size-1, 1):
+        Bu_inv, Bl_inv = produce_bridges(K_local, l_C, process_i, blocksize)
 
-
-    return K_inv
+    return K_inv, Bu_inv, Bl_inv
 
 
 
@@ -1305,25 +1312,154 @@ def produce_update_matrix_elements(
 
 
 
+def produce_bridges(
+    K_local: np.ndarray,
+    l_C: list[np.ndarray],
+    process_i: int,
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
+    """ Produce the bridges.
+    
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_C : list of numpy matrix
+        list of the cross maps
+    process_i : int
+        index of the process to produce the bridges
+    blocksize : int
+        size of a block
+        
+    Returns
+    -------
+    Bu_inv : numpy matrix
+        upper bridge
+    Bl_inv : numpy matrix
+        lower bridge
+    """
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    
+    Bu_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    Bl_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    
+    N_rowindex = K_local.shape[0] - blocksize
+    
+    if comm_rank == process_i:
+        phi1_1_N = K_local[0:blocksize, N_rowindex:N_rowindex+blocksize]
+        phi1_N_1 = K_local[N_rowindex:N_rowindex+blocksize, 0:blocksize]
+        phi1_N_N = K_local[N_rowindex:N_rowindex+blocksize, N_rowindex:N_rowindex+blocksize]
+        
+        phi2_1_1 = comm.recv(source=comm_rank+1, tag=0)
+        phi2_N_1 = comm.recv(source=comm_rank+1, tag=1)
+        phi2_1_N = comm.recv(source=comm_rank+1, tag=2)
+        
+        Bu_inv = produce_upper_bridge(phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C)
+        Bl_inv = produce_upper_bridge(phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C)
+        
+    elif comm_rank == process_i+1:
+        comm.send(K_local[0:blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=0)
+        comm.send(K_local[N_rowindex:N_rowindex+blocksize, 0:blocksize], dest=comm_rank-1, tag=1)
+        comm.send(K_local[N_rowindex:N_rowindex+blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=2)
+        
+    return Bu_inv, Bl_inv
+    
+    
+
+def produce_upper_bridge(
+    phi1_N_1, 
+    phi1_N_N, 
+    phi2_1_1, 
+    phi2_N_1, 
+    l_C
+) -> np.ndarray:
+    """ Produce the upper bridge.
+    
+    Parameters
+    ----------
+    phi1_N_1 : numpy matrix
+        Lower left block of the upper partition
+    phi1_N_N : numpy matrix
+        Lower right block of the upper partition
+    phi2_1_1 : numpy matrix
+        Upper left block of the lower partition
+    phi2_N_1 : numpy matrix
+        Lower left block of the lower partition
+    l_C : list of numpy matrix
+        list of the cross maps
+        
+    Returns
+    -------
+    Bu_inv : numpy matrix
+        upper bridge        
+    """
+    
+    Bu_inv = phi1_N_1 @ l_C[0] @ phi2_1_1\
+                + phi1_N_1 @ l_C[1] @ phi2_N_1\
+                + phi1_N_N @ l_C[2] @ phi2_1_1\
+                + phi1_N_N @ l_C[3] @ phi2_N_1
+    
+    return Bu_inv
+
+
+
+def produce_upper_bridge(
+    phi1_1_N, 
+    phi1_N_N, 
+    phi2_1_1, 
+    phi2_1_N, 
+    l_C
+) -> np.ndarray:
+    """ Produce the lower bridge.
+    
+    Parameters
+    ----------
+    phi1_1_N : numpy matrix
+        Upper right block of the upper partition
+    phi1_N_N : numpy matrix
+        Lower right block of the upper partition
+    phi2_1_1 : numpy matrix
+        Upper left block of the lower partition
+    phi2_1_N : numpy matrix
+        Upper right block of the lower partition
+    l_C : list of numpy matrix
+        list of the cross maps
+        
+    Returns
+    -------
+    Bl_inv : numpy matrix
+        lower bridge
+    """
+    
+    Bl_inv = phi2_1_1 @ l_C[4] @ phi1_1_N\
+                + phi2_1_1 @ l_C[5] @ phi1_N_N\
+                + phi2_1_N @ l_C[6] @ phi1_1_N\
+                + phi2_1_N @ l_C[7] @ phi1_N_N
+    
+    return Bl_inv
+
+
+
+
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
     comm_rank = comm.Get_rank()
 
-    isComplex = False
+    isComplex = True
     seed = 63
 
-    matrice_size = 26
-    blocksize    = 2
-    #matrice_size = 8
-    #blocksize    = 1
+    #matrice_size = 26
+    #blocksize    = 2
+    matrice_size = 8
+    blocksize    = 1
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A_refsol = np.linalg.inv(A)
-        
         #utils.vizu.vizualiseDenseMatrixFlat(A, f"A\n Process: {comm_rank}")
         
         # PDIV worflow
@@ -1334,27 +1470,35 @@ if __name__ == '__main__':
         K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
         
         K_local = K_i[comm_rank]
-        K_inv_local, Bu_i, Bl_i = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
+        K_inv_local, Bu_inv, Bl_inv = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
         
         
         # Extract local reference solution
+        A_refsol = np.linalg.inv(A)
         start_localpart_rowindex = l_start_blockrow[comm_rank] * blocksize
         stop_localpart_rowindex  = start_localpart_rowindex + l_partitions_blocksizes[comm_rank] * blocksize
         A_local_slice_of_refsolution = A_refsol[start_localpart_rowindex:stop_localpart_rowindex, start_localpart_rowindex:stop_localpart_rowindex]
+        if comm_rank < comm_size-1:
+            Bu_refsol = A_refsol[stop_localpart_rowindex-blocksize:stop_localpart_rowindex, stop_localpart_rowindex:stop_localpart_rowindex+blocksize]
+            Bl_refsol = A_refsol[stop_localpart_rowindex:stop_localpart_rowindex+blocksize, stop_localpart_rowindex-blocksize:stop_localpart_rowindex]
         
+        """ if comm_rank == 0:
+            utils.vizu.vizualiseDenseMatrixFlat(A_refsol, "A_refsol")
+            
+        if comm_rank < comm_size-1:
+            utils.vizu.vizualiseDenseMatrixFlat(Bu_refsol, "Bu_refsol")
+            utils.vizu.vizualiseDenseMatrixFlat(Bl_refsol, "Bl_refsol") """
         
         for i in range(0, l_partitions_blocksizes[comm_rank], 1):
             for j in range(0, l_partitions_blocksizes[comm_rank], 1):
                 if j < i-1 or j > i+1:
-                    #print(f"i: {i}, j*blocksize: {j*blocksize}, (j+1)*blocksize: {(j+1)*blocksize}")
                     A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
         
+        assert np.allclose(A_local_slice_of_refsolution, K_inv_local)
+        if comm_rank < comm_size-1:
+            assert np.allclose(Bu_refsol, Bu_inv)
+            assert np.allclose(Bl_refsol, Bl_inv)
         
         utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
         
-        #assert np.allclose(A_local_slice_of_refsolution, A_pdiv_localmap)
-        
-        """ if comm_rank == 0:
-            utils.vizu.vizualiseDenseMatrixFlat(A, "A") """
-            
             

@@ -78,7 +78,7 @@ def pdiv_localmap(K_local: np.ndarray,
 
     n_reduction_steps = int(math.log2(comm_size))
     for current_step in range(1, n_reduction_steps + 1):
-        update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
+        l_M, l_C = update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
     
     K_inv = produce_partition(K_local, l_M, l_C, l_upperbridges, l_lowerbridges, blocksize)
 
@@ -231,14 +231,24 @@ def update_maps(l_M: np.ndarray,
             l_C = update_crossmap(l_C, l_M, l_M_ip1, Bu_mid, Bl_mid, J, middle_process, ending_process)
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
             
+            """ utils.vizu.vizualiseDenseMatrixFlat(l_M[0], f"l_M[0]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[1], f"l_M[1]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[2], f"l_M[2]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[3], f"l_M[3]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[4], f"l_M[4]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[5], f"l_M[5]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[6], f"l_M[6]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[7], f"l_M[7]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[8], f"l_M[8]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[9], f"l_M[9]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[10], f"l_M[10]\n Process: {comm_rank}")
+            utils.vizu.vizualiseDenseMatrixFlat(l_M[11], f"l_M[11]\n Process: {comm_rank}")
+             """
             
-            
-            
-            
-
         if comm_rank == 0:        
             print("current_step: ", current_step, " active_process: ", active_process, " starting_process: ", starting_process, " ending_process: ", ending_process, " middle_process: ", middle_process)
 
+    return l_M, l_C
 
 
 def get_middle_process(starting_process: int, 
@@ -348,7 +358,12 @@ def get_U(K_local: np.ndarray,
         DUR = comm.recv(source=middle_process+1, tag=4)
         DLL = comm.recv(source=middle_process+1, tag=5)
                 
-    #utils.vizu.compareDenseMatrix(K_local, "K_local", ULR, "ULR\n Process: " + str(comm_rank))
+    """ utils.vizu.compareDenseMatrix(K_local, "K_local", UUR, "UUR\n Process: " + str(comm_rank))
+    utils.vizu.compareDenseMatrix(K_local, "K_local", ULL, "ULL\n Process: " + str(comm_rank))
+    utils.vizu.compareDenseMatrix(K_local, "K_local", ULR, "ULR\n Process: " + str(comm_rank))
+    utils.vizu.compareDenseMatrix(K_local, "K_local", DUL, "DUL\n Process: " + str(comm_rank))
+    utils.vizu.compareDenseMatrix(K_local, "K_local", DUR, "DUR\n Process: " + str(comm_rank))
+    utils.vizu.compareDenseMatrix(K_local, "K_local", DLL, "DLL\n Process: " + str(comm_rank)) """
     
     return [UUR, ULL, ULR, DUL, DUR, DLL]
 
@@ -382,7 +397,7 @@ def produce_UUR_ULL_ULR(K_local: np.ndarray,
     col_blockindex = K_local.shape[0] // blocksize - 1
     
     UUR = produce_toprow_element(col_blockindex, K_local, l_M)
-    ULL = produce_rightcol_element(row_blockindex, K_local, l_M)
+    ULL = produce_leftcol_element(row_blockindex, K_local, l_M)
     ULR = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
 
     return UUR, ULL, ULR
@@ -663,7 +678,8 @@ def update_crossmap(l_C: list[np.ndarray],
         l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
     
     elif comm_rank < ending_process:
-        # Last process doesn't need to update the crossmap.
+        # Last process doesn't need to update the crossmap since it doesn't own
+        # any bridges matrices.
         l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J)
 
     return l_C
@@ -974,8 +990,8 @@ def update_matrixmap_lower(l_M: list[np.ndarray],
     l_M[2] += l_M[4] @ Bl_mid @ J21 @ DUR
     l_M[3] += l_M[5] @ Bl_mid @ J21 @ DUR
     
-    l_M[4] = l_M[5] @ Bl_mid @ J22 @ ULL 
-    l_M[5] = l_M[4] @ Bl_mid @ J22 @ ULL
+    l_M[4] = l_M[4] @ Bl_mid @ J22 @ ULL 
+    l_M[5] = l_M[5] @ Bl_mid @ J22 @ ULL
     
     l_M[6] += DLL @ Bl_mid @ J21 @ l_M[0]
     l_M[7] += DLL @ Bl_mid @ J21 @ l_M[1]
@@ -1019,16 +1035,21 @@ def produce_partition(K_local,
     """
     
     K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
+    K_update = np.zeros(K_local.shape, dtype=K_local.dtype)
     
     # 1. Produce the tridiag part of the partition.
     partition_blocksize = K_local.shape[0] // blocksize
     
     for row in range(0, partition_blocksize, 1):
         for col in range(max(0, row-1), min(partition_blocksize, row+2), 1):
-            K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
-                = produce_matrix_elements(row, col, K_local, l_M)
+            K_update[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
+                = produce_update_matrix_elements(row, col, K_local, l_M)
+    
+    utils.vizu.compareDenseMatrix(K_local, "K_local", K_update, "K_update")
+    K_inv = K_local + K_update
     
     # 2. Produce the bridge part of the partition.
+    # TODO
 
 
     return K_inv
@@ -1213,6 +1234,61 @@ def produce_matrix_elements(row_blockindex: int,
 
 
 
+def produce_update_matrix_elements(row_blockindex: int, 
+                                   col_blockindex: int, 
+                                   K_local: np.ndarray, 
+                                   l_M: list[np.ndarray]) -> np.ndarray:
+    """ Produce the update of a selected block of the given partition.
+    
+    Parameters
+    ----------
+    row : int
+        row index of the block
+    col : int
+        column index of the block
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+
+    Returns
+    -------
+    BLK : numpy matrix
+        selected block of the given partition
+    """
+    
+    start_rowindex = row_blockindex * blocksize
+    end_rowindex   = start_rowindex + blocksize
+    
+    start_colindex = col_blockindex * blocksize
+    end_colindex   = start_colindex + blocksize
+    
+    start_lastblockindex = K_local.shape[0] - blocksize
+    end_lastblockindex   = K_local.shape[0]
+    
+    """ elem = K_local[start_rowindex:end_rowindex, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[8] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[9] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[10] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[11] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex] """
+    
+    elem = K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[8] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, 0:blocksize]\
+                @ l_M[9] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[10] @ K_local[0:blocksize, start_colindex:end_colindex]\
+            + K_local[start_rowindex:end_rowindex, start_lastblockindex:end_lastblockindex]\
+                @ l_M[11] @ K_local[start_lastblockindex:end_lastblockindex, start_colindex:end_colindex]
+    
+    return elem
+
+
+
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
@@ -1221,8 +1297,10 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    matrice_size = 26
-    blocksize    = 2
+    #matrice_size = 26
+    #blocksize    = 2
+    matrice_size = 8
+    blocksize    = 1
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
@@ -1230,6 +1308,7 @@ if __name__ == '__main__':
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         
+        #utils.vizu.vizualiseDenseMatrixFlat(A, f"A\n Process: {comm_rank}")
         
         # PDIV worflow
         pdiv_u.check_multiprocessing(comm_size)
@@ -1239,7 +1318,7 @@ if __name__ == '__main__':
         K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
         
         K_local = K_i[comm_rank]
-        K_local, Bu_i, Bl_i = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
+        K_inv_local, Bu_i, Bl_i = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
         
         
         # Extract local reference solution
@@ -1248,7 +1327,14 @@ if __name__ == '__main__':
         A_local_slice_of_refsolution = A_refsol[start_localpart_rowindex:stop_localpart_rowindex, start_localpart_rowindex:stop_localpart_rowindex]
         
         
-        utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_local, f"K_local\n Process: {comm_rank} ")
+        for i in range(0, l_partitions_blocksizes[comm_rank], 1):
+            for j in range(0, l_partitions_blocksizes[comm_rank], 1):
+                if j < i-1 or j > i+1:
+                    #print(f"i: {i}, j*blocksize: {j*blocksize}, (j+1)*blocksize: {(j+1)*blocksize}")
+                    A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
+        
+        
+        utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
         
         #assert np.allclose(A_local_slice_of_refsolution, A_pdiv_localmap)
         

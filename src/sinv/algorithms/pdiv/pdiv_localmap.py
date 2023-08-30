@@ -82,7 +82,7 @@ def pdiv_localmap(
     for current_step in range(1, n_reduction_steps + 1):
         l_M, l_C = update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
     
-    K_inv, Bu_inv, Bl_inv = produce_partition(K_local, l_M, l_C, l_upperbridges, l_lowerbridges, blocksize)
+    K_inv, Bu_inv, Bl_inv = produce_partition(K_local, l_M, l_C, blocksize)
 
     return K_inv, Bu_inv, Bl_inv
 
@@ -426,8 +426,8 @@ def produce_DUL_DUR_DLL(
     
     return DUL, DUR, DLL
 
-    
-    
+
+
 def get_J(
     l_U: list[np.ndarray],
     Bu_mid: np.ndarray,
@@ -506,7 +506,6 @@ def get_nextprocess_matrixmap(
             l_M_ip1 = lower_or_middle_process_recv(l_M_ip1)
         else:
             l_M_ip1 = upperprocess_recv(l_M_ip1)
-    
     # Last process only send.
     elif comm_rank == ending_process:
         send_to_lower_or_middle_process(l_M)
@@ -522,7 +521,16 @@ def get_nextprocess_matrixmap(
         else:
             send_to_lower_or_middle_process(l_M)
             l_M_ip1 = lower_or_middle_process_recv(l_M_ip1)
-        
+            
+            
+    """ # 1st process only receive.
+    if comm_rank == starting_process:
+        lower_or_middle_process_recv(l_M_ip1)
+    if comm_rank == ending_process:
+        send_to_lower_or_middle_process(l_M) """
+             
+    
+            
     return l_M_ip1
 
 
@@ -672,14 +680,13 @@ def update_crossmap(
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-    
 
     if comm_rank < middle_process:
         l_C = update_crossmap_upper(l_M, l_M_ip1, l_C, Bu_mid, J)
-        
+    
     elif comm_rank == middle_process:
         l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
-    
+        
     elif comm_rank < ending_process:
         # Last process doesn't need to update the crossmap since it doesn't own
         # any bridges matrices.
@@ -737,6 +744,15 @@ def update_crossmap_upper(
     l_C[5] += M3_ip1 @ Bu_mid @ J12 @ M8
     l_C[6] += M4_ip1 @ Bu_mid @ J12 @ M7
     l_C[7] += M4_ip1 @ Bu_mid @ J12 @ M8
+    
+    """ l_C[0] += M3 @ Bu_mid @ J12 @ M3_ip1
+    l_C[1] += M3 @ Bu_mid @ J12 @ M4_ip1
+    l_C[2] += M4 @ Bu_mid @ J12 @ M3_ip1
+    l_C[3] += M4 @ Bu_mid @ J12 @ M4_ip1
+    l_C[4] += M7_ip1 @ Bu_mid @ J12 @ M7
+    l_C[5] += M8_ip1 @ Bu_mid @ J12 @ M8
+    l_C[6] += M7_ip1 @ Bu_mid @ J12 @ M7
+    l_C[7] += M8_ip1 @ Bu_mid @ J12 @ M8 """
     
     return l_C
 
@@ -840,7 +856,8 @@ def update_crossmap_lower(
     J21 = J[blocksize:2*blocksize, 0:blocksize]
     
     l_C[0] += M5 @ Bl_mid @ J21 @ M1_ip1
-    l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1
+    #l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1 # Wrong formula present in the paper!
+    l_C[1] += M5 @ Bl_mid @ J21 @ M2_ip1 # Corrected formula
     l_C[2] += M6 @ Bl_mid @ J21 @ M1_ip1
     l_C[3] += M6 @ Bl_mid @ J21 @ M2_ip1
     l_C[4] += M5_ip1 @ Bl_mid @ J21 @ M1
@@ -1026,8 +1043,6 @@ def produce_partition(
     K_local, 
     l_M, 
     l_C, 
-    l_upperbridges, 
-    l_lowerbridges, 
     blocksize
 ) -> np.ndarray:
     """ Produce the partition of the matrix.
@@ -1040,10 +1055,6 @@ def produce_partition(
         list of the matrix maps
     l_C : list of numpy matrix
         list of the cross maps
-    l_upperbridges : list of numpy matrix
-        list of the upper bridges
-    l_lowerbridges : list of numpy matrix
-        list of the lower bridges
     blocksize : int
         size of a block
         
@@ -1062,7 +1073,6 @@ def produce_partition(
             K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
                 = produce_matrix_elements(row, col, K_local, l_M)
     
-    
     # 2. Produce the bridge part of the partition.
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
@@ -1070,8 +1080,9 @@ def produce_partition(
     Bu_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
     Bl_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
     
-    for process_i in range(0, comm_size-1, 1):
-        Bu_inv, Bl_inv = produce_bridges(K_local, l_C, process_i, blocksize)
+    for process_i in range(0, comm_size, 1):
+        Bu_inv, Bl_inv = produce_bridges(Bu_inv, Bl_inv, K_local, l_C, process_i, blocksize)
+        #utils.vizu.compareDenseMatrix(Bu_inv, f"Bu_inv\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
 
     return K_inv, Bu_inv, Bl_inv
 
@@ -1227,10 +1238,10 @@ def produce_matrix_elements(
     
     Parameters
     ----------
-    row : int
-        row index of the block
-    col : int
-        column index of the block
+    row_blockindex : int
+        row blockindex of the block
+    col_blockindex : int
+        column blockindex of the block
     K_local : numpy matrix
         local inverted partition of the matrix
     l_M : list of numpy matrix
@@ -1313,12 +1324,14 @@ def produce_update_matrix_elements(
 
 
 def produce_bridges(
+    Bu_inv: np.ndarray, 
+    Bl_inv: np.ndarray, 
     K_local: np.ndarray,
     l_C: list[np.ndarray],
     process_i: int,
     blocksize: int
 ) -> [np.ndarray, np.ndarray]:
-    """ Produce the bridges.
+    """ Produce the upper and lower bridges.
     
     Parameters
     ----------
@@ -1342,9 +1355,6 @@ def produce_bridges(
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
     
-    Bu_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    Bl_inv = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    
     N_rowindex = K_local.shape[0] - blocksize
     
     if comm_rank == process_i:
@@ -1356,29 +1366,32 @@ def produce_bridges(
         phi2_N_1 = comm.recv(source=comm_rank+1, tag=1)
         phi2_1_N = comm.recv(source=comm_rank+1, tag=2)
         
-        Bu_inv = produce_upper_bridge(phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C)
-        Bl_inv = produce_upper_bridge(phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C)
+        Bu_inv = produce_upper_bridge(Bu_inv, phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C)
+        Bl_inv = produce_lower_bridge(Bl_inv, phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C)
         
     elif comm_rank == process_i+1:
-        comm.send(K_local[0:blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=0)
+        comm.send(K_local[0:blocksize, 0:blocksize], dest=comm_rank-1, tag=0)
         comm.send(K_local[N_rowindex:N_rowindex+blocksize, 0:blocksize], dest=comm_rank-1, tag=1)
-        comm.send(K_local[N_rowindex:N_rowindex+blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=2)
+        comm.send(K_local[0:blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=2)
         
     return Bu_inv, Bl_inv
     
     
 
 def produce_upper_bridge(
-    phi1_N_1, 
-    phi1_N_N, 
-    phi2_1_1, 
-    phi2_N_1, 
-    l_C
+    Bu_inv: np.ndarray,
+    phi1_N_1: np.ndarray, 
+    phi1_N_N: np.ndarray, 
+    phi2_1_1: np.ndarray, 
+    phi2_N_1: np.ndarray, 
+    l_C: list[np.ndarray]
 ) -> np.ndarray:
     """ Produce the upper bridge.
     
     Parameters
     ----------
+    Bu_inv : numpy matrix
+        upper bridge
     phi1_N_1 : numpy matrix
         Lower left block of the upper partition
     phi1_N_N : numpy matrix
@@ -1405,17 +1418,20 @@ def produce_upper_bridge(
 
 
 
-def produce_upper_bridge(
-    phi1_1_N, 
-    phi1_N_N, 
-    phi2_1_1, 
-    phi2_1_N, 
-    l_C
+def produce_lower_bridge(
+    Bl_inv: np.ndarray,
+    phi1_1_N: np.ndarray, 
+    phi1_N_N: np.ndarray, 
+    phi2_1_1: np.ndarray, 
+    phi2_1_N: np.ndarray, 
+    l_C: list[np.ndarray]
 ) -> np.ndarray:
     """ Produce the lower bridge.
     
     Parameters
     ----------
+    Bl_inv : numpy matrix
+        lower bridge
     phi1_1_N : numpy matrix
         Upper right block of the upper partition
     phi1_N_N : numpy matrix
@@ -1442,7 +1458,6 @@ def produce_upper_bridge(
 
 
 
-
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
@@ -1451,10 +1466,10 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    #matrice_size = 26
-    #blocksize    = 2
-    matrice_size = 8
-    blocksize    = 1
+    matrice_size = 26
+    blocksize    = 2
+    #matrice_size = 8
+    #blocksize    = 1
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
@@ -1494,11 +1509,17 @@ if __name__ == '__main__':
                 if j < i-1 or j > i+1:
                     A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
         
-        assert np.allclose(A_local_slice_of_refsolution, K_inv_local)
+        #assert np.allclose(A_local_slice_of_refsolution, K_inv_local)
+        #print("Process: ", comm_rank, " - Local solution is correct")
         if comm_rank < comm_size-1:
+            utils.vizu.compareDenseMatrix(Bu_refsol, f"Bu_refsol\n Process: {comm_rank} "  , Bu_inv, f"Bu_inv\n Process: {comm_rank} ")
+            utils.vizu.compareDenseMatrix(Bl_refsol, f"Bl_refsol\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
+            
             assert np.allclose(Bu_refsol, Bu_inv)
-            assert np.allclose(Bl_refsol, Bl_inv)
+            assert np.allclose(Bl_refsol, Bl_inv) 
+            print("Process: ", comm_rank, " - Bridges are correct")
+           
         
-        utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
+        #utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
         
             

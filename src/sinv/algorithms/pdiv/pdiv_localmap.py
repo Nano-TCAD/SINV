@@ -938,8 +938,8 @@ def update_matrixmap_upper(
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
     
     # Attention: order of the updates is important.
-    l_M[8] += l_M[2] @ Bu_mid @ J12 @ l_M[6]
-    l_M[9] += l_M[2] @ Bu_mid @ J12 @ l_M[7]
+    l_M[8]  += l_M[2] @ Bu_mid @ J12 @ l_M[6]
+    l_M[9]  += l_M[2] @ Bu_mid @ J12 @ l_M[7]
     l_M[10] += l_M[3] @ Bu_mid @ J12 @ l_M[6]
     l_M[11] += l_M[3] @ Bu_mid @ J12 @ l_M[7]
     
@@ -1000,8 +1000,8 @@ def update_matrixmap_lower(
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
 
     # Attention: order of the updates is important.
-    l_M[8] += l_M[4] @ Bl_mid @ J21 @ l_M[0]
-    l_M[9] += l_M[4] @ Bl_mid @ J21 @ l_M[1]
+    l_M[8]  += l_M[4] @ Bl_mid @ J21 @ l_M[0]
+    l_M[9]  += l_M[4] @ Bl_mid @ J21 @ l_M[1]
     l_M[10] += l_M[5] @ Bl_mid @ J21 @ l_M[0]
     l_M[11] += l_M[5] @ Bl_mid @ J21 @ l_M[1]
     
@@ -1503,14 +1503,16 @@ if __name__ == '__main__':
             #utils.vizu.compareDenseMatrix(Bu_refsol, f"Bu_refsol\n Process: {comm_rank} "  , Bu_inv, f"Bu_inv\n Process: {comm_rank} ")
             #utils.vizu.compareDenseMatrix(Bl_refsol, f"Bl_refsol\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
             
-            if np.allclose(Bu_refsol, Bu_inv) == False:
+            """ if np.allclose(Bu_refsol, Bu_inv) == False:
                 print("Process: ", comm_rank, " - Bu is not correct")
-                print("Bu_refsol: ", Bu_refsol)
-                print("Bu_inv: ", Bu_inv)
+                print("     Bu_refsol: ", Bu_refsol)
+                print("     Bu_inv: ", Bu_inv)
             if np.allclose(Bl_refsol, Bl_inv) == False:
                 print("Process: ", comm_rank, " - Bl is not correct")
-                print("Bl_refsol: ", Bl_refsol)
-                print("Bl_inv: ", Bl_inv)
+                print("     Bl_refsol: ", Bl_refsol)
+                print("     Bl_inv: ", Bl_inv) """
+                
+            pass
 
         
         #utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")

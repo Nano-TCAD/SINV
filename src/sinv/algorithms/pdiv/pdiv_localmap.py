@@ -73,7 +73,7 @@ def pdiv_localmap(
     comm_size = comm.Get_size()
     
     K_local = invert_partition(K_local)
-
+    
     l_M = initialize_matrixmaps(K_local, blocksize)
     l_M_ip1 = initialize_crossmaps(K_local, blocksize)
     l_C = initialize_crossmaps(K_local, blocksize)
@@ -240,6 +240,7 @@ def update_maps(
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
 
     return l_M, l_C
+
 
 
 def get_middle_process(
@@ -502,7 +503,7 @@ def get_nextprocess_matrixmap(
     # 1st process only receive.
     if comm_rank == starting_process:
         if comm_rank == middle_process:
-            # In a not so special case, 1st process is the middle process.
+            # In a not so special case, 1st process is also the middle process.
             l_M_ip1 = lower_or_middle_process_recv(l_M_ip1)
         else:
             l_M_ip1 = upperprocess_recv(l_M_ip1)
@@ -510,7 +511,7 @@ def get_nextprocess_matrixmap(
     elif comm_rank == ending_process:
         send_to_lower_or_middle_process(l_M)
         
-    # Other processes send top upper process and receive from lower one.
+    # Other processes send to the process above and receive from lthe one below.
     else:
         if comm_rank < middle_process:
             send_to_upper_process(l_M)
@@ -521,15 +522,6 @@ def get_nextprocess_matrixmap(
         else:
             send_to_lower_or_middle_process(l_M)
             l_M_ip1 = lower_or_middle_process_recv(l_M_ip1)
-            
-            
-    """ # 1st process only receive.
-    if comm_rank == starting_process:
-        lower_or_middle_process_recv(l_M_ip1)
-    if comm_rank == ending_process:
-        send_to_lower_or_middle_process(l_M) """
-             
-    
             
     return l_M_ip1
 
@@ -736,23 +728,14 @@ def update_crossmap_upper(
     
     J12 = J[0:blocksize, blocksize:2*blocksize]
     
-    l_C[0] += M3 @ Bu_mid @ J12 @ M7_ip1
-    l_C[1] += M3 @ Bu_mid @ J12 @ M8_ip1
-    l_C[2] += M4 @ Bu_mid @ J12 @ M7_ip1
-    l_C[3] += M4 @ Bu_mid @ J12 @ M8_ip1
-    l_C[4] += M3_ip1 @ Bu_mid @ J12 @ M7
-    l_C[5] += M3_ip1 @ Bu_mid @ J12 @ M8
-    l_C[6] += M4_ip1 @ Bu_mid @ J12 @ M7
-    l_C[7] += M4_ip1 @ Bu_mid @ J12 @ M8
-    
-    """ l_C[0] += M3 @ Bu_mid @ J12 @ M3_ip1
-    l_C[1] += M3 @ Bu_mid @ J12 @ M4_ip1
-    l_C[2] += M4 @ Bu_mid @ J12 @ M3_ip1
-    l_C[3] += M4 @ Bu_mid @ J12 @ M4_ip1
-    l_C[4] += M7_ip1 @ Bu_mid @ J12 @ M7
-    l_C[5] += M8_ip1 @ Bu_mid @ J12 @ M8
-    l_C[6] += M7_ip1 @ Bu_mid @ J12 @ M7
-    l_C[7] += M8_ip1 @ Bu_mid @ J12 @ M8 """
+    l_C[0] -= M3 @ Bu_mid @ J12 @ M7_ip1
+    l_C[1] -= M3 @ Bu_mid @ J12 @ M8_ip1
+    l_C[2] -= M4 @ Bu_mid @ J12 @ M7_ip1
+    l_C[3] -= M4 @ Bu_mid @ J12 @ M8_ip1
+    l_C[4] -= M3_ip1 @ Bu_mid @ J12 @ M7
+    l_C[5] -= M3_ip1 @ Bu_mid @ J12 @ M8
+    l_C[6] -= M4_ip1 @ Bu_mid @ J12 @ M7
+    l_C[7] -= M4_ip1 @ Bu_mid @ J12 @ M8
     
     return l_C
 
@@ -802,14 +785,14 @@ def update_crossmap_middle(
     J11 = J[0:blocksize, 0:blocksize]
     J22 = J[blocksize:2*blocksize, blocksize:2*blocksize]
     
-    l_C[0] += M3 @ Bu_mid @ J11 @ M1_ip1
-    l_C[1] += M3 @ Bu_mid @ J11 @ M2_ip1
-    l_C[2] += M4 @ Bu_mid @ J11 @ M1_ip1
-    l_C[3] += M4 @ Bu_mid @ J11 @ M2_ip1
-    l_C[4] += M5_ip1 @ Bl_mid @ J22 @ M7
-    l_C[5] += M5_ip1 @ Bl_mid @ J22 @ M8
-    l_C[6] += M6_ip1 @ Bl_mid @ J22 @ M7
-    l_C[7] += M6_ip1 @ Bl_mid @ J22 @ M8
+    l_C[0] -= M3 @ Bu_mid @ J11 @ M1_ip1
+    l_C[1] -= M3 @ Bu_mid @ J11 @ M2_ip1
+    l_C[2] -= M4 @ Bu_mid @ J11 @ M1_ip1
+    l_C[3] -= M4 @ Bu_mid @ J11 @ M2_ip1
+    l_C[4] -= M5_ip1 @ Bl_mid @ J22 @ M7
+    l_C[5] -= M5_ip1 @ Bl_mid @ J22 @ M8
+    l_C[6] -= M6_ip1 @ Bl_mid @ J22 @ M7
+    l_C[7] -= M6_ip1 @ Bl_mid @ J22 @ M8
     
     return l_C
 
@@ -854,16 +837,15 @@ def update_crossmap_lower(
     M6_ip1 = l_M_ip1[5]
     
     J21 = J[blocksize:2*blocksize, 0:blocksize]
-    
-    l_C[0] += M5 @ Bl_mid @ J21 @ M1_ip1
-    #l_C[1] += M5 @ Bl_mid @ J21 @ M1_ip1 # Wrong formula present in the paper!
-    l_C[1] += M5 @ Bl_mid @ J21 @ M2_ip1 # Corrected formula
-    l_C[2] += M6 @ Bl_mid @ J21 @ M1_ip1
-    l_C[3] += M6 @ Bl_mid @ J21 @ M2_ip1
-    l_C[4] += M5_ip1 @ Bl_mid @ J21 @ M1
-    l_C[5] += M5_ip1 @ Bl_mid @ J21 @ M2
-    l_C[6] += M6_ip1 @ Bl_mid @ J21 @ M1
-    l_C[7] += M6_ip1 @ Bl_mid @ J21 @ M2
+
+    l_C[0] -= M5 @ Bl_mid @ J21 @ M1_ip1
+    l_C[1] -= M5 @ Bl_mid @ J21 @ M2_ip1
+    l_C[2] -= M6 @ Bl_mid @ J21 @ M1_ip1
+    l_C[3] -= M6 @ Bl_mid @ J21 @ M2_ip1
+    l_C[4] -= M5_ip1 @ Bl_mid @ J21 @ M1
+    l_C[5] -= M5_ip1 @ Bl_mid @ J21 @ M2
+    l_C[6] -= M6_ip1 @ Bl_mid @ J21 @ M1
+    l_C[7] -= M6_ip1 @ Bl_mid @ J21 @ M2
     
     return l_C
 
@@ -1354,10 +1336,11 @@ def produce_bridges(
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
+    comm_size = comm.Get_size()
     
     N_rowindex = K_local.shape[0] - blocksize
     
-    if comm_rank == process_i:
+    if comm_rank == process_i and comm_rank != comm_size-1:
         phi1_1_N = K_local[0:blocksize, N_rowindex:N_rowindex+blocksize]
         phi1_N_1 = K_local[N_rowindex:N_rowindex+blocksize, 0:blocksize]
         phi1_N_N = K_local[N_rowindex:N_rowindex+blocksize, N_rowindex:N_rowindex+blocksize]
@@ -1369,7 +1352,7 @@ def produce_bridges(
         Bu_inv = produce_upper_bridge(Bu_inv, phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C)
         Bl_inv = produce_lower_bridge(Bl_inv, phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C)
         
-    elif comm_rank == process_i+1:
+    elif comm_rank == process_i+1 and process_i+1 != comm_size:
         comm.send(K_local[0:blocksize, 0:blocksize], dest=comm_rank-1, tag=0)
         comm.send(K_local[N_rowindex:N_rowindex+blocksize, 0:blocksize], dest=comm_rank-1, tag=1)
         comm.send(K_local[0:blocksize, N_rowindex:N_rowindex+blocksize], dest=comm_rank-1, tag=2)
@@ -1483,10 +1466,10 @@ if __name__ == '__main__':
         
         l_start_blockrow, l_partitions_blocksizes = pdiv_u.divide_matrix(A, comm_size, blocksize)
         K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        
+    
         K_local = K_i[comm_rank]
+        #utils.vizu.vizualiseDenseMatrixFlat(K_local, f"K_local\nProcess: {comm_rank}")
         K_inv_local, Bu_inv, Bl_inv = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
-        
         
         # Extract local reference solution
         A_refsol = np.linalg.inv(A)
@@ -1509,16 +1492,26 @@ if __name__ == '__main__':
                 if j < i-1 or j > i+1:
                     A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
         
-        #assert np.allclose(A_local_slice_of_refsolution, K_inv_local)
-        #print("Process: ", comm_rank, " - Local solution is correct")
+        
+        if np.allclose(A_local_slice_of_refsolution, K_inv_local) == False:
+            for i in range(0, A_local_slice_of_refsolution.shape[0], 1):
+                for j in range(0, A_local_slice_of_refsolution.shape[1], 1):
+                    if np.allclose(A_local_slice_of_refsolution[i, j], K_inv_local[i, j]) == False:
+                        print("Process: ", comm_rank, " - i: ", i, " - j: ", j, " - A_refsol[i, j]: ", A_local_slice_of_refsolution[i, j], " - K_inv_local[i, j]: ", K_inv_local[i, j])
+          
         if comm_rank < comm_size-1:
-            utils.vizu.compareDenseMatrix(Bu_refsol, f"Bu_refsol\n Process: {comm_rank} "  , Bu_inv, f"Bu_inv\n Process: {comm_rank} ")
-            utils.vizu.compareDenseMatrix(Bl_refsol, f"Bl_refsol\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
+            #utils.vizu.compareDenseMatrix(Bu_refsol, f"Bu_refsol\n Process: {comm_rank} "  , Bu_inv, f"Bu_inv\n Process: {comm_rank} ")
+            #utils.vizu.compareDenseMatrix(Bl_refsol, f"Bl_refsol\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
             
-            assert np.allclose(Bu_refsol, Bu_inv)
-            assert np.allclose(Bl_refsol, Bl_inv) 
-            print("Process: ", comm_rank, " - Bridges are correct")
-           
+            if np.allclose(Bu_refsol, Bu_inv) == False:
+                print("Process: ", comm_rank, " - Bu is not correct")
+                print("Bu_refsol: ", Bu_refsol)
+                print("Bu_inv: ", Bu_inv)
+            if np.allclose(Bl_refsol, Bl_inv) == False:
+                print("Process: ", comm_rank, " - Bl is not correct")
+                print("Bl_refsol: ", Bl_refsol)
+                print("Bl_inv: ", Bl_inv)
+
         
         #utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
         

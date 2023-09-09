@@ -391,6 +391,12 @@ def produce_UUR_ULL_ULR(
     ULL = produce_leftcol_element(row_blockindex, K_local, l_M)
     ULR = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
 
+    """ # DEBUG: Store UUR, ULL and ULR in the K_local matrix (as an update)
+    
+    K_local[0:blocksize, col_blockindex*blocksize:(col_blockindex+1)*blocksize] = UUR
+    K_local[row_blockindex*blocksize:(row_blockindex+1)*blocksize, 0:blocksize] = ULL
+    K_local[row_blockindex*blocksize:(row_blockindex+1)*blocksize, col_blockindex*blocksize:(col_blockindex+1)*blocksize] = ULR
+ """
     return UUR, ULL, ULR
 
 
@@ -435,7 +441,9 @@ def get_J(
     Bl_mid: np.ndarray,
     blocksize: np.ndarray
 ) -> np.ndarray:
-    """ Compute the J matrix.
+    """ Compute the J matrix. This is were the cost of the update part resides.
+    Updating the partition is done by computing the inverse of the J matrix that
+    is a 2x2 blocks matrix.
     
     Parameters
     ----------
@@ -1449,6 +1457,8 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
+    #matrice_size = 80
+    #blocksize    = 4
     matrice_size = 26
     blocksize    = 2
     #matrice_size = 8

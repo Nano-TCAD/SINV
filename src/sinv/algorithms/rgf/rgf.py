@@ -82,14 +82,28 @@ if __name__ == '__main__':
         [np.random.rand(SUB_MAT_SIZE, SUB_MAT_SIZE) for _ in range(N_SUB_MAT)], BLOCKSIZE, OVERLAP
     ) """
     
-    SIZE = 4
-    BLOCKSIZE = 2
     
+    # | Test 6  |    11x11     | 3, 2, 1, 2, 3 |    5    |
+    """ OFFSET = 2
     BLOCKSIZES = [3, 2, 1, 2, 3]
+    BLOCKSIZES = [i+OFFSET for i in BLOCKSIZES] """
 
-    a = vbdia.diag([np.random.rand(BLOCKSIZES[i], BLOCKSIZES[i]) for i in range(0, len(BLOCKSIZES))], 0)
+    OFFSET = 2
+    BLOCKSIZES = [3, 2, 1, 2, 3]
+    BLOCKSIZES = [5, 4, 3, 4, 5]
+    #BLOCKSIZES = [i+OFFSET for i in BLOCKSIZES]
+
+    A = vbsr.diag([np.random.rand(BLOCKSIZES[i], BLOCKSIZES[i]) 
+                    for i in range(0, len(BLOCKSIZES))], OFFSET)
     
-    a.show()
+    A.show()
+    
+    """ X_refsol = np.linalg.inv(A.toarray())
+    X_rgf = rgf(A)
+    
+    X_rgf.show()
+    plt.matshow(np.abs(X_refsol)) """
+    #X_refsol.show()
     plt.show()
     
     

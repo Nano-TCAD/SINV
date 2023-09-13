@@ -369,8 +369,8 @@ def get_U(
     last_blockindex = K_local.shape[0] // blocksize - 1
         
     if comm_rank == middle_process:
-        UUR = produce_matrix_elements(first_blockindex, last_blockindex, K_local, l_M)
-        ULL = produce_matrix_elements(last_blockindex, first_blockindex, K_local, l_M)
+        UUR = produce_toprow_element(last_blockindex, K_local, l_M)
+        ULL = produce_leftcol_element(last_blockindex, K_local, l_M)
     
     if comm_rank == middle_process:
         ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)
@@ -379,8 +379,8 @@ def get_U(
         DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
         
     if comm_rank == ending_process:    
-        DUR = produce_matrix_elements(first_blockindex, last_blockindex, K_local, l_M)
-        DLL = produce_matrix_elements(last_blockindex, first_blockindex, K_local, l_M)
+        DUR = produce_rightcol_element(first_blockindex, K_local, l_M)
+        DLL = produce_botrow_element(first_blockindex, K_local, l_M)
     
     governing_process = middle_process
     if comm_rank == governing_process:

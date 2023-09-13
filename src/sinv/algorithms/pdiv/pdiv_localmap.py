@@ -313,6 +313,160 @@ def get_U(
     comm_rank = comm.Get_rank()
     
     
+    UUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    ULL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    ULR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    DUL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    DUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    DLL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
+    
+    
+    """ if comm_rank == starting_process:
+        UUR, ULL = produce_UUR_ULL(K_local, l_M, blocksize)
+    elif comm_rank == middle_process:
+        ULR = produce_ULR(K_local, l_M, blocksize)
+    elif comm_rank == middle_process+1:
+        DUL = produce_DUL(K_local, l_M, blocksize)
+    elif comm_rank == ending_process:
+        DUR, DLL = produce_DUR_DLL(K_local, l_M, blocksize)
+    
+    
+    # First process bcst UUR and ULL
+    if comm_rank == starting_process:
+        for process in range(starting_process+1, ending_process + 1):
+            comm.send(UUR, dest=process, tag=0)
+            comm.send(ULL, dest=process, tag=1)
+    else:
+        UUR = comm.recv(source=starting_process, tag=0)
+        ULL = comm.recv(source=starting_process, tag=1)
+
+    # Middle process bcst ULR
+    if comm_rank == middle_process:
+        for process in range(starting_process, ending_process + 1):
+            if process != middle_process:
+                comm.send(ULR, dest=process, tag=2)
+    else:
+        ULR = comm.recv(source=middle_process, tag=2)
+        
+    # Middle+1 process bcst DUL
+    if comm_rank == middle_process+1:
+        for process in range(starting_process, ending_process + 1):
+            if process != middle_process+1:
+                comm.send(DUL, dest=process, tag=3)
+    else:
+        DUL = comm.recv(source=middle_process+1, tag=3)
+        
+    # Last process bcst DUR and DLL
+    if comm_rank == ending_process:
+        for process in range(starting_process, ending_process):
+            comm.send(DUR, dest=process, tag=4)
+            comm.send(DLL, dest=process, tag=5)
+    else:
+        DUR = comm.recv(source=ending_process, tag=4)
+        DLL = comm.recv(source=ending_process, tag=5) """
+    
+    first_blockindex = 0
+    last_blockindex = K_local.shape[0] // blocksize - 1
+        
+    if comm_rank == middle_process:
+        UUR = produce_matrix_elements(first_blockindex, last_blockindex, K_local, l_M)
+        ULL = produce_matrix_elements(last_blockindex, first_blockindex, K_local, l_M)
+    
+    if comm_rank == middle_process:
+        ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)
+    
+    if comm_rank == middle_process+1:
+        DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
+        
+    if comm_rank == ending_process:    
+        DUR = produce_matrix_elements(first_blockindex, last_blockindex, K_local, l_M)
+        DLL = produce_matrix_elements(last_blockindex, first_blockindex, K_local, l_M)
+    
+    governing_process = middle_process
+    if comm_rank == governing_process:
+        for process in range(starting_process, ending_process + 1):
+            if process != governing_process:
+                comm.send(UUR, dest=process, tag=0)
+                comm.send(ULL, dest=process, tag=1)
+    else:
+        UUR = comm.recv(source=governing_process, tag=0)
+        ULL = comm.recv(source=governing_process, tag=1)
+
+    governing_process = middle_process
+    if comm_rank == governing_process:
+        for process in range(starting_process, ending_process + 1):
+            if process != governing_process:
+                comm.send(ULR, dest=process, tag=2)
+    else:
+        ULR = comm.recv(source=governing_process, tag=2)
+        
+    governing_process = middle_process + 1
+    if comm_rank == governing_process:
+        for process in range(starting_process, ending_process + 1):
+            if process != governing_process:
+                comm.send(DUL, dest=process, tag=3)
+    else:
+        DUL = comm.recv(source=governing_process, tag=3)
+        
+    governing_process = middle_process + 1
+    if comm_rank == governing_process:
+        for process in range(starting_process, ending_process + 1):
+            if process != governing_process:
+                comm.send(DUR, dest=process, tag=4)
+                comm.send(DLL, dest=process, tag=5)
+    else:
+        DUR = comm.recv(source=governing_process, tag=4)
+        DLL = comm.recv(source=governing_process, tag=5)
+                
+    return [UUR, ULL, ULR, DUL, DUR, DLL]
+
+
+
+""" def get_U(
+    K_local: np.ndarray,
+    l_M: np.ndarray,
+    starting_process: int,
+    middle_process: int,
+    ending_process: int,
+    blocksize: int
+) -> list[np.ndarray]:
+    Compute the U factors. U factors are a collection of 6 corner matrices
+    that will be needed on every process to update their local partition.
+    
+    Parameters
+    ----------
+    K_local : numpy matrix
+        local inverted partition of the matrix
+    l_M : list of numpy matrix
+        list of the matrix maps
+    starting_process : int
+        starting process of the current reduction step
+    middle_process : int
+        middle process of the current reduction step
+    ending_process : int
+        ending process of the current reduction step
+    blocksize : int
+        size of a block
+        
+    Returns
+    -------
+    l_U : list of numpy matrix
+        list of the U factors
+        
+    Notes
+    -----
+    UUR: Upper Right block of the Upper partition
+    ULL: Lower Left block of the Upper partition
+    ULR: Lower Right block of the Upper partition
+    DUL: Upper Left block of the Down partition
+    DUR: Upper Right block of the Down partition
+    DLL: Lower Left block of the Down partition
+    
+    
+    comm = MPI.COMM_WORLD
+    comm_rank = comm.Get_rank()
+    
+    
     UUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype) 
     ULL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
     ULR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
@@ -354,16 +508,76 @@ def get_U(
         DUR = comm.recv(source=middle_process+1, tag=4)
         DLL = comm.recv(source=middle_process+1, tag=5)
                 
-    return [UUR, ULL, ULR, DUL, DUR, DLL]
+    return [UUR, ULL, ULR, DUL, DUR, DLL] """
 
 
 
-def produce_UUR_ULL_ULR(
+def produce_UUR_ULL(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
+    """
+    """
+
+    last_blockindex = K_local.shape[0] // blocksize - 1
+    
+    UUR = produce_rightcol_element(last_blockindex, K_local, l_M)
+    ULL = produce_botrow_element(last_blockindex, K_local, l_M)
+    
+    return UUR, ULL
+
+def produce_ULR(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
+    """
+    """
+    
+    last_blockindex = K_local.shape[0] // blocksize - 1
+    
+    ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)   
+    
+    return ULR
+
+def produce_DUL(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
+    """
+    """
+    
+    first_blockindex = 0
+    
+    DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
+    
+    return DUL
+
+def produce_DUR_DLL(
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    blocksize: int
+) -> [np.ndarray, np.ndarray]:
+    """
+    """
+    
+    last_blockindex = K_local.shape[0] // blocksize - 1
+    
+    DUR = produce_toprow_element(last_blockindex, K_local, l_M)
+    DLL = produce_leftcol_element(last_blockindex, K_local, l_M)
+    
+    return DUR, DLL
+
+
+
+""" def produce_UUR_ULL_ULR(
     K_local: np.ndarray, 
     l_M: list[np.ndarray], 
     blocksize: int
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Produce the UUR, ULL and ULR corner matrices.
+    Produce the UUR, ULL and ULR corner matrices.
     
     Parameters
     ----------
@@ -382,7 +596,7 @@ def produce_UUR_ULL_ULR(
         Lower Left block of the Upper partition
     ULR : numpy matrix
         Lower Right block of the Upper partition
-    """
+   
     
     row_blockindex = K_local.shape[0] // blocksize - 1
     col_blockindex = K_local.shape[0] // blocksize - 1
@@ -391,21 +605,15 @@ def produce_UUR_ULL_ULR(
     ULL = produce_leftcol_element(row_blockindex, K_local, l_M)
     ULR = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
 
-    """ # DEBUG: Store UUR, ULL and ULR in the K_local matrix (as an update)
-    
-    K_local[0:blocksize, col_blockindex*blocksize:(col_blockindex+1)*blocksize] = UUR
-    K_local[row_blockindex*blocksize:(row_blockindex+1)*blocksize, 0:blocksize] = ULL
-    K_local[row_blockindex*blocksize:(row_blockindex+1)*blocksize, col_blockindex*blocksize:(col_blockindex+1)*blocksize] = ULR
- """
-    return UUR, ULL, ULR
+    return UUR, ULL, ULR """
 
 
 
-def produce_DUL_DUR_DLL(
+""" def produce_DUL_DUR_DLL(
     K_local: np.ndarray, 
     l_M: list[np.ndarray] 
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Produce the DUL, DUR and DLL corner matrices.
+    Produce the DUL, DUR and DLL corner matrices.
     
     Parameters
     ----------
@@ -422,7 +630,7 @@ def produce_DUL_DUR_DLL(
         Upper Right block of the Down partition
     DLL : numpy matrix
         Lower Left block of the Down partition
-    """
+   
     
     row_blockindex = 0
     col_blockindex = 0
@@ -431,7 +639,7 @@ def produce_DUL_DUR_DLL(
     DUR = produce_rightcol_element(row_blockindex, K_local, l_M)
     DLL = produce_botrow_element(col_blockindex, K_local, l_M)
     
-    return DUL, DUR, DLL
+    return DUL, DUR, DLL """
 
 
 
@@ -1013,9 +1221,6 @@ def update_matrixmap_lower(
     l_M[10] += l_M[5] @ Bl_mid @ J21 @ l_M[0]
     l_M[11] += l_M[5] @ Bl_mid @ J21 @ l_M[1]
     
-    l_M[0] = UUR @ Bu_mid @ J11 @ l_M[0]
-    l_M[1] = UUR @ Bu_mid @ J11 @ l_M[1]
-    
     l_M[2] += l_M[4] @ Bl_mid @ J21 @ DUR
     l_M[3] += l_M[5] @ Bl_mid @ J21 @ DUR
     
@@ -1024,6 +1229,9 @@ def update_matrixmap_lower(
     
     l_M[6] += DLL @ Bl_mid @ J21 @ l_M[0]
     l_M[7] += DLL @ Bl_mid @ J21 @ l_M[1]
+    
+    l_M[0] = UUR @ Bu_mid @ J11 @ l_M[0]
+    l_M[1] = UUR @ Bu_mid @ J11 @ l_M[1]
     
     return l_M
 
@@ -1457,10 +1665,10 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    #matrice_size = 80
-    #blocksize    = 4
-    matrice_size = 26
-    blocksize    = 2
+    matrice_size = 80
+    blocksize    = 4
+    #matrice_size = 26
+    #blocksize    = 2
     #matrice_size = 8
     #blocksize    = 1
     nblocks      = matrice_size // blocksize

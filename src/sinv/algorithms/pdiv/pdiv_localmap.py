@@ -378,7 +378,7 @@ def get_U(
     if comm_rank == middle_process+1:
         DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
         
-    if comm_rank == ending_process:    
+    if comm_rank == middle_process+1:    
         DUR = produce_rightcol_element(first_blockindex, K_local, l_M)
         DLL = produce_botrow_element(first_blockindex, K_local, l_M)
     
@@ -1665,7 +1665,7 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    matrice_size = 80
+    matrice_size = 120
     blocksize    = 4
     #matrice_size = 26
     #blocksize    = 2

@@ -105,7 +105,8 @@ def invert_partition(
         
     Notes
     -----
-    The inversion of the partition should be a full inversion.
+    The inversion of the partition should be a full inversion that produce a 
+    full dense inverse.
     """
     
     return np.linalg.inv(K_local)
@@ -122,6 +123,8 @@ def initialize_matrixmaps(
     
     Parameters
     ----------
+    K_local : numpy matrix
+        local inverted partition of the matrix
     blocksize : int
         size of a block
         
@@ -158,6 +161,8 @@ def initialize_crossmaps(
     
     Parameters
     ----------
+    K_local : numpy matrix
+        local inverted partition of the matrix
     blocksize : int
         size of a block
         
@@ -225,7 +230,7 @@ def update_maps(
     for active_process in range(0, comm_size, process_stride):
         starting_process = active_process
         ending_process   = active_process + process_stride - 1
-        middle_process = get_middle_process(starting_process, ending_process)
+        middle_process   = get_middle_process(starting_process, ending_process)
 
         if comm_rank >= starting_process and comm_rank <= ending_process:
             # If the process is part of the current reduction step, proceed.
@@ -321,325 +326,44 @@ def get_U(
     DLL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
     
     
-    """ if comm_rank == starting_process:
-        UUR, ULL = produce_UUR_ULL(K_local, l_M, blocksize)
-    elif comm_rank == middle_process:
-        ULR = produce_ULR(K_local, l_M, blocksize)
-    elif comm_rank == middle_process+1:
-        DUL = produce_DUL(K_local, l_M, blocksize)
-    elif comm_rank == ending_process:
-        DUR, DLL = produce_DUR_DLL(K_local, l_M, blocksize)
-    
-    
-    # First process bcst UUR and ULL
-    if comm_rank == starting_process:
-        for process in range(starting_process+1, ending_process + 1):
-            comm.send(UUR, dest=process, tag=0)
-            comm.send(ULL, dest=process, tag=1)
-    else:
-        UUR = comm.recv(source=starting_process, tag=0)
-        ULL = comm.recv(source=starting_process, tag=1)
-
-    # Middle process bcst ULR
-    if comm_rank == middle_process:
-        for process in range(starting_process, ending_process + 1):
-            if process != middle_process:
-                comm.send(ULR, dest=process, tag=2)
-    else:
-        ULR = comm.recv(source=middle_process, tag=2)
-        
-    # Middle+1 process bcst DUL
-    if comm_rank == middle_process+1:
-        for process in range(starting_process, ending_process + 1):
-            if process != middle_process+1:
-                comm.send(DUL, dest=process, tag=3)
-    else:
-        DUL = comm.recv(source=middle_process+1, tag=3)
-        
-    # Last process bcst DUR and DLL
-    if comm_rank == ending_process:
-        for process in range(starting_process, ending_process):
-            comm.send(DUR, dest=process, tag=4)
-            comm.send(DLL, dest=process, tag=5)
-    else:
-        DUR = comm.recv(source=ending_process, tag=4)
-        DLL = comm.recv(source=ending_process, tag=5) """
-    
+    # Produce corner blocks
     first_blockindex = 0
     last_blockindex = K_local.shape[0] // blocksize - 1
         
     if comm_rank == middle_process:
         UUR = produce_toprow_element(last_blockindex, K_local, l_M)
         ULL = produce_leftcol_element(last_blockindex, K_local, l_M)
-    
-    if comm_rank == middle_process:
         ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)
     
     if comm_rank == middle_process+1:
         DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
-        
-    if comm_rank == middle_process+1:    
         DUR = produce_rightcol_element(first_blockindex, K_local, l_M)
         DLL = produce_botrow_element(first_blockindex, K_local, l_M)
     
-    governing_process = middle_process
-    if comm_rank == governing_process:
-        for process in range(starting_process, ending_process + 1):
-            if process != governing_process:
-                comm.send(UUR, dest=process, tag=0)
-                comm.send(ULL, dest=process, tag=1)
-    else:
-        UUR = comm.recv(source=governing_process, tag=0)
-        ULL = comm.recv(source=governing_process, tag=1)
-
-    governing_process = middle_process
-    if comm_rank == governing_process:
-        for process in range(starting_process, ending_process + 1):
-            if process != governing_process:
-                comm.send(ULR, dest=process, tag=2)
-    else:
-        ULR = comm.recv(source=governing_process, tag=2)
-        
-    governing_process = middle_process + 1
-    if comm_rank == governing_process:
-        for process in range(starting_process, ending_process + 1):
-            if process != governing_process:
-                comm.send(DUL, dest=process, tag=3)
-    else:
-        DUL = comm.recv(source=governing_process, tag=3)
-        
-    governing_process = middle_process + 1
-    if comm_rank == governing_process:
-        for process in range(starting_process, ending_process + 1):
-            if process != governing_process:
-                comm.send(DUR, dest=process, tag=4)
-                comm.send(DLL, dest=process, tag=5)
-    else:
-        DUR = comm.recv(source=governing_process, tag=4)
-        DLL = comm.recv(source=governing_process, tag=5)
-                
-    return [UUR, ULL, ULR, DUL, DUR, DLL]
-
-
-
-""" def get_U(
-    K_local: np.ndarray,
-    l_M: np.ndarray,
-    starting_process: int,
-    middle_process: int,
-    ending_process: int,
-    blocksize: int
-) -> list[np.ndarray]:
-    Compute the U factors. U factors are a collection of 6 corner matrices
-    that will be needed on every process to update their local partition.
-    
-    Parameters
-    ----------
-    K_local : numpy matrix
-        local inverted partition of the matrix
-    l_M : list of numpy matrix
-        list of the matrix maps
-    starting_process : int
-        starting process of the current reduction step
-    middle_process : int
-        middle process of the current reduction step
-    ending_process : int
-        ending process of the current reduction step
-    blocksize : int
-        size of a block
-        
-    Returns
-    -------
-    l_U : list of numpy matrix
-        list of the U factors
-        
-    Notes
-    -----
-    UUR: Upper Right block of the Upper partition
-    ULL: Lower Left block of the Upper partition
-    ULR: Lower Right block of the Upper partition
-    DUL: Upper Left block of the Down partition
-    DUR: Upper Right block of the Down partition
-    DLL: Lower Left block of the Down partition
-    
-    
-    comm = MPI.COMM_WORLD
-    comm_rank = comm.Get_rank()
-    
-    
-    UUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype) 
-    ULL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    ULR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    DUL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    DUR = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    DLL = np.zeros((blocksize, blocksize), dtype=K_local.dtype)
-    
-    
-    # Produce UUR, UUL and ULR on the middle process and communicate 
-    # them to the other processes.
+    # Communicate corner blocks
     if comm_rank == middle_process:
-        UUR, ULL, ULR = produce_UUR_ULL_ULR(K_local, l_M, blocksize)
-        
         for process in range(starting_process, ending_process + 1):
             if process != middle_process:
                 comm.send(UUR, dest=process, tag=0)
                 comm.send(ULL, dest=process, tag=1)
                 comm.send(ULR, dest=process, tag=2)
-    # Receive UUR, UUL and ULR from the middle process
     else:
         UUR = comm.recv(source=middle_process, tag=0)
         ULL = comm.recv(source=middle_process, tag=1)
         ULR = comm.recv(source=middle_process, tag=2)
         
-    
-    # Produce DUL, DUR and DLL on the middle+1 process and communicate 
-    # them to the other processes.
-    if comm_rank == middle_process+1:
-        DUL, DUR, DLL = produce_DUL_DUR_DLL(K_local, l_M)
-        
+    if comm_rank == middle_process + 1:
         for process in range(starting_process, ending_process + 1):
-            if process != middle_process+1:
+            if process != middle_process + 1:
                 comm.send(DUL, dest=process, tag=3)
                 comm.send(DUR, dest=process, tag=4)
                 comm.send(DLL, dest=process, tag=5)
-    # Receive DUL, DUR and DLL from the middle+1 process
     else:
-        DUL = comm.recv(source=middle_process+1, tag=3)
-        DUR = comm.recv(source=middle_process+1, tag=4)
-        DLL = comm.recv(source=middle_process+1, tag=5)
+        DUL = comm.recv(source=middle_process + 1, tag=3)
+        DUR = comm.recv(source=middle_process + 1, tag=4)
+        DLL = comm.recv(source=middle_process + 1, tag=5)
                 
-    return [UUR, ULL, ULR, DUL, DUR, DLL] """
-
-
-
-def produce_UUR_ULL(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray], 
-    blocksize: int
-) -> [np.ndarray, np.ndarray]:
-    """
-    """
-
-    last_blockindex = K_local.shape[0] // blocksize - 1
-    
-    UUR = produce_rightcol_element(last_blockindex, K_local, l_M)
-    ULL = produce_botrow_element(last_blockindex, K_local, l_M)
-    
-    return UUR, ULL
-
-def produce_ULR(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray], 
-    blocksize: int
-) -> [np.ndarray, np.ndarray]:
-    """
-    """
-    
-    last_blockindex = K_local.shape[0] // blocksize - 1
-    
-    ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)   
-    
-    return ULR
-
-def produce_DUL(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray], 
-    blocksize: int
-) -> [np.ndarray, np.ndarray]:
-    """
-    """
-    
-    first_blockindex = 0
-    
-    DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
-    
-    return DUL
-
-def produce_DUR_DLL(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray], 
-    blocksize: int
-) -> [np.ndarray, np.ndarray]:
-    """
-    """
-    
-    last_blockindex = K_local.shape[0] // blocksize - 1
-    
-    DUR = produce_toprow_element(last_blockindex, K_local, l_M)
-    DLL = produce_leftcol_element(last_blockindex, K_local, l_M)
-    
-    return DUR, DLL
-
-
-
-""" def produce_UUR_ULL_ULR(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray], 
-    blocksize: int
-) -> [np.ndarray, np.ndarray, np.ndarray]:
-    Produce the UUR, ULL and ULR corner matrices.
-    
-    Parameters
-    ----------
-    K_local : numpy matrix
-        local inverted partition of the matrix
-    l_M : list of numpy matrix
-        list of the matrix maps
-    blocksize : int
-        size of a block
-        
-    Returns
-    -------
-    UUR : numpy matrix
-        Upper Right block of the Upper partition
-    ULL : numpy matrix
-        Lower Left block of the Upper partition
-    ULR : numpy matrix
-        Lower Right block of the Upper partition
-   
-    
-    row_blockindex = K_local.shape[0] // blocksize - 1
-    col_blockindex = K_local.shape[0] // blocksize - 1
-    
-    UUR = produce_toprow_element(col_blockindex, K_local, l_M)
-    ULL = produce_leftcol_element(row_blockindex, K_local, l_M)
-    ULR = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
-
-    return UUR, ULL, ULR """
-
-
-
-""" def produce_DUL_DUR_DLL(
-    K_local: np.ndarray, 
-    l_M: list[np.ndarray] 
-) -> [np.ndarray, np.ndarray, np.ndarray]:
-    Produce the DUL, DUR and DLL corner matrices.
-    
-    Parameters
-    ----------
-    K_local : numpy matrix
-        local inverted partition of the matrix
-    l_M : list of numpy matrix
-        list of the matrix maps
-        
-    Returns
-    -------
-    DUL : numpy matrix
-        Upper Left block of the Down partition
-    DUR : numpy matrix
-        Upper Right block of the Down partition
-    DLL : numpy matrix
-        Lower Left block of the Down partition
-   
-    
-    row_blockindex = 0
-    col_blockindex = 0
-    
-    DUL = produce_matrix_elements(row_blockindex, col_blockindex, K_local, l_M)
-    DUR = produce_rightcol_element(row_blockindex, K_local, l_M)
-    DLL = produce_botrow_element(col_blockindex, K_local, l_M)
-    
-    return DUL, DUR, DLL """
+    return [UUR, ULL, ULR, DUL, DUR, DLL]
 
 
 
@@ -896,8 +620,8 @@ def update_crossmap(
         l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
         
     elif comm_rank < ending_process:
-        # Last process doesn't need to update the crossmap since it doesn't own
-        # any bridges matrices.
+        # Last process doesn't need to update the crossmap since it 
+        # doesn't own any bridges matrices.
         l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J)
 
     return l_C
@@ -1280,7 +1004,6 @@ def produce_partition(
     
     for process_i in range(0, comm_size, 1):
         Bu_inv, Bl_inv = produce_bridges(Bu_inv, Bl_inv, K_local, l_C, process_i, blocksize)
-        #utils.vizu.compareDenseMatrix(Bu_inv, f"Bu_inv\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
 
     return K_inv, Bu_inv, Bl_inv
 
@@ -1665,10 +1388,10 @@ if __name__ == '__main__':
     isComplex = True
     seed = 63
 
-    matrice_size = 120
-    blocksize    = 4
-    #matrice_size = 26
-    #blocksize    = 2
+    #matrice_size = 120
+    #blocksize    = 4
+    matrice_size = 26
+    blocksize    = 2
     #matrice_size = 8
     #blocksize    = 1
     nblocks      = matrice_size // blocksize
@@ -1676,7 +1399,7 @@ if __name__ == '__main__':
     
     if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        #utils.vizu.vizualiseDenseMatrixFlat(A, f"A\n Process: {comm_rank}")
+        
         
         # PDIV worflow
         pdiv_u.check_multiprocessing(comm_size)
@@ -1686,8 +1409,8 @@ if __name__ == '__main__':
         K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
     
         K_local = K_i[comm_rank]
-        #utils.vizu.vizualiseDenseMatrixFlat(K_local, f"K_local\nProcess: {comm_rank}")
         K_inv_local, Bu_inv, Bl_inv = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
+        
         
         # Extract local reference solution
         A_refsol = np.linalg.inv(A)
@@ -1698,19 +1421,13 @@ if __name__ == '__main__':
             Bu_refsol = A_refsol[stop_localpart_rowindex-blocksize:stop_localpart_rowindex, stop_localpart_rowindex:stop_localpart_rowindex+blocksize]
             Bl_refsol = A_refsol[stop_localpart_rowindex:stop_localpart_rowindex+blocksize, stop_localpart_rowindex-blocksize:stop_localpart_rowindex]
         
-        """ if comm_rank == 0:
-            utils.vizu.vizualiseDenseMatrixFlat(A_refsol, "A_refsol")
-            
-        if comm_rank < comm_size-1:
-            utils.vizu.vizualiseDenseMatrixFlat(Bu_refsol, "Bu_refsol")
-            utils.vizu.vizualiseDenseMatrixFlat(Bl_refsol, "Bl_refsol") """
-        
         for i in range(0, l_partitions_blocksizes[comm_rank], 1):
             for j in range(0, l_partitions_blocksizes[comm_rank], 1):
                 if j < i-1 or j > i+1:
                     A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
         
         
+        # Check results
         if np.allclose(A_local_slice_of_refsolution, K_inv_local) == False:
             for i in range(0, A_local_slice_of_refsolution.shape[0], 1):
                 for j in range(0, A_local_slice_of_refsolution.shape[1], 1):
@@ -1718,21 +1435,14 @@ if __name__ == '__main__':
                         print("Process: ", comm_rank, " - i: ", i, " - j: ", j, " - A_refsol[i, j]: ", A_local_slice_of_refsolution[i, j], " - K_inv_local[i, j]: ", K_inv_local[i, j])
           
         if comm_rank < comm_size-1:
-            #utils.vizu.compareDenseMatrix(Bu_refsol, f"Bu_refsol\n Process: {comm_rank} "  , Bu_inv, f"Bu_inv\n Process: {comm_rank} ")
-            #utils.vizu.compareDenseMatrix(Bl_refsol, f"Bl_refsol\n Process: {comm_rank} "  , Bl_inv, f"Bl_inv\n Process: {comm_rank} ")
-            
-            """ if np.allclose(Bu_refsol, Bu_inv) == False:
+            if np.allclose(Bu_refsol, Bu_inv) == False:
                 print("Process: ", comm_rank, " - Bu is not correct")
                 print("     Bu_refsol: ", Bu_refsol)
                 print("     Bu_inv: ", Bu_inv)
             if np.allclose(Bl_refsol, Bl_inv) == False:
                 print("Process: ", comm_rank, " - Bl is not correct")
                 print("     Bl_refsol: ", Bl_refsol)
-                print("     Bl_inv: ", Bl_inv) """
-                
-            pass
+                print("     Bl_inv: ", Bl_inv)
 
-        
-        #utils.vizu.compareDenseMatrix(A_local_slice_of_refsolution, f"A_local_slice_of_refsolution\n Process: {comm_rank} "  , K_inv_local, f"K_inv_local\n Process: {comm_rank} ")
         
             

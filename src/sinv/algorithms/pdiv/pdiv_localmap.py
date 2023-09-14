@@ -31,6 +31,7 @@ def pdiv_localmap(
     blocksize: int
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Parallel Divide & Conquer implementation of the PDIV/Pairwise algorithm.
+    This implementation handle inverse of general matrices (no symmetry is assumed).
         
     Parameters
     ----------

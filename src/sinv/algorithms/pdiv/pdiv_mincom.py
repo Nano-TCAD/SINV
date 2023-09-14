@@ -208,19 +208,34 @@ def compute_update_term(K_local: np.ndarray,
     phi_1_size = phi_1_blocksize*blocksize
     phi_2_size = phi_2_blocksize*blocksize
 
-    assembled_system_size = phi_1_size + phi_2_size
-
-    U = np.zeros((assembled_system_size, assembled_system_size), dtype=K_local.dtype)
-
     Bu = Bu_i[partition_i]
     Bl = Bl_i[partition_i]
-
-    J11, J12, J21, J22 = pdiv_u.compute_J(K_local, Bu, Bl, phi_1_size, blocksize)
-
-    U[0:phi_1_size, 0:phi_1_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J12 @ K_local[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
-    U[0:phi_1_size, phi_1_size:assembled_system_size] = -1 * K_local[0:phi_1_size, phi_1_size-blocksize:phi_1_size] @ Bu @ J11 @ K_local[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
-    U[phi_1_size:assembled_system_size, 0:phi_1_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J22 @ K_local[phi_1_size-blocksize:phi_1_size, 0:phi_1_size]
-    U[phi_1_size:assembled_system_size, phi_1_size:assembled_system_size] = -1 * K_local[phi_1_size:assembled_system_size, phi_1_size:phi_1_size+blocksize] @ Bl @ J21 @ K_local[phi_1_size:phi_1_size+blocksize, phi_1_size:assembled_system_size]
+    
+    U = pdiv_u.compute_full_update_term(K_local, Bu, Bl, phi_1_size, phi_2_size, blocksize)
 
     return U
     
+
+
+if __name__ == '__main__':
+    comm = MPI.COMM_WORLD
+    comm_size = comm.Get_size()
+    comm_rank = comm.Get_rank()
+
+    isComplex = True
+    seed = 63
+
+    matrice_size = 128
+    blocksize    = 8
+    nblocks      = matrice_size // blocksize
+    bandwidth    = np.ceil(blocksize/2)
+    
+    if comm_size <= nblocks:
+        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A_refsol = np.linalg.inv(A)
+        A_pdiv_mincom = pdiv_mincom(A, blocksize)
+        if comm_rank == 0:
+            utils.vizu.compareDenseMatrix(A_refsol, "A_refsol", A_pdiv_mincom, "A_pdiv_mincom")
+            assert np.allclose(A_refsol, A_pdiv_mincom)
+                
+                

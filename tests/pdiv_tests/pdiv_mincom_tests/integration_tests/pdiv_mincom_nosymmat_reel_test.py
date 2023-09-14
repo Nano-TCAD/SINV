@@ -31,7 +31,6 @@ from sinv import algorithms as alg
 from sinv import utils
 
 import numpy as np
-import math
 from mpi4py import MPI
 
 comm = MPI.COMM_WORLD
@@ -47,7 +46,7 @@ def test_pdiv_mincom_nosymmat_reel_1():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -60,7 +59,7 @@ def test_pdiv_mincom_nosymmat_reel_2():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -73,7 +72,7 @@ def test_pdiv_mincom_nosymmat_reel_3():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -86,7 +85,7 @@ def test_pdiv_mincom_nosymmat_reel_4():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -99,7 +98,7 @@ def test_pdiv_mincom_nosymmat_reel_5():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -112,7 +111,7 @@ def test_pdiv_mincom_nosymmat_reel_6():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -125,7 +124,7 @@ def test_pdiv_mincom_nosymmat_reel_7():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -138,7 +137,7 @@ def test_pdiv_mincom_nosymmat_reel_8():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -151,7 +150,7 @@ def test_pdiv_mincom_nosymmat_reel_9():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -164,7 +163,7 @@ def test_pdiv_mincom_nosymmat_reel_10():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -177,7 +176,7 @@ def test_pdiv_mincom_nosymmat_reel_11():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)
@@ -190,7 +189,7 @@ def test_pdiv_mincom_nosymmat_reel_12():
     nblocks      = matrice_size // blocksize
     bandwidth    = np.ceil(blocksize/2)
     
-    if comm_size <= nblocks and math.log2(comm_size).is_integer():
+    if comm_size <= nblocks:
         A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_mincom = alg.pdiv_m.pdiv_mincom(A, blocksize)

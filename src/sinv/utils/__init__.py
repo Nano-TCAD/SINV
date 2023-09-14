@@ -3,3 +3,4 @@
 from . import vizualisation as vizu
 from . import generate_matrices as gen_mat
 from . import transform_matrices as trans_mat
+from . import multiprocessing_utils as mpu

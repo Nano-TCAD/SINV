@@ -11,6 +11,7 @@ import numpy as np
 
 def generateRandomNumpyMat(matrice_size: int, 
                            is_complex: bool = False,
+                           is_symmetric: bool = False,
                            seed: int = None) -> np.ndarray:
     """ Generate a dense matrix of shape: (matrice_size x matrice_size) filled 
     with random numbers. The matrice may be complex or real valued.
@@ -21,6 +22,8 @@ def generateRandomNumpyMat(matrice_size: int,
         Size of the matrice to generate.
     is_complex : bool, optional
         Whether the matrice should be complex or real valued. The default is False.
+    is_symmetric : bool, optional
+        Whether the matrice should be symmetric or not. The default is False.
     seed : int, optional
         Seed for the random number generator. The default is no seed.
         
@@ -31,37 +34,19 @@ def generateRandomNumpyMat(matrice_size: int,
     """
     if seed is not None:
         np.random.seed(seed)
+        
+    A = np.zeros((matrice_size, matrice_size))
 
     if is_complex:
-        return np.random.rand(matrice_size, matrice_size)\
+        A = np.random.rand(matrice_size, matrice_size)\
                + 1j * np.random.rand(matrice_size, matrice_size)
     else:
-        return np.random.rand(matrice_size, matrice_size)
-
-
-
-def generateDenseMatrix(matrice_size: int,
-                        is_complex: bool = False,
-                        seed: int = None) -> np.ndarray:
-    """ Generate a dense matrix of shape: (matrice_size x matrice_size) filled 
-    with random numbers.
-    
-    Parameters
-    ----------
-    matrice_size : int
-        Size of the matrice to generate.
-    is_complex : bool, optional
-        Whether the matrice should be complex or real valued. The default is False.
-    seed : int, optional
-        Seed for the random number generator. The default is no seed.
+        A = np.random.rand(matrice_size, matrice_size)
         
-    Returns
-    -------
-    A : np.ndarray
-        The generated matrice.
-    """
-
-    return generateRandomNumpyMat(matrice_size, is_complex, seed)
+    if is_symmetric:
+        A = A + A.T
+        
+    return A
 
 
 

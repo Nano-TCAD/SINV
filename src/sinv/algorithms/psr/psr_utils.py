@@ -60,8 +60,7 @@ def check_input(A: np.ndarray,
     
 def divide_matrix(A: np.ndarray, 
                   n_partitions: int, 
-                  blocksize: int) -> [list, 
-                                      list]:
+                  blocksize: int) -> [list, list]:
     """ Compute the n_partitions segments that divide the matrix A.
 
     Parameters
@@ -88,7 +87,6 @@ def divide_matrix(A: np.ndarray,
     # Compute the starting block row and the partition size for each process
     l_start_blockrow        = []
     l_partitions_blocksizes = []
-    
 
     for i in range(n_partitions):
         if i == 0:
@@ -97,7 +95,6 @@ def divide_matrix(A: np.ndarray,
         else:
             l_start_blockrow.append(l_start_blockrow[i-1] + l_partitions_blocksizes[i-1])
             l_partitions_blocksizes.append(partition_blocksize)
-
 
     return l_start_blockrow, l_partitions_blocksizes
 

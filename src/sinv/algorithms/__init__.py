@@ -1,7 +1,7 @@
 # Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
 from .rgf import rgf as rgf
-from .rgf import rgf_2sided as rgf2s
+from .rgf import rgf2sided as rgf2s
 
 from .tridiag_lusolve import block_tridiag_lusolve as blk_trid_lusolve
 

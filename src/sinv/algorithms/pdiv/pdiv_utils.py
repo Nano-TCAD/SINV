@@ -9,7 +9,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
 import numpy as np
 import math
-
 from mpi4py import MPI
 
 

@@ -11,7 +11,6 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-
 from mpi4py import MPI
 
 
@@ -19,9 +18,9 @@ from mpi4py import MPI
 def rgf_2sided(A_bloc_diag: np.ndarray, 
                A_bloc_upper: np.ndarray, 
                A_bloc_lower: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Exstension of the RGF algorithm that uses two processes that meet in the
+    """ Extension of the RGF algorithm that uses two processes that meet in the
     middle of the matrix. The array traversal is done from both sides to the
-    middle. Rank 0 will aggregate the final result.
+    middle. 
     
     Parameters
     ----------

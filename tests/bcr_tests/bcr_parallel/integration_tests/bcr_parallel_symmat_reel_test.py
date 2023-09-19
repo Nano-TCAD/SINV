@@ -43,7 +43,7 @@ def test_bcr_parallel_symmat_reel_1():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -63,7 +63,7 @@ def test_bcr_parallel_symmat_reel_2():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -83,7 +83,7 @@ def test_bcr_parallel_symmat_reel_3():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -103,7 +103,7 @@ def test_bcr_parallel_symmat_reel_4():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -123,7 +123,7 @@ def test_bcr_parallel_symmat_reel_5():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -143,7 +143,7 @@ def test_bcr_parallel_symmat_reel_6():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -163,7 +163,7 @@ def test_bcr_parallel_symmat_reel_7():
     blocksize    = 8
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -183,7 +183,7 @@ def test_bcr_parallel_symmat_reel_8():
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)
@@ -203,7 +203,7 @@ def test_bcr_parallel_symmat_reel_9():
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
     
     A_refsol = np.linalg.inv(A)

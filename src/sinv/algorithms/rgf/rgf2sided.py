@@ -20,9 +20,8 @@ def rgf2sided(
     A_bloc_upper: np.ndarray, 
     A_bloc_lower: np.ndarray
 ) -> list[np.ndarray, np.ndarray, np.ndarray]:
-    """ Extension of the RGF algorithm that uses two processes that meet in the
-    middle of the matrix. The array traversal is done from both sides to the
-    middle. 
+    """ Extension of the RGF algorithm performing block-tridiagonal selected
+    inversion using 2 processes meeting in the middle of the matrix traversal.
     
     Parameters
     ----------
@@ -58,7 +57,7 @@ def rgf2sided(
     if comm_rank == 0:
         G_diag_blocks[0:nblocks_2, ]\
         , G_upper_blocks[0:nblocks_2, ]\
-        , G_lower_blocks[0:nblocks_2, ] = rgf_leftprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
+        , G_lower_blocks[0:nblocks_2, ] = rgf2sided_upperprocess(A_bloc_diag[0:nblocks_2, ], A_bloc_upper[0:nblocks_2, ], A_bloc_lower[0:nblocks_2, ])
 
         G_diag_blocks[nblocks_2:, ]  = comm.recv(source=1, tag=0)
         G_upper_blocks[nblocks_2:, ] = comm.recv(source=1, tag=1)
@@ -67,7 +66,7 @@ def rgf2sided(
     elif comm_rank == 1:
         G_diag_blocks[nblocks_2:, ]\
         , G_upper_blocks[nblocks_2-1:, ]\
-        , G_lower_blocks[nblocks_2-1:, ] = rgf_rightprocess(A_bloc_diag[nblocks_2:, ], A_bloc_upper[nblocks_2-1:, ], A_bloc_lower[nblocks_2-1:, ])
+        , G_lower_blocks[nblocks_2-1:, ] = rgf2sided_lowerprocess(A_bloc_diag[nblocks_2:, ], A_bloc_upper[nblocks_2-1:, ], A_bloc_lower[nblocks_2-1:, ])
         
         comm.send(G_diag_blocks[nblocks_2:, ], dest=0, tag=0)
         comm.send(G_upper_blocks[nblocks_2:, ], dest=0, tag=1)
@@ -78,9 +77,11 @@ def rgf2sided(
 
 
 
-def rgf_leftprocess(A_bloc_diag_leftprocess: np.ndarray, 
-                    A_bloc_upper_leftprocess: np.ndarray, 
-                    A_bloc_lower_leftprocess: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
+def rgf2sided_upperprocess(
+    A_bloc_diag_leftprocess: np.ndarray, 
+    A_bloc_upper_leftprocess: np.ndarray, 
+    A_bloc_lower_leftprocess: np.ndarray
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Left process of the 2-sided RGF algorithm. Array traversal is done from 
     left to right.
     
@@ -146,9 +147,11 @@ def rgf_leftprocess(A_bloc_diag_leftprocess: np.ndarray,
 
 
 
-def rgf_rightprocess(A_bloc_diag_rightprocess: np.ndarray, 
-                     A_bloc_upper_rightprocess: np.ndarray, 
-                     A_bloc_lower_rightprocess: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
+def rgf2sided_lowerprocess(
+    A_bloc_diag_rightprocess: np.ndarray, 
+    A_bloc_upper_rightprocess: np.ndarray, 
+    A_bloc_lower_rightprocess: np.ndarray
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Right process of the 2-sided RGF algorithm. Array traversal is done from 
     right to left.
     

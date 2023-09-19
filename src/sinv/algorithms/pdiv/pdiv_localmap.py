@@ -1399,7 +1399,7 @@ if __name__ == '__main__':
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         
         
         # PDIV worflow

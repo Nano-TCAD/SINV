@@ -47,7 +47,7 @@ def test_bcr_serial_symmat_complex_1():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -66,7 +66,7 @@ def test_bcr_serial_symmat_complex_2():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -85,7 +85,7 @@ def test_bcr_serial_symmat_complex_3():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -104,7 +104,7 @@ def test_bcr_serial_symmat_complex_4():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -123,7 +123,7 @@ def test_bcr_serial_symmat_complex_5():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -142,7 +142,7 @@ def test_bcr_serial_symmat_complex_6():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -161,7 +161,7 @@ def test_bcr_serial_symmat_complex_7():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -180,7 +180,7 @@ def test_bcr_serial_symmat_complex_8():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -199,7 +199,7 @@ def test_bcr_serial_symmat_complex_9():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -218,7 +218,7 @@ def test_bcr_serial_symmat_complex_10():
     blocksize    = 8
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -237,7 +237,7 @@ def test_bcr_serial_symmat_complex_11():
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
@@ -256,7 +256,7 @@ def test_bcr_serial_symmat_complex_12():
     blocksize    = 32
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A = utils.trans_mat.transformToSymmetric(A)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)

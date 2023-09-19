@@ -56,17 +56,22 @@ def generateBandedDiagonalMatrix(
     matrice_size: int,
     matrice_bandwidth: int, 
     is_complex: bool = False, 
+    is_symmetric: bool = False,
     seed: int = None
 ) -> np.ndarray:
-    """ Generate a banded diagonal matrix of shape: (matrice_size x matrice_size)
-    with a bandwidth of "bandwidth", filled with random numbers.
+    """ Generate a banded diagonal matrix of shape: matrice_size^2 with a 
+    bandwidth = matrice_bandwidth, filled with random numbers.
 
     Parameters
     ----------
     matrice_size : int
         Size of the matrice to generate.
+    matrice_bandwidth : int
+        Bandwidth of the matrice to generate.
     is_complex : bool, optional
         Whether the matrice should be complex or real valued. The default is False.
+    is_symmetric : bool, optional
+        Whether the matrice should be symmetric or not. The default is False.
     seed : int, optional
         Seed for the random number generator. The default is no seed.
         
@@ -76,7 +81,7 @@ def generateBandedDiagonalMatrix(
         The generated matrice.
     """
 
-    A = generateRandomNumpyMat(matrice_size, is_complex, seed)
+    A = generateRandomNumpyMat(matrice_size, is_complex, is_symmetric, seed)
     
     for i in range(matrice_size):
         for j in range(matrice_size):
@@ -87,7 +92,9 @@ def generateBandedDiagonalMatrix(
 
 
 
-def transformToSymmetric(A: np.ndarray):
+def transformToSymmetric(
+    A: np.ndarray
+) -> np.ndarray:
     """ Make a matrix symmetric by adding its transpose to itself.
     
     Parameters
@@ -105,9 +112,11 @@ def transformToSymmetric(A: np.ndarray):
 
 
 
-def convertDenseToBlockTridiag(A: np.ndarray, 
-                               blocksize: int):
-    """ Converte a numpy dense matrix to 3 numpy arrays containing the diagonal,
+def convertDenseToBlkTridiag(
+    A: np.ndarray, 
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
+    """ Converte a square numpy dense matrix to 3 numpy arrays containing the diagonal,
     upper diagonal and lower diagonal blocks.
     
     Parameters
@@ -140,4 +149,28 @@ def convertDenseToBlockTridiag(A: np.ndarray,
             A_bloc_lower[i, ] = A[(i+1)*blocksize:(i+2)*blocksize, i*blocksize:(i+1)*blocksize]
 
     return A_bloc_diag, A_bloc_upper, A_bloc_lower
+
+
+
+def convertBlkTridiagToDense(
+    A_diagblk: np.ndarray, 
+    A_upperblk: np.ndarray, 
+    A_lowerblk: np.ndarray
+) -> np.ndarray:
+    """
+    """
+    
+    blocksize = A_diagblk.shape[1]
+    nblocks   = A_diagblk.shape[0]
+    
+    A = np.zeros((nblocks*blocksize, nblocks*blocksize), dtype=A_diagblk.dtype)
+    
+    for i in range(nblocks):
+        A[i*blocksize:(i+1)*blocksize, i*blocksize:(i+1)*blocksize] = A_diagblk[i, ]
+        if i < nblocks-1:
+            A[i*blocksize:(i+1)*blocksize, (i+1)*blocksize:(i+2)*blocksize] = A_upperblk[i, ]
+            A[(i+1)*blocksize:(i+2)*blocksize, i*blocksize:(i+1)*blocksize] = A_lowerblk[i, ]
+            
+    return A
+    
 

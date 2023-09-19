@@ -47,7 +47,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_1():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_block_tridiag_lusolve = alg.blk_trid_lusolve.block_tridiag_lusolve(A, blocksize)
     assert np.allclose(A_refsol, A_block_tridiag_lusolve)
@@ -58,7 +58,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_2():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_block_tridiag_lusolve = alg.blk_trid_lusolve.block_tridiag_lusolve(A, blocksize)
     assert np.allclose(A_refsol, A_block_tridiag_lusolve)
@@ -69,7 +69,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_3():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_block_tridiag_lusolve = alg.blk_trid_lusolve.block_tridiag_lusolve(A, blocksize)
     assert np.allclose(A_refsol, A_block_tridiag_lusolve)
@@ -80,7 +80,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_4():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -99,7 +99,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_5():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -118,7 +118,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_6():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -137,7 +137,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_7():
     blocksize    = 1
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -156,7 +156,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_8():
     blocksize    = 2
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -175,7 +175,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_9():
     blocksize    = 3
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -194,7 +194,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_10():
     blocksize    = 8
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -213,7 +213,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_11():
     blocksize    = 16
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     
@@ -232,7 +232,7 @@ def test_block_tridiag_lusolve_nosymmat_complex_12():
     blocksize    = 32
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+    A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
     A_refsol = np.linalg.inv(A)
     A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
     

@@ -6,7 +6,7 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 from sinv.algorithms import rgf
-from sinv.utils import gen_mat
+from sinv.utils import matu
 
 from quasi.bsparse import bdia, bsr
 from quasi.bsparse._base import bsparse
@@ -73,7 +73,7 @@ def test_rgf_bsparse(
     overlap = blocksize    
         
     A = bsparse_type.diag(
-        [gen_mat.generateRandomNumpyMat(sub_mat_size, is_complex, is_symmetric, SEED) 
+        [matu.generateRandomNumpyMat(sub_mat_size, is_complex, is_symmetric, SEED) 
         for _ in range(n_sub_mat)], 
         blocksize, overlap
     )

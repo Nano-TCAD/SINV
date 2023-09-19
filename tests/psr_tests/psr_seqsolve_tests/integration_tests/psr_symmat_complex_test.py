@@ -45,7 +45,7 @@ def test_psr_symmat_complex_1():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -67,7 +67,7 @@ def test_psr_symmat_complex_2():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -89,7 +89,7 @@ def test_psr_symmat_complex_3():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -111,7 +111,7 @@ def test_psr_symmat_complex_4():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -133,7 +133,7 @@ def test_psr_symmat_complex_5():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -155,7 +155,7 @@ def test_psr_symmat_complex_6():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -177,7 +177,7 @@ def test_psr_symmat_complex_7():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -199,7 +199,7 @@ def test_psr_symmat_complex_8():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
@@ -221,7 +221,7 @@ def test_psr_symmat_complex_9():
     bandwidth    = np.ceil(blocksize/2)
     
     if nblocks >= 3*comm_size:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)

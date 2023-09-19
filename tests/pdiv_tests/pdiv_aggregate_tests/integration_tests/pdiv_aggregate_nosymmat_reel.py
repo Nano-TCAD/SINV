@@ -48,7 +48,7 @@ def test_pdiv_aggregate_nosymmat_reel_1():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -61,7 +61,7 @@ def test_pdiv_aggregate_nosymmat_reel_2():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -74,7 +74,7 @@ def test_pdiv_aggregate_nosymmat_reel_3():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -87,7 +87,7 @@ def test_pdiv_aggregate_nosymmat_reel_4():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -100,7 +100,7 @@ def test_pdiv_aggregate_nosymmat_reel_5():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -113,7 +113,7 @@ def test_pdiv_aggregate_nosymmat_reel_6():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -126,7 +126,7 @@ def test_pdiv_aggregate_nosymmat_reel_7():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -139,7 +139,7 @@ def test_pdiv_aggregate_nosymmat_reel_8():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -152,7 +152,7 @@ def test_pdiv_aggregate_nosymmat_reel_9():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -165,7 +165,7 @@ def test_pdiv_aggregate_nosymmat_reel_10():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -178,7 +178,7 @@ def test_pdiv_aggregate_nosymmat_reel_11():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:
@@ -191,7 +191,7 @@ def test_pdiv_aggregate_nosymmat_reel_12():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size <= nblocks and math.log2(comm_size).is_integer():
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A_refsol = np.linalg.inv(A)
         A_pdiv_aggregate = alg.pdiv_a.pdiv_aggregate(A, blocksize)
         if comm_rank == 0:

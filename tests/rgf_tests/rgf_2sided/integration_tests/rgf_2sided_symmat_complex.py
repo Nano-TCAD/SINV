@@ -48,8 +48,8 @@ def test_rgf_2sided_symmat_complex_1():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
         G_diag_blocks, G_upper_blocks, G_lower_blocks = alg.rgfl.rgf_leftToRight(A_bloc_diag, A_bloc_upper, A_bloc_lower)
@@ -68,7 +68,7 @@ def test_rgf_2sided_symmat_complex_2():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -88,7 +88,7 @@ def test_rgf_2sided_symmat_complex_3():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -108,7 +108,7 @@ def test_rgf_2sided_symmat_complex_4():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -128,7 +128,7 @@ def test_rgf_2sided_symmat_complex_5():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -148,7 +148,7 @@ def test_rgf_2sided_symmat_complex_6():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -168,7 +168,7 @@ def test_rgf_2sided_symmat_complex_7():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -188,7 +188,7 @@ def test_rgf_2sided_symmat_complex_8():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -208,7 +208,7 @@ def test_rgf_2sided_symmat_complex_9():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -228,7 +228,7 @@ def test_rgf_2sided_symmat_complex_10():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -248,7 +248,7 @@ def test_rgf_2sided_symmat_complex_11():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)
@@ -268,7 +268,7 @@ def test_rgf_2sided_symmat_complex_12():
     bandwidth    = np.ceil(blocksize/2)
     
     if comm_size == 2:
-        A = utils.gen_mat.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
         A = utils.trans_mat.transformToSymmetric(A)
         
         A_bloc_diag, A_bloc_upper, A_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A, blocksize)

@@ -49,17 +49,17 @@ def rgf(
 
     # 2. Backward substitution (performed right to left)
     for i in range(A.blockorder-2, -1, -1): 
-        G_ii = G.blocks[i, i]
-        G_lowerfactor = G.blocks[i+1, i+1] @ A.blocks[i+1, i] @ G_ii   
+        g_ii = G.blocks[i, i]
+        G_lowerfactor = G.blocks[i+1, i+1] @ A.blocks[i+1, i] @ g_ii   
         
         if save_off_diag:
             G.blocks[i+1, i] = -G_lowerfactor
             if sym_mat:
                 G.blocks[i, i+1] = G.blocks[i+1, i].T
             else:
-                G.blocks[i, i+1] = -G_ii @ A.blocks[i, i+1] @ G.blocks[i+1, i+1]
+                G.blocks[i, i+1] = -g_ii @ A.blocks[i, i+1] @ G.blocks[i+1, i+1]
             
-        G.blocks[i, i]   =  G_ii + G_ii @ A.blocks[i, i+1] @ G_lowerfactor
+        G.blocks[i, i]   =  g_ii + g_ii @ A.blocks[i, i+1] @ G_lowerfactor
 
     return G
         

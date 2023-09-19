@@ -19,7 +19,7 @@ def rgf2sided(
     A_bloc_diag: np.ndarray, 
     A_bloc_upper: np.ndarray, 
     A_bloc_lower: np.ndarray
-) -> list[np.ndarray, np.ndarray, np.ndarray]:
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Extension of the RGF algorithm performing block-tridiagonal selected
     inversion using 2 processes meeting in the middle of the matrix traversal.
     
@@ -100,11 +100,11 @@ def rgf2sided_upperprocess(
         
     Returns
     -------
-    G_diag_blocks_leftprocess : np.ndarray
+    G_diagblk_leftprocess : np.ndarray
         Diagonal blocks of the matrix G.
-    G_upper_blocks_leftprocess : np.ndarray
+    G_upperblk_leftprocess : np.ndarray
         Upper off-diagonal blocks of the matrix G.
-    G_lower_blocks_leftprocess : np.ndarray
+    G_lowerblk_leftprocess : np.ndarray
         Lower off-diagonal blocks of the matrix G.
     """
     
@@ -113,41 +113,50 @@ def rgf2sided_upperprocess(
     nblocks   = A_diagblk_leftprocess.shape[0]
     blockSize = A_diagblk_leftprocess.shape[1]
 
-    g_diag_leftprocess = np.zeros((nblocks+1, blockSize, blockSize), dtype=A_diagblk_leftprocess.dtype)
-    G_diag_blocks_leftprocess  = np.zeros_like(A_diagblk_leftprocess)
-    G_upper_blocks_leftprocess = np.zeros_like(A_upperblk_leftprocess)
-    G_lower_blocks_leftprocess = np.zeros_like(A_lowerblk_leftprocess)
+    G_diagblk_leftprocess  = np.zeros((nblocks+1, blockSize, blockSize), dtype=A_diagblk_leftprocess.dtype)
+    G_upperblk_leftprocess = np.zeros_like(A_upperblk_leftprocess)
+    G_lowerblk_leftprocess = np.zeros_like(A_lowerblk_leftprocess)
 
 
     # Initialisation of g
-    g_diag_leftprocess[0, ] = np.linalg.inv(A_diagblk_leftprocess[0, ])
+    G_diagblk_leftprocess[0, ] = np.linalg.inv(A_diagblk_leftprocess[0, ])
 
     # Forward substitution
     for i in range(1, nblocks):
-        g_diag_leftprocess[i, ] = np.linalg.inv(A_diagblk_leftprocess[i, ]\
-                                                - A_lowerblk_leftprocess[i-1, ] @ g_diag_leftprocess[i-1, ] @ A_upperblk_leftprocess[i-1, ])
+        G_diagblk_leftprocess[i, ]\
+            = np.linalg.inv(A_diagblk_leftprocess[i, ]\
+                - A_lowerblk_leftprocess[i-1, ]\
+                    @ G_diagblk_leftprocess[i-1, ]\
+                    @ A_upperblk_leftprocess[i-1, ])
 
     # Communicate the left connected block and receive the right connected block
-    comm.send(g_diag_leftprocess[nblocks-1, ], dest=1, tag=0)
-    g_diag_leftprocess[nblocks, ] = comm.recv(source=1, tag=0)
+    comm.send(G_diagblk_leftprocess[nblocks-1, ], dest=1, tag=0)
+    G_diagblk_leftprocess[nblocks, ] = comm.recv(source=1, tag=0)
 
     # Connection from both sides of the full G
-    G_diag_blocks_leftprocess[nblocks-1, ] = np.linalg.inv(A_diagblk_leftprocess[nblocks-1, ]\
-                                                         - A_lowerblk_leftprocess[nblocks-2, ] @ g_diag_leftprocess[nblocks-2, ] @ A_upperblk_leftprocess[nblocks-2, ]\
-                                                         - A_upperblk_leftprocess[nblocks-1, ] @ g_diag_leftprocess[nblocks, ] @ A_lowerblk_leftprocess[nblocks-1, ])
+    G_diagblk_leftprocess[nblocks-1, ]\
+        = np.linalg.inv(A_diagblk_leftprocess[nblocks-1, ]\
+            - A_lowerblk_leftprocess[nblocks-2, ]\
+                @ G_diagblk_leftprocess[nblocks-2, ]\
+                @ A_upperblk_leftprocess[nblocks-2, ]\
+            - A_upperblk_leftprocess[nblocks-1, ]\
+                @ G_diagblk_leftprocess[nblocks, ]\
+                @ A_lowerblk_leftprocess[nblocks-1, ])
 
     # Compute the shared off-diagonal upper block
-    G_upper_blocks_leftprocess[nblocks-1, ] = -G_diag_blocks_leftprocess[nblocks-1, ] @ A_upperblk_leftprocess[nblocks-1, ] @ g_diag_leftprocess[nblocks, ]
-    G_lower_blocks_leftprocess[nblocks-1, ] = G_upper_blocks_leftprocess[nblocks-1, ].T
+    G_upperblk_leftprocess[nblocks-1, ] = -G_diagblk_leftprocess[nblocks-1, ] @ A_upperblk_leftprocess[nblocks-1, ] @ G_diagblk_leftprocess[nblocks, ]
+    G_lowerblk_leftprocess[nblocks-1, ] = G_upperblk_leftprocess[nblocks-1, ].T
 
     # Backward substitution
     for i in range(nblocks-2, -1, -1):
-        G_diag_blocks_leftprocess[i, ]  = g_diag_leftprocess[i, ] @ (np.identity(blockSize) + A_upperblk_leftprocess[i, ] @ G_diag_blocks_leftprocess[i+1, ] @ A_lowerblk_leftprocess[i, ] @ g_diag_leftprocess[i, ])
-        G_upper_blocks_leftprocess[i, ] = -g_diag_leftprocess[i, ] @ A_upperblk_leftprocess[i, ] @ G_diag_blocks_leftprocess[i+1, ]
-        G_lower_blocks_leftprocess[i, ] =  G_upper_blocks_leftprocess[i, ].T
+        g_ii = G_diagblk_leftprocess[i, ]
+        G_lowerfactor = G_diagblk_leftprocess[i+1, ] @ A_lowerblk_leftprocess[i, ] @ g_ii
+        
+        G_upperblk_leftprocess[i, ] = -g_ii @ A_upperblk_leftprocess[i, ] @ G_diagblk_leftprocess[i+1, ]
+        G_lowerblk_leftprocess[i, ] = -G_lowerfactor
+        G_diagblk_leftprocess[i, ]  = g_ii + g_ii @ A_upperblk_leftprocess[i, ] @ G_lowerfactor
 
-
-    return G_diag_blocks_leftprocess, G_upper_blocks_leftprocess, G_lower_blocks_leftprocess
+    return G_diagblk_leftprocess[:nblocks, ], G_upperblk_leftprocess, G_lowerblk_leftprocess
 
 
 

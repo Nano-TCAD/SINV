@@ -14,7 +14,9 @@ from mpi4py import MPI
 
 
 
-def distance_to_power_of_two(matrice_size: int):
+def distance_to_power_of_two(
+    matrice_size: int
+) -> int:
     """ Compute the distance between the matrice_size and the closest power 
     of two minus one.
     
@@ -39,8 +41,10 @@ def distance_to_power_of_two(matrice_size: int):
 
 
 
-def identity_padding(A: np.ndarray, 
-                     padding_size: int) -> np.ndarray:
+def identity_padding(
+    A: np.ndarray, 
+    padding_size: int
+) -> np.ndarray:
     """ Padd the A matrix with an identity matrix of size padding_size.
     
     Parameters
@@ -68,8 +72,10 @@ def identity_padding(A: np.ndarray,
 
 
 
-def compute_i_from(level: int, 
-                   nblocks: int) -> list:
+def compute_i_from(
+    level: int, 
+    nblocks: int
+) -> list[int]:
     """ Compute the blocks-row that will be used for production at the 
     current level of the production tree.
     
@@ -90,8 +96,10 @@ def compute_i_from(level: int,
 
 
 
-def compute_i_prod(i_from: list, 
-                   stride_blockindex: int) -> list:
+def compute_i_prod(
+    i_from: list, 
+    stride_blockindex: int
+) -> list[int]:
     """ Compute the blocks-row to be produced at the current level of the 
     production tree.
     
@@ -122,9 +130,10 @@ def compute_i_prod(i_from: list,
 
 
 
-def divide_matrix(n_blocks: int, 
-                  n_partitions: int) -> [list, 
-                                         list]:
+def divide_matrix(
+    n_blocks: int, 
+    n_partitions: int
+) -> [list[int], list[int]]:
     """ Compute the n_partitions segments that divide the matrix A.
 
     Parameters
@@ -164,8 +173,10 @@ def divide_matrix(n_blocks: int,
 
 
 
-def get_process_rowblock_index(start_blockrow: int, 
-                               partitions_blocksizes: int) -> [int, int]:
+def get_process_rowblock_index(
+    start_blockrow: int, 
+    partitions_blocksizes: int
+) -> [int, int]:
     
     process_top_blockrow    = start_blockrow
     process_bottom_blockrow = process_top_blockrow + partitions_blocksizes

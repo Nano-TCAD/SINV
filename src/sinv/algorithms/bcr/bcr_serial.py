@@ -16,8 +16,10 @@ import math
 
 
 
-def bcr_serial(A: np.ndarray, 
-               blocksize: int) -> np.ndarray:
+def bcr_serial(
+    A: np.ndarray, 
+    blocksize: int
+) -> np.ndarray:
     """ Performe the tridiagonal selected inversion using a serial version of
     the block cyclic reduction algorithm.
     
@@ -61,13 +63,15 @@ def bcr_serial(A: np.ndarray,
 
 
 
-def reduce(A: np.ndarray, 
-           L: np.ndarray, 
-           U: np.ndarray, 
-           row: int, 
-           level: int, 
-           i_elim: np.ndarray, 
-           blocksize: int) -> None:
+def reduce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    row: int, 
+    level: int, 
+    i_elim: np.ndarray, 
+    blocksize: int
+) -> None:
     """ Operate the reduction towards the row-th row of the matrix A.
     
     Parameters
@@ -164,11 +168,13 @@ def reduce(A: np.ndarray,
                     
 
 
-def reduce_bcr(A: np.ndarray, 
-               L: np.ndarray, 
-               U: np.ndarray, 
-               i_bcr: np.ndarray, 
-               blocksize: int) -> int:
+def reduce_bcr(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    i_bcr: np.ndarray, 
+    blocksize: int
+) -> int:
     """ Performs block cyclic reduction on the matrix A. Computing during the 
     process the LU decomposition of the matrix A. The matrix A is overwritten.
     
@@ -209,10 +215,12 @@ def reduce_bcr(A: np.ndarray,
 
 
 
-def invert_block(A: np.ndarray, 
-                 G: np.ndarray, 
-                 target_block: int, 
-                 blocksize: int) -> None:
+def invert_block(
+    A: np.ndarray, 
+    G: np.ndarray, 
+    target_block: int, 
+    blocksize: int
+) -> None:
     """ Produce the first block of the inverse of A after having perfomed the 
     cyclic reduction.
     
@@ -240,13 +248,15 @@ def invert_block(A: np.ndarray,
         
 
 
-def corner_produce(A: np.ndarray, 
-                   L: np.ndarray, 
-                   U: np.ndarray, 
-                   G: np.ndarray, 
-                   k_from: int, 
-                   k_to: int, 
-                   blocksize: int) -> None:
+def corner_produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    k_from: int, 
+    k_to: int, 
+    blocksize: int
+) -> None:
     """ BCR production procedure associated with the corner production case.
     
     Parameters
@@ -293,14 +303,16 @@ def corner_produce(A: np.ndarray,
     
 
 
-def center_produce(A: np.ndarray, 
-                   L: np.ndarray, 
-                   U: np.ndarray, 
-                   G: np.ndarray,
-                   k_above: int, 
-                   k_to: int, 
-                   k_below: int, 
-                   blocksize: int) -> None:
+def center_produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray,
+    k_above: int, 
+    k_to: int, 
+    k_below: int, 
+    blocksize: int
+) -> None:
     """ BCR production procedure associated with the center production case.
     
     Parameters
@@ -370,12 +382,14 @@ def center_produce(A: np.ndarray,
 
 
 
-def produce_bcr(A: np.ndarray, 
-                L: np.ndarray, 
-                U: np.ndarray, 
-                G: np.ndarray, 
-                i_bcr: np.ndarray, 
-                blocksize: int) -> None:
+def produce_bcr(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    i_bcr: np.ndarray, 
+    blocksize: int
+) -> None:
     """ Performs the block cyclic production.
     
     Parameters

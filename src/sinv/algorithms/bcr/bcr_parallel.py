@@ -18,8 +18,10 @@ from mpi4py import MPI
 
 
 
-def bcr_parallel(A: np.ndarray, 
-                 blocksize: int) -> np.ndarray:
+def bcr_parallel(
+    A: np.ndarray, 
+    blocksize: int
+) -> np.ndarray:
     """ Performe the tridiagonal selected inversion using a parallel version of
     the block cyclic reduction algorithm.
     
@@ -74,13 +76,15 @@ def bcr_parallel(A: np.ndarray,
 
 
 
-def reduce(A: np.ndarray, 
-           L: np.ndarray, 
-           U: np.ndarray, 
-           row: int, 
-           level: int, 
-           i_elim: list, 
-           blocksize: int) -> None:
+def reduce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    row: int, 
+    level: int, 
+    i_elim: list, 
+    blocksize: int
+) -> None:
     """ Operate the reduction towards the row-th row of the matrix A.
     
     Parameters
@@ -158,13 +162,15 @@ def reduce(A: np.ndarray,
 
 
 
-def reduce_bcr(A: np.ndarray, 
-               L: np.ndarray, 
-               U: np.ndarray, 
-               i_bcr: list, 
-               top_blockrow, 
-               bottom_blockrow, 
-               blocksize: int) -> int:
+def reduce_bcr(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    i_bcr: list, 
+    top_blockrow: int, 
+    bottom_blockrow: int, 
+    blocksize: int
+) -> int:
     """ Performs block cyclic reduction in parallel on the matrix A. Computing 
     during the process the LU decomposition of the matrix A. The matrix A is 
     overwritten.
@@ -231,13 +237,15 @@ def reduce_bcr(A: np.ndarray,
 
 
 
-def communicate_reducprod(A: np.ndarray, 
-                          L: np.ndarray, 
-                          U: np.ndarray, 
-                          i_from: list, 
-                          indice_process_start_reduction: int, 
-                          indice_process_stop_reduction: int, 
-                          blocksize: int) -> None:
+def communicate_reducprod(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    i_from: list, 
+    indice_process_start_reduction: int, 
+    indice_process_stop_reduction: int, 
+    blocksize: int
+) -> None:
     """ Communicate the last produced row of the current level to the surrounding
     processes. They may need this value to produce at the next level.
     
@@ -317,11 +325,13 @@ def communicate_reducprod(A: np.ndarray,
         
 
 
-def send_down(A: np.ndarray,
-              L: np.ndarray, 
-              U: np.ndarray,  
-              blockrow_idx: int,
-              blocksize: int) -> None:
+def send_down(
+    A: np.ndarray,
+    L: np.ndarray, 
+    U: np.ndarray,  
+    blockrow_idx: int,
+    blocksize: int
+) -> None:
     """ Send downward the last produced row of the current level to the next 
     process.
     
@@ -345,7 +355,6 @@ def send_down(A: np.ndarray,
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
     
     i_rowindice   = blockrow_idx * blocksize
     ip1_rowindice = (blockrow_idx+1) * blocksize
@@ -356,11 +365,13 @@ def send_down(A: np.ndarray,
 
 
 
-def recv_up(A: np.ndarray,
-            L: np.ndarray, 
-            U: np.ndarray,  
-            blockrow_idx: int,
-            blocksize: int) -> None:
+def recv_up(
+    A: np.ndarray,
+    L: np.ndarray, 
+    U: np.ndarray,  
+    blockrow_idx: int,
+    blocksize: int
+) -> None:
     """ Receive upward the last produced row of the current level from the 
     previous process.
     
@@ -395,11 +406,13 @@ def recv_up(A: np.ndarray,
 
 
 
-def send_up(A: np.ndarray,
-            L: np.ndarray, 
-            U: np.ndarray,  
-            blockrow_idx: int,
-            blocksize: int) -> None:
+def send_up(
+    A: np.ndarray,
+    L: np.ndarray, 
+    U: np.ndarray,  
+    blockrow_idx: int,
+    blocksize: int
+) -> None:
     """ Send upward the last produced row of the current level to the previous
     process.
     
@@ -423,7 +436,6 @@ def send_up(A: np.ndarray,
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
     
     i_rowindice   = blockrow_idx * blocksize
     ip1_rowindice = (blockrow_idx+1) * blocksize
@@ -434,11 +446,13 @@ def send_up(A: np.ndarray,
 
 
 
-def recv_down(A: np.ndarray,
-              L: np.ndarray, 
-              U: np.ndarray,  
-              blockrow_idx: int,
-              blocksize: int) -> None:
+def recv_down(
+    A: np.ndarray,
+    L: np.ndarray, 
+    U: np.ndarray,  
+    blockrow_idx: int,
+    blocksize: int
+) -> None:
     """ Receive downward the last produced row of the current level from the
     next process.
     
@@ -462,7 +476,6 @@ def recv_down(A: np.ndarray,
     
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
-    comm_size = comm.Get_size()
     
     i_rowindice   = blockrow_idx * blocksize
     ip1_rowindice = (blockrow_idx+1) * blocksize
@@ -473,12 +486,14 @@ def recv_down(A: np.ndarray,
     
     
 
-def invert_block(A: np.ndarray, 
-                 G: np.ndarray, 
-                 target_block: int, 
-                 top_blockrow: int, 
-                 bottom_blockrow: int, 
-                 blocksize: int) -> None:
+def invert_block(
+    A: np.ndarray, 
+    G: np.ndarray, 
+    target_block: int, 
+    top_blockrow: int, 
+    bottom_blockrow: int, 
+    blocksize: int
+) -> None:
     """ Produce the first block of the inverse of A after having perfomed the 
     cyclic reduction.
     
@@ -511,13 +526,15 @@ def invert_block(A: np.ndarray,
             
 
 
-def corner_produce(A: np.ndarray, 
-                   L: np.ndarray, 
-                   U: np.ndarray, 
-                   G: np.ndarray, 
-                   k_from: int, 
-                   k_to: int, 
-                   blocksize: int) -> None:
+def corner_produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    k_from: int, 
+    k_to: int, 
+    blocksize: int
+) -> None:
     """ BCR production procedure associated with the corner production case.
     
     Parameters
@@ -564,14 +581,16 @@ def corner_produce(A: np.ndarray,
     
 
 
-def center_produce(A: np.ndarray, 
-                   L: np.ndarray, 
-                   U: np.ndarray, 
-                   G: np.ndarray,
-                   k_above: int, 
-                   k_to: int, 
-                   k_below: int, 
-                   blocksize: int) -> None:
+def center_produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray,
+    k_above: int, 
+    k_to: int, 
+    k_below: int, 
+    blocksize: int
+) -> None:
     """ BCR production procedure associated with the center production case.
     
     Parameters
@@ -611,46 +630,48 @@ def center_produce(A: np.ndarray,
     G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
                     
     G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] =\
         - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
+        - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] =\
         - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
+        - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
             - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
                 @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                    - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+            - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+                @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
 
 
 
-def produce(A: np.ndarray, 
-            L: np.ndarray, 
-            U: np.ndarray, 
-            G: np.ndarray, 
-            i_bcr: list, 
-            i_prod: list, 
-            stride_blockindex, 
-            top_blockrow, 
-            bottom_blockrow, 
-            blocksize: int) -> None:
+def produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    i_bcr: list, 
+    i_prod: list, 
+    stride_blockindex, 
+    top_blockrow, 
+    bottom_blockrow, 
+    blocksize: int
+) -> None:
     """ Call the appropriate production function for each block that needs to 
     be produced.
     
@@ -717,16 +738,18 @@ def produce(A: np.ndarray,
 
 
 
-def comm_to_produce(A: np.ndarray, 
-                    L: np.ndarray, 
-                    U: np.ndarray, 
-                    G: np.ndarray, 
-                    i_from: list, 
-                    i_prod: list, 
-                    stride_blockindex: int, 
-                    top_blockrow: int, 
-                    bottom_blockrow: int, 
-                    blocksize: int) -> None:
+def comm_to_produce(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    i_from: list, 
+    i_prod: list, 
+    stride_blockindex: int, 
+    top_blockrow: int, 
+    bottom_blockrow: int, 
+    blocksize: int
+) -> None:
     """ Determine the blocks-row that need to be communicated/received to/from 
     other processes in order for each process to be able to locally produce the 
     blocks-row it is responsible for.
@@ -823,13 +846,15 @@ def comm_to_produce(A: np.ndarray,
 
 
 
-def comm_produced(G: np.ndarray, 
-                  i_prod: list, 
-                  i_from: list, 
-                  stride_blockindex: int, 
-                  top_blockrow: int, 
-                  bottom_blockrow: int, 
-                  blocksize: int) -> None:
+def comm_produced(
+    G: np.ndarray, 
+    i_prod: list, 
+    i_from: list, 
+    stride_blockindex: int, 
+    top_blockrow: int, 
+    bottom_blockrow: int, 
+    blocksize: int
+) -> None:
     """ Communicate part of the produced row back to the original process.
     
     Parameters
@@ -916,14 +941,16 @@ def comm_produced(G: np.ndarray,
 
 
 
-def produce_bcr(A: np.ndarray, 
-                L: np.ndarray, 
-                U: np.ndarray, 
-                G: np.ndarray, 
-                i_bcr: list, 
-                top_blockrow: int, 
-                bottom_blockrow: int, 
-                blocksize: int) -> None:
+def produce_bcr(
+    A: np.ndarray, 
+    L: np.ndarray, 
+    U: np.ndarray, 
+    G: np.ndarray, 
+    i_bcr: list, 
+    top_blockrow: int, 
+    bottom_blockrow: int, 
+    blocksize: int
+) -> None:
     """ Performs the block cyclic production.
     
     Parameters
@@ -968,10 +995,12 @@ def produce_bcr(A: np.ndarray,
 
 
 
-def agregate_result_on_root(G: np.ndarray, 
-                            l_start_blockrow: list, 
-                            l_partitions_blocksizes: list, 
-                            blocksize: int) -> None:
+def agregate_result_on_root(
+    G: np.ndarray, 
+    l_start_blockrow: list, 
+    l_partitions_blocksizes: list, 
+    blocksize: int
+) -> None:
     """ Agregate the distributed results on the root process
     
     Parameters
@@ -1012,3 +1041,4 @@ def agregate_result_on_root(G: np.ndarray,
         bottom_rowindice = top_rowindice + l_partitions_blocksizes[comm_rank] * blocksize
 
         comm.send(G[top_rowindice:bottom_rowindice, :], dest=0, tag=0)
+

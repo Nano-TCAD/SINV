@@ -50,10 +50,10 @@ def test_bcr_serial_nosymmat_reel_1():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
         
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -68,10 +68,10 @@ def test_bcr_serial_nosymmat_reel_2():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -86,10 +86,10 @@ def test_bcr_serial_nosymmat_reel_3():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -104,10 +104,10 @@ def test_bcr_serial_nosymmat_reel_4():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -122,10 +122,10 @@ def test_bcr_serial_nosymmat_reel_5():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -140,10 +140,10 @@ def test_bcr_serial_nosymmat_reel_6():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -158,10 +158,10 @@ def test_bcr_serial_nosymmat_reel_7():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -176,10 +176,10 @@ def test_bcr_serial_nosymmat_reel_8():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -194,10 +194,10 @@ def test_bcr_serial_nosymmat_reel_9():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -212,10 +212,10 @@ def test_bcr_serial_nosymmat_reel_10():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -230,10 +230,10 @@ def test_bcr_serial_nosymmat_reel_11():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\
@@ -248,10 +248,10 @@ def test_bcr_serial_nosymmat_reel_12():
     A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
 
     G = alg.bcr_s.bcr_serial(A, blocksize)
-    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(G, blocksize)
+    G_bcr_s_bloc_diag, G_bcr_s_bloc_upper, G_bcr_s_bloc_lower = utils.matu.convertDenseToBlkTridiag(G, blocksize)
     
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
     
     assert np.allclose(A_refsol_bloc_diag, G_bcr_s_bloc_diag)\
             and np.allclose(A_refsol_bloc_upper, G_bcr_s_bloc_upper)\

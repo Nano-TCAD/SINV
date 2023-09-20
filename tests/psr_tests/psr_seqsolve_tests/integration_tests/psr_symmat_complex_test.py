@@ -46,13 +46,13 @@ def test_psr_symmat_complex_1():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -68,13 +68,13 @@ def test_psr_symmat_complex_2():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -90,13 +90,13 @@ def test_psr_symmat_complex_3():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -112,13 +112,13 @@ def test_psr_symmat_complex_4():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -134,13 +134,13 @@ def test_psr_symmat_complex_5():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -156,13 +156,13 @@ def test_psr_symmat_complex_6():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -178,13 +178,13 @@ def test_psr_symmat_complex_7():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -200,13 +200,13 @@ def test_psr_symmat_complex_8():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
@@ -222,13 +222,13 @@ def test_psr_symmat_complex_9():
     
     if nblocks >= 3*comm_size:
         A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        A = utils.trans_mat.transformToSymmetric(A)
+        A = utils.matu.transformToSymmetric(A)
         
         A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_refsol, blocksize)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
         A_psr = alg.psr_s.psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.trans_mat.convertDenseToBlockTridiag(A_psr, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
         
         if comm_rank == 0:
             assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\

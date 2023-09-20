@@ -242,7 +242,7 @@ def update_maps(
             J = get_J(l_U, Bu_mid, Bl_mid, blocksize)
             
             l_M_ip1 = get_nextprocess_matrixmap(l_M, l_M_ip1, starting_process, middle_process, ending_process)
-            l_C = update_crossmap(l_C, l_M, l_M_ip1, Bu_mid, Bl_mid, J, middle_process, ending_process)
+            l_C = update_crossmap(l_C, l_M, l_M_ip1, Bu_mid, Bl_mid, J, middle_process, ending_process, blocksize)
             l_M = update_matrixmap(l_M, l_U, Bu_mid, Bl_mid, J, middle_process, blocksize)
 
     return l_M, l_C
@@ -332,14 +332,14 @@ def get_U(
     last_blockindex = K_local.shape[0] // blocksize - 1
         
     if comm_rank == middle_process:
-        UUR = produce_toprow_element(last_blockindex, K_local, l_M)
-        ULL = produce_leftcol_element(last_blockindex, K_local, l_M)
-        ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M)
+        UUR = produce_toprow_element(last_blockindex, K_local, l_M, blocksize)
+        ULL = produce_leftcol_element(last_blockindex, K_local, l_M, blocksize)
+        ULR = produce_matrix_elements(last_blockindex, last_blockindex, K_local, l_M, blocksize)
     
     if comm_rank == middle_process+1:
-        DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M)
-        DUR = produce_rightcol_element(first_blockindex, K_local, l_M)
-        DLL = produce_botrow_element(first_blockindex, K_local, l_M)
+        DUL = produce_matrix_elements(first_blockindex, first_blockindex, K_local, l_M, blocksize)
+        DUR = produce_rightcol_element(first_blockindex, K_local, l_M, blocksize)
+        DLL = produce_botrow_element(first_blockindex, K_local, l_M, blocksize)
     
     # Communicate corner blocks
     if comm_rank == middle_process:
@@ -582,7 +582,8 @@ def update_crossmap(
     Bl_mid: np.ndarray,
     J: np.ndarray, 
     middle_process: int,
-    ending_process: int
+    ending_process: int,
+    blocksize: int
 ) -> list[np.ndarray]:
     """ Update the cross maps.
     
@@ -604,6 +605,8 @@ def update_crossmap(
         middle process of the current reduction step
     ending_process : int
         ending process of the current reduction step
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -615,15 +618,15 @@ def update_crossmap(
     comm_rank = comm.Get_rank()
 
     if comm_rank < middle_process:
-        l_C = update_crossmap_upper(l_M, l_M_ip1, l_C, Bu_mid, J)
+        l_C = update_crossmap_upper(l_M, l_M_ip1, l_C, Bu_mid, J, blocksize)
     
     elif comm_rank == middle_process:
-        l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J)
+        l_C = update_crossmap_middle(l_M, l_M_ip1, l_C, Bu_mid, Bl_mid, J, blocksize)
         
     elif comm_rank < ending_process:
         # Last process doesn't need to update the crossmap since it 
         # doesn't own any bridges matrices.
-        l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J)
+        l_C = update_crossmap_lower(l_M, l_M_ip1, l_C, Bl_mid, J, blocksize)
 
     return l_C
 
@@ -634,7 +637,8 @@ def update_crossmap_upper(
     l_M_ip1: list[np.ndarray],
     l_C: list[np.ndarray], 
     Bu_mid: np.ndarray,
-    J: np.ndarray
+    J: np.ndarray,
+    blocksize: int
 ) -> list[np.ndarray]:
     """ Cross maps update formula for the upper processes.
     
@@ -650,6 +654,8 @@ def update_crossmap_upper(
         upper bridge of the middle process
     J : numpy matrix
         J matrix
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -688,7 +694,8 @@ def update_crossmap_middle(
     l_C: list[np.ndarray], 
     Bu_mid: np.ndarray,
     Bl_mid: np.ndarray,
-    J: np.ndarray
+    J: np.ndarray,
+    blocksize: int
 ) -> list[np.ndarray]:
     """ Cross maps update formula for the middle process.
     
@@ -706,6 +713,8 @@ def update_crossmap_middle(
         lower bridge of the middle process
     J : numpy matrix
         J matrix
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -744,7 +753,8 @@ def update_crossmap_lower(
     l_M_ip1: list[np.ndarray],
     l_C: list[np.ndarray], 
     Bl_mid: np.ndarray,
-    J: np.ndarray
+    J: np.ndarray,
+    blocksize: int
 ) -> list[np.ndarray]:
     """ Cross maps update formula for the lower processes.
     
@@ -760,6 +770,8 @@ def update_crossmap_lower(
         lower bridge of the middle process
     J : numpy matrix
         J matrix
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -963,10 +975,10 @@ def update_matrixmap_lower(
     
     
 def produce_partition(
-    K_local, 
-    l_M, 
-    l_C, 
-    blocksize
+    K_local: np.ndarray, 
+    l_M: list[np.ndarray], 
+    l_C: list[np.ndarray], 
+    blocksize: int
 ) -> np.ndarray:
     """ Produce the partition of the matrix.
     
@@ -994,7 +1006,7 @@ def produce_partition(
     for row in range(0, partition_blocksize, 1):
         for col in range(max(0, row-1), min(partition_blocksize, row+2), 1):
             K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
-                = produce_matrix_elements(row, col, K_local, l_M)
+                = produce_matrix_elements(row, col, K_local, l_M, blocksize)
     
     # 2. Produce the bridge part of the partition.
     comm = MPI.COMM_WORLD
@@ -1013,7 +1025,8 @@ def produce_partition(
 def produce_toprow_element(
     col_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce an element of the top row of the partition.
     
@@ -1025,6 +1038,8 @@ def produce_toprow_element(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
+    blocksize : int
+        size of a block
         
     Returns
     -------
@@ -1048,7 +1063,8 @@ def produce_toprow_element(
 def produce_rightcol_element(
     row_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce an element of the right column of the partition.
     
@@ -1060,7 +1076,9 @@ def produce_rightcol_element(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-        
+    blocksize : int
+        size of a block
+            
     Returns
     -------
     elem : numpy matrix
@@ -1083,7 +1101,8 @@ def produce_rightcol_element(
 def produce_leftcol_element(
     row_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce an element of the left column of the partition.
 
@@ -1095,7 +1114,9 @@ def produce_leftcol_element(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-
+    blocksize : int
+        size of a block
+        
     Returns
     -------
     elem : numpy matrix
@@ -1118,7 +1139,8 @@ def produce_leftcol_element(
 def produce_botrow_element(
     col_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce an element of the bottom row of the partition.
     
@@ -1130,7 +1152,9 @@ def produce_botrow_element(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-
+    blocksize : int
+        size of a block
+        
     Returns
     -------
     elem : numpy matrix
@@ -1154,7 +1178,8 @@ def produce_matrix_elements(
     row_blockindex: int, 
     col_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce a selected block of the given partition.
     
@@ -1168,7 +1193,9 @@ def produce_matrix_elements(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-
+    blocksize : int
+        size of a block
+        
     Returns
     -------
     elem : numpy matrix
@@ -1202,7 +1229,8 @@ def produce_update_matrix_elements(
     row_blockindex: int, 
     col_blockindex: int, 
     K_local: np.ndarray, 
-    l_M: list[np.ndarray]
+    l_M: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce the update of a selected block of the given partition.
     
@@ -1216,7 +1244,9 @@ def produce_update_matrix_elements(
         local inverted partition of the matrix
     l_M : list of numpy matrix
         list of the matrix maps
-
+    blocksize : int
+        size of a block
+        
     Returns
     -------
     elem_update : numpy matrix
@@ -1379,71 +1409,3 @@ def produce_lower_bridge(
     
     return Bl_inv
 
-
-
-if __name__ == '__main__':
-    comm = MPI.COMM_WORLD
-    comm_size = comm.Get_size()
-    comm_rank = comm.Get_rank()
-
-    isComplex = True
-    seed = 63
-
-    #matrice_size = 120
-    #blocksize    = 4
-    matrice_size = 26
-    blocksize    = 2
-    #matrice_size = 8
-    #blocksize    = 1
-    nblocks      = matrice_size // blocksize
-    bandwidth    = np.ceil(blocksize/2)
-    
-    if comm_size <= nblocks:
-        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, seed)
-        
-        
-        # PDIV worflow
-        pdiv_u.check_multiprocessing(comm_size)
-        pdiv_u.check_input(A, blocksize, comm_size)
-        
-        l_start_blockrow, l_partitions_blocksizes = pdiv_u.divide_matrix(A, comm_size, blocksize)
-        K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-    
-        K_local = K_i[comm_rank]
-        K_inv_local, Bu_inv, Bl_inv = pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
-        
-        
-        # Extract local reference solution
-        A_refsol = np.linalg.inv(A)
-        start_localpart_rowindex = l_start_blockrow[comm_rank] * blocksize
-        stop_localpart_rowindex  = start_localpart_rowindex + l_partitions_blocksizes[comm_rank] * blocksize
-        A_local_slice_of_refsolution = A_refsol[start_localpart_rowindex:stop_localpart_rowindex, start_localpart_rowindex:stop_localpart_rowindex]
-        if comm_rank < comm_size-1:
-            Bu_refsol = A_refsol[stop_localpart_rowindex-blocksize:stop_localpart_rowindex, stop_localpart_rowindex:stop_localpart_rowindex+blocksize]
-            Bl_refsol = A_refsol[stop_localpart_rowindex:stop_localpart_rowindex+blocksize, stop_localpart_rowindex-blocksize:stop_localpart_rowindex]
-        
-        for i in range(0, l_partitions_blocksizes[comm_rank], 1):
-            for j in range(0, l_partitions_blocksizes[comm_rank], 1):
-                if j < i-1 or j > i+1:
-                    A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] = np.zeros((blocksize, blocksize))
-        
-        
-        # Check results
-        if np.allclose(A_local_slice_of_refsolution, K_inv_local) == False:
-            for i in range(0, A_local_slice_of_refsolution.shape[0], 1):
-                for j in range(0, A_local_slice_of_refsolution.shape[1], 1):
-                    if np.allclose(A_local_slice_of_refsolution[i, j], K_inv_local[i, j]) == False:
-                        print("Process: ", comm_rank, " - i: ", i, " - j: ", j, " - A_refsol[i, j]: ", A_local_slice_of_refsolution[i, j], " - K_inv_local[i, j]: ", K_inv_local[i, j])
-          
-        if comm_rank < comm_size-1:
-            if np.allclose(Bu_refsol, Bu_inv) == False:
-                print("Process: ", comm_rank, " - Bu is not correct")
-                print("     Bu_refsol: ", Bu_refsol)
-                print("     Bu_inv: ", Bu_inv)
-            if np.allclose(Bl_refsol, Bl_inv) == False:
-                print("Process: ", comm_rank, " - Bl is not correct")
-                print("     Bl_refsol: ", Bl_refsol)
-                print("     Bl_inv: ", Bl_inv)
-
-        
-            

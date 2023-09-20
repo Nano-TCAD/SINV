@@ -32,7 +32,7 @@ SEED = 63
 ================================================ """
 @pytest.mark.mpi(min_size=2)
 @pytest.mark.parametrize("is_complex", [False, True])
-@pytest.mark.parametrize("is_symmetric", [True])
+@pytest.mark.parametrize("is_symmetric", [False, True])
 @pytest.mark.parametrize(
     "matrix_size, blocksize",
     [
@@ -62,7 +62,7 @@ def test_rgf2sided(
     A_diagblk, A_upperblk, A_lowerblk\
         = utils.matu.convertDenseToBlkTridiag(A, blocksize)
     G_diagblk, G_upperblk, G_lowerblk\
-        = rgf2s.rgf2sided(A_diagblk, A_upperblk, A_lowerblk)
+        = rgf2s.rgf2sided(A_diagblk, A_upperblk, A_lowerblk, is_symmetric)
 
     A_refsol = np.linalg.inv(A)
     A_refsol_diagblk, A_refsol_upperblk, A_refsol_lowerblk\

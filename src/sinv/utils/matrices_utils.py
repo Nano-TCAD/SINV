@@ -157,7 +157,22 @@ def convertBlkTridiagToDense(
     A_upperblk: np.ndarray, 
     A_lowerblk: np.ndarray
 ) -> np.ndarray:
-    """
+    """ Convert 3 numpy arrays containing the diagonal, upper diagonal and lower
+    diagonal blocks to a square numpy dense matrix.
+    
+    Parameters
+    ----------
+    A_diagblk : np.ndarray
+        The diagonal blocks.
+    A_upperblk : np.ndarray
+        The upper diagonal blocks.
+    A_lowerblk : np.ndarray
+        The lower diagonal blocks.
+        
+    Returns
+    -------
+    A : np.ndarray
+        Dense matrix representation of the input block tridiagonal matrix.
     """
     
     blocksize = A_diagblk.shape[1]

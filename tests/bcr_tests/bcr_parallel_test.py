@@ -5,6 +5,9 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
+from os import environ
+environ['OMP_NUM_THREADS'] = '1'
+
 from sinv.algorithms import bcr_p
 from sinv import utils
 

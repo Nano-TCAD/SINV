@@ -46,14 +46,16 @@ def pdiv_localmap(
 
     Returns
     -------
-    K_local : numpy matrix
-        inverted local partition of the matrix
-    l_upperbridges : numpy matrix
-        updated lower bridges (return the entire list of bridges but only the
-        local bridges are updated)
-    l_lowerbridges : numpy matrix
-        updated upper bridges (return the entire list of bridges but only the
-        local bridges are updated)
+    X_diagblk : numpy matrix
+        diagonal entries of the inverted local partition
+    X_upperblk : numpy matrix
+        upper diagonal entries of the inverted local partition, the last block 
+        contains the upper bridge of the local partition. (execpt for the last
+        process)
+    X_lowerblk : numpy matrix
+        lower diagonal entries of the inverted local partition, the last block 
+        contains the lower bridge of the local partition. (execpt for the last
+        process)
 
     Notes
     -----
@@ -979,7 +981,7 @@ def produce_partition(
     l_M: list[np.ndarray], 
     l_C: list[np.ndarray], 
     blocksize: int
-) -> np.ndarray:
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Produce the partition of the matrix.
     
     Parameters
@@ -995,26 +997,30 @@ def produce_partition(
         
     Returns
     -------
-    K_inv : numpy matrix
-        local inverted partition of the matrix
+    X_diagblk : numpy matrix
+        diagonal entries of the inverted local partition
+    X_upperblk : numpy matrix
+        upper diagonal entries of the inverted local partition, the last block 
+        contains the upper bridge of the local partition. (execpt for the last
+        process)
+    X_lowerblk : numpy matrix
+        lower diagonal entries of the inverted local partition, the last block 
+        contains the lower bridge of the local partition. (execpt for the last
+        process)
     """
     
     # 1. Produce the tridiag part of the partition.
-    K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
     partition_blocksize = K_local.shape[0] // blocksize
     
     X_diagblk  = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)] 
     X_upperblk = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)]
     X_lowerblk = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)]
     
-    for row in range(0, partition_blocksize, 1):
-        for col in range(max(0, row-1), min(partition_blocksize, row+2), 1):
-            if row == col:
-                X_diagblk[row] = produce_matrix_elements(row, col, K_local, l_M, blocksize)
-            elif row == col + 1:
-                X_lowerblk[row-1] = produce_matrix_elements(row, col, K_local, l_M, blocksize)
-            elif row == col - 1:
-                X_upperblk[row] = produce_matrix_elements(row, col, K_local, l_M, blocksize)    
+    for idx in range(0, partition_blocksize, 1):
+        X_diagblk[idx] = produce_matrix_elements(idx, idx, K_local, l_M, blocksize)
+        X_lowerblk[idx] = produce_matrix_elements(idx+1, idx, K_local, l_M, blocksize)
+        X_upperblk[idx] = produce_matrix_elements(idx, idx+1, K_local, l_M, blocksize)
+
     
     # 2. Produce the bridge part of the partition.
     comm = MPI.COMM_WORLD
@@ -1298,6 +1304,10 @@ def produce_bridges(
     
     Parameters
     ----------
+    Bu_inv : numpy matrix
+        upper bridge to be produced
+    Bl_inv : numpy matrix
+        lower bridge to be produced
     K_local : numpy matrix
         local inverted partition of the matrix
     l_C : list of numpy matrix
@@ -1330,8 +1340,8 @@ def produce_bridges(
         phi2_N_1 = comm.recv(source=comm_rank+1, tag=1)
         phi2_1_N = comm.recv(source=comm_rank+1, tag=2)
         
-        Bu_inv = produce_upper_bridge(Bu_inv, phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C)
-        Bl_inv = produce_lower_bridge(Bl_inv, phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C)
+        Bu_inv = produce_upper_bridge(phi1_N_1, phi1_N_N, phi2_1_1, phi2_N_1, l_C, blocksize)
+        Bl_inv = produce_lower_bridge(phi1_1_N, phi1_N_N, phi2_1_1, phi2_1_N, l_C, blocksize)
         
     elif comm_rank == process_i+1 and process_i+1 != comm_size:
         comm.send(K_local[0:blocksize, 0:blocksize], dest=comm_rank-1, tag=0)
@@ -1343,19 +1353,17 @@ def produce_bridges(
     
 
 def produce_upper_bridge(
-    Bu_inv: np.ndarray,
     phi1_N_1: np.ndarray, 
     phi1_N_N: np.ndarray, 
     phi2_1_1: np.ndarray, 
     phi2_N_1: np.ndarray, 
-    l_C: list[np.ndarray]
+    l_C: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce the upper bridge.
     
     Parameters
     ----------
-    Bu_inv : numpy matrix
-        upper bridge
     phi1_N_1 : numpy matrix
         Lower left block of the upper partition
     phi1_N_N : numpy matrix
@@ -1366,12 +1374,16 @@ def produce_upper_bridge(
         Lower left block of the lower partition
     l_C : list of numpy matrix
         list of the cross maps
+    blocksize : int
+        size of a block
         
     Returns
     -------
     Bu_inv : numpy matrix
         upper bridge        
     """
+    
+    Bu_inv = np.zeros((blocksize, blocksize), dtype=phi1_N_1.dtype)
     
     Bu_inv = phi1_N_1 @ l_C[0] @ phi2_1_1\
                 + phi1_N_1 @ l_C[1] @ phi2_N_1\
@@ -1383,19 +1395,17 @@ def produce_upper_bridge(
 
 
 def produce_lower_bridge(
-    Bl_inv: np.ndarray,
     phi1_1_N: np.ndarray, 
     phi1_N_N: np.ndarray, 
     phi2_1_1: np.ndarray, 
     phi2_1_N: np.ndarray, 
-    l_C: list[np.ndarray]
+    l_C: list[np.ndarray],
+    blocksize: int
 ) -> np.ndarray:
     """ Produce the lower bridge.
     
     Parameters
     ----------
-    Bl_inv : numpy matrix
-        lower bridge
     phi1_1_N : numpy matrix
         Upper right block of the upper partition
     phi1_N_N : numpy matrix
@@ -1406,12 +1416,16 @@ def produce_lower_bridge(
         Upper right block of the lower partition
     l_C : list of numpy matrix
         list of the cross maps
+    blocksize : int
+        size of a block
         
     Returns
     -------
     Bl_inv : numpy matrix
         lower bridge
     """
+    
+    Bl_inv = np.zeros((blocksize, blocksize), dtype=phi1_1_N.dtype)
     
     Bl_inv = phi2_1_1 @ l_C[4] @ phi1_1_N\
                 + phi2_1_1 @ l_C[5] @ phi1_N_N\

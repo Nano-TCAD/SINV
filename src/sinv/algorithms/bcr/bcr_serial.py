@@ -128,7 +128,9 @@ def reduce(
             A[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A_ii_inv
         
         A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] =\
-            A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
+            A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex]\
+            - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex]\
+                @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
 
 
         # If the row above is not the top row
@@ -298,8 +300,8 @@ def corner_produce(
             
     G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
-            - G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex]\
-                @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_to_rowindex:kp1_to_rowindex, k_from_rowindex:kp1_from_rowindex]\
+            @ L[k_from_rowindex:kp1_from_rowindex, k_to_rowindex:kp1_to_rowindex]
     
 
 
@@ -352,33 +354,33 @@ def center_produce(
     G[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         - G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
                     
     G[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         - G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex] =\
         - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ G[k_above_rowindex:kp1_above_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
+        - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ G[k_below_rowindex:kp1_below_rowindex, k_above_rowindex:kp1_above_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex] =\
         - U[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
             @ G[k_above_rowindex:kp1_above_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                    @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
+        - U[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ G[k_below_rowindex:kp1_below_rowindex, k_below_rowindex:kp1_below_rowindex]
                     
     G[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex] =\
         np.linalg.inv(A[k_to_rowindex:kp1_to_rowindex, k_to_rowindex:kp1_to_rowindex])\
-            - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
-                @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
-                    - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
-                        @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
+        - G[k_to_rowindex:kp1_to_rowindex, k_above_rowindex:kp1_above_rowindex]\
+            @ L[k_above_rowindex:kp1_above_rowindex, k_to_rowindex:kp1_to_rowindex]\
+        - G[k_to_rowindex:kp1_to_rowindex, k_below_rowindex:kp1_below_rowindex]\
+            @ L[k_below_rowindex:kp1_below_rowindex, k_to_rowindex:kp1_to_rowindex]
 
 
 

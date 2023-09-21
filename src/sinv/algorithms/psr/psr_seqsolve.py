@@ -941,38 +941,3 @@ def aggregate_results(
         
         comm.send(G[start_rowindex:stop_rowindex, :], dest=0, tag=0)
         
-
-
-if __name__ == "__main__":
-    comm = MPI.COMM_WORLD
-    comm_size = comm.Get_size()
-    comm_rank = comm.Get_rank()
-
-    isComplex = False
-    is_symmetric = False
-    seed = 63
-
-    matrice_size = 9
-    blocksize    = 1
-    nblocks      = matrice_size // blocksize
-    bandwidth    = np.ceil(blocksize/2)
-    
-    if nblocks >= 3*comm_size:
-        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, is_symmetric, seed)
-        
-        A_refsol = np.linalg.inv(A)
-        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
-
-        A_psr = psr_seqsolve(A, blocksize)
-        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
-        
-        """ import matplotlib.pyplot as plt
-        plt.matshow(A_psr)
-        plt.matshow(A_refsol)
-        plt.show() """
-        
-        
-        if comm_rank == 0:
-            assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
-                and np.allclose(A_refsol_bloc_upper, A_psr_bloc_upper)\
-                and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)

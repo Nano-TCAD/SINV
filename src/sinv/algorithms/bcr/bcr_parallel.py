@@ -55,8 +55,11 @@ def bcr_parallel(
     G = np.zeros((nblocks_padded*blocksize, nblocks_padded*blocksize), dtype=A.dtype)
 
     # Partitionning
-    l_start_blockrow, l_partitions_blocksizes = bcr_u.divide_matrix(nblocks_padded, comm_size)
-    process_top_blockrow, process_bottom_blockrow = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank], l_partitions_blocksizes[comm_rank])
+    l_start_blockrow, l_partitions_blocksizes\
+        = bcr_u.divide_matrix(nblocks_padded, comm_size)
+    process_top_blockrow, process_bottom_blockrow\
+        = bcr_u.get_process_rowblock_index(l_start_blockrow[comm_rank],\
+                                           l_partitions_blocksizes[comm_rank])
 
 
     # 1. Block cyclic reduction
@@ -133,32 +136,50 @@ def reduce(
     # If there is a row above
     if i_blockindex >= 0: 
         A_ii_inv = np.linalg.inv(A[i_rowindex:ip1_rowindex, i_rowindex:ip1_rowindex])
-        U[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex] = A_ii_inv @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
-        L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] = A[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A_ii_inv
         
-        A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
+        U[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]\
+            = A_ii_inv @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
+            
+        L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex]\
+            = A[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A_ii_inv
+        
+        A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex]\
+            = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex]\
+              - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex]\
+                  @ A[i_rowindex:ip1_rowindex, j_rowindex:jp1_rowindex]
 
         # If the row above is not the top row
         if i_blockindex != i_elim[0]:
             h_rowindex = (i_blockindex - offset_blockindex) * blocksize
             hp1_rowindex = (i_blockindex - offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, h_rowindex:hp1_rowindex] = - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex] @ A[i_rowindex:ip1_rowindex, h_rowindex:hp1_rowindex]
+            A[j_rowindex:jp1_rowindex, h_rowindex:hp1_rowindex]\
+                = - L[j_rowindex:jp1_rowindex, i_rowindex:ip1_rowindex]\
+                    @ A[i_rowindex:ip1_rowindex, h_rowindex:hp1_rowindex]
 
     # If there is a row below
     if k_blockindex <= nblocks-1:
         A_kk_inv = np.linalg.inv(A[k_rowindex:kp1_rowindex, k_rowindex:kp1_rowindex])
-        U[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex] = A_kk_inv @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
-        L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] = A[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A_kk_inv
+        
+        U[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]\
+            = A_kk_inv @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
+            
+        L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex]\
+            = A[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A_kk_inv
 
-        A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex] - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
+        A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex]\
+            = A[j_rowindex:jp1_rowindex, j_rowindex:jp1_rowindex]\
+              - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex]\
+                  @ A[k_rowindex:kp1_rowindex, j_rowindex:jp1_rowindex]
 
         # If the row below is not the bottom row
         if k_blockindex != i_elim[-1]:
             l_rowindex   = (k_blockindex + offset_blockindex) * blocksize
             lp1_rowindex = (k_blockindex + offset_blockindex + 1) * blocksize
 
-            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex] = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex] @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
+            A[j_rowindex:jp1_rowindex, l_rowindex:lp1_rowindex]\
+                = - L[j_rowindex:jp1_rowindex, k_rowindex:kp1_rowindex]\
+                    @ A[k_rowindex:kp1_rowindex, l_rowindex:lp1_rowindex]
 
 
 

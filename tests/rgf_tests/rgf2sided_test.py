@@ -56,8 +56,10 @@ def test_rgf2sided(
     
     bandwidth    = np.ceil(blocksize/2)
     
-    A = utils.matu.generateBandedDiagonalMatrix(matrix_size, bandwidth, 
-                                                is_complex, is_symmetric, SEED)
+    A = utils.matu.generateBandedDiagonalMatrix(matrix_size, 
+                                                bandwidth, 
+                                                is_complex, 
+                                                is_symmetric, SEED)
     
     A_diagblk, A_upperblk, A_lowerblk\
         = utils.matu.convertDenseToBlkTridiag(A, blocksize)

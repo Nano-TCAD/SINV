@@ -83,9 +83,9 @@ def pdiv_localmap(
     for current_step in range(1, n_reduction_steps + 1):
         l_M, l_C = update_maps(l_M, l_M_ip1, l_C, K_local, l_upperbridges, l_lowerbridges, current_step, blocksize)
     
-    K_inv, Bu_inv, Bl_inv = produce_partition(K_local, l_M, l_C, blocksize)
+    X_diagblk, X_upperblk, X_lowerblk = produce_partition(K_local, l_M, l_C, blocksize)
 
-    return K_inv, Bu_inv, Bl_inv
+    return X_diagblk, X_upperblk, X_lowerblk
 
 
 
@@ -1003,10 +1003,18 @@ def produce_partition(
     K_inv = np.zeros(K_local.shape, dtype=K_local.dtype)
     partition_blocksize = K_local.shape[0] // blocksize
     
+    X_diagblk  = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)] 
+    X_upperblk = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)]
+    X_lowerblk = [np.zeros((blocksize, blocksize), dtype=K_local.dtype) for i in range(partition_blocksize)]
+    
     for row in range(0, partition_blocksize, 1):
         for col in range(max(0, row-1), min(partition_blocksize, row+2), 1):
-            K_inv[row*blocksize:(row+1)*blocksize, col*blocksize:(col+1)*blocksize]\
-                = produce_matrix_elements(row, col, K_local, l_M, blocksize)
+            if row == col:
+                X_diagblk[row] = produce_matrix_elements(row, col, K_local, l_M, blocksize)
+            elif row == col + 1:
+                X_lowerblk[row-1] = produce_matrix_elements(row, col, K_local, l_M, blocksize)
+            elif row == col - 1:
+                X_upperblk[row] = produce_matrix_elements(row, col, K_local, l_M, blocksize)    
     
     # 2. Produce the bridge part of the partition.
     comm = MPI.COMM_WORLD
@@ -1017,8 +1025,11 @@ def produce_partition(
     
     for process_i in range(0, comm_size, 1):
         Bu_inv, Bl_inv = produce_bridges(Bu_inv, Bl_inv, K_local, l_C, process_i, blocksize)
+        
+    X_upperblk[-1] = Bu_inv
+    X_lowerblk[-1] = Bl_inv
 
-    return K_inv, Bu_inv, Bl_inv
+    return X_diagblk, X_upperblk, X_lowerblk
 
 
 
@@ -1409,3 +1420,4 @@ def produce_lower_bridge(
     
     return Bl_inv
 
+        

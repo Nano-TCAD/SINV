@@ -60,15 +60,14 @@ def test_pdiv(
     blocksize: int
 ):
     """ Test the PDIV algorithm. """
-    
-    bandwidth = np.ceil(blocksize/2)
-    nblocks   = int(np.ceil(matrix_size/blocksize))
-    
     comm = MPI.COMM_WORLD
     comm_size = comm.Get_size()
     comm_rank = comm.Get_rank()
     
+    nblocks   = int(np.ceil(matrix_size/blocksize))
     if math.log2(comm_size).is_integer() and comm_size <= nblocks:
+        
+        bandwidth = np.ceil(blocksize/2)
         A = utils.matu.generateBandedDiagonalMatrix(matrix_size, 
                                                     bandwidth, 
                                                     is_complex, 
@@ -83,34 +82,30 @@ def test_pdiv(
         K_i, Bu_i, Bl_i = pdiv_u.partition_subdomain(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
     
         K_local = K_i[comm_rank]
-        K_inv_local, Bu_inv, Bl_inv = pdiv_lm.pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
+        X_diagblk, X_upperblk, X_lowerblk = pdiv_lm.pdiv_localmap(K_local, Bu_i, Bl_i, blocksize)
         
         
         # Extract local reference solution
         A_refsol = np.linalg.inv(A)
-        start_localpart_rowindex = l_start_blockrow[comm_rank] * blocksize
-        stop_localpart_rowindex  = start_localpart_rowindex + l_partitions_blocksizes[comm_rank] * blocksize
-        A_local_slice_of_refsolution = A_refsol[start_localpart_rowindex:stop_localpart_rowindex,
-                                                start_localpart_rowindex:stop_localpart_rowindex]
-        if comm_rank < comm_size-1:
-            Bu_refsol = A_refsol[stop_localpart_rowindex-blocksize:stop_localpart_rowindex,
-                                 stop_localpart_rowindex:stop_localpart_rowindex+blocksize]
-            Bl_refsol = A_refsol[stop_localpart_rowindex:stop_localpart_rowindex+blocksize,
-                                 stop_localpart_rowindex-blocksize:stop_localpart_rowindex]
         
+        X_refsol_diagblk  = [np.zeros((blocksize, blocksize), dtype=A_refsol.dtype) for i in range(0, l_partitions_blocksizes[comm_rank], 1)]
+        X_refsol_upperblk = [np.zeros((blocksize, blocksize), dtype=A_refsol.dtype) for i in range(0, l_partitions_blocksizes[comm_rank], 1)]
+        X_refsol_lowerblk = [np.zeros((blocksize, blocksize), dtype=A_refsol.dtype) for i in range(0, l_partitions_blocksizes[comm_rank], 1)]
+        
+        start_localpart_blockindex = l_start_blockrow[comm_rank]
         for i in range(0, l_partitions_blocksizes[comm_rank], 1):
-            for j in range(0, l_partitions_blocksizes[comm_rank], 1):
-                if j < i-1 or j > i+1:
-                    A_local_slice_of_refsolution[i*blocksize:(i+1)*blocksize, 
-                                                 j*blocksize:(j+1)*blocksize]\
-                                                    = np.zeros((blocksize, blocksize))
-        
-        
-        # Check results
-        assert np.allclose(A_local_slice_of_refsolution, K_inv_local)
+            i_part = i + start_localpart_blockindex
+            X_refsol_diagblk[i]  = A_refsol[i_part*blocksize:(i_part+1)*blocksize, i_part*blocksize:(i_part+1)*blocksize]
+            if i_part < nblocks-1:
+                X_refsol_upperblk[i] = A_refsol[i_part*blocksize:(i_part+1)*blocksize, (i_part+1)*blocksize:(i_part+2)*blocksize]
+                X_refsol_lowerblk[i] = A_refsol[(i_part+1)*blocksize:(i_part+2)*blocksize, i_part*blocksize:(i_part+1)*blocksize]
+            else:
+                X_refsol_upperblk[i] = np.zeros((blocksize, blocksize), dtype=A_refsol.dtype)
+                X_refsol_lowerblk[i] = np.zeros((blocksize, blocksize), dtype=A_refsol.dtype)
+
           
-        if comm_rank < comm_size-1:
-            assert np.allclose(Bu_refsol, Bu_inv)
-            assert np.allclose(Bl_refsol, Bl_inv)
+        assert np.allclose(X_diagblk, X_refsol_diagblk)
+        assert np.allclose(X_upperblk, X_refsol_upperblk)
+        assert np.allclose(X_lowerblk, X_refsol_lowerblk)
             
             

@@ -17,8 +17,10 @@ from mpi4py import MPI
 
 
 
-def psr_seqsolve(A: np.ndarray, 
-                 blocksize: int):
+def psr_seqsolve(
+    A: np.ndarray, 
+    blocksize: int
+) -> np.ndarray:
     """ Selected inversion algorithm using the parallel Schur reduction 
     algorithm. The algorithm work in place and will overwrite the input matrix A.
 
@@ -56,7 +58,7 @@ def psr_seqsolve(A: np.ndarray,
     
     if comm_rank == 0:
         A_schur = aggregate_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
-        G_schur = inverse_reduced_system(A_schur, blocksize)
+        G_schur = inverse_reduced_system(A_schur)
         sendback_inverted_reduced_system(G_schur, G, l_start_blockrow, l_partitions_blocksizes, blocksize)
     else:
         send_reduced_system(A, l_start_blockrow, l_partitions_blocksizes, blocksize)
@@ -71,10 +73,12 @@ def psr_seqsolve(A: np.ndarray,
 
 
 
-def reduce_schur(A: np.ndarray, 
-                 l_start_blockrow: list,
-                 l_partitions_blocksizes: list,
-                 blocksize: int):
+def reduce_schur(
+    A: np.ndarray, 
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Proceed to the parallel Schur reduction of the matrix A.
     
     Parameters
@@ -120,10 +124,12 @@ def reduce_schur(A: np.ndarray,
     
     
     
-def reduce_schur_topleftcorner(A: np.ndarray, 
-                               start_blockrow: int,
-                               partition_blocksize: int,
-                               blocksize: int):
+def reduce_schur_topleftcorner(
+    A: np.ndarray, 
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Top left corner of the parallel Schur reduction of the matrix A.
     
     Parameters
@@ -173,10 +179,12 @@ def reduce_schur_topleftcorner(A: np.ndarray,
 
 
 
-def reduce_schur_bottomrightcorner(A: np.ndarray, 
-                                   start_blockrow: int,
-                                   partition_blocksize: int,
-                                   blocksize: int):
+def reduce_schur_bottomrightcorner(
+    A: np.ndarray, 
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Bottom right corner of the parallel Schur reduction of the matrix A.
     
     Parameters
@@ -226,10 +234,12 @@ def reduce_schur_bottomrightcorner(A: np.ndarray,
 
 
 
-def reduce_schur_central(A: np.ndarray, 
-                         start_blockrow: int,
-                         partition_blocksize: int,
-                         blocksize: int):
+def reduce_schur_central(
+    A: np.ndarray, 
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Central part of the parallel Schur reduction of the matrix A.
     
     Parameters
@@ -300,10 +310,12 @@ def reduce_schur_central(A: np.ndarray,
     
 
 
-def aggregate_reduced_system(A: np.ndarray,
-                             l_start_blockrow: list,
-                             l_partitions_blocksizes: list,
-                             blocksize: int):
+def aggregate_reduced_system(
+    A: np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> np.ndarray:
     """ Aggregate the Schur reduced system on the root process.
     
     Parameters
@@ -372,10 +384,12 @@ def aggregate_reduced_system(A: np.ndarray,
                
                
 
-def send_reduced_system(A: np.ndarray,
-                        l_start_blockrow: list,
-                        l_partitions_blocksizes: list,
-                        blocksize: int):
+def send_reduced_system(
+    A: np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> None:
     """ Send the local part of the reduced system to the root process for 
     inversion.
     
@@ -453,8 +467,9 @@ def send_reduced_system(A: np.ndarray,
      
      
       
-def inverse_reduced_system(A_schur: np.ndarray,
-                           blocksize: int):
+def inverse_reduced_system(
+    A_schur: np.ndarray,
+) -> np.ndarray:
     """ Compute the inverse of the reduced system. Any selected inversion 
     solvers may be plugged here.
     
@@ -477,11 +492,13 @@ def inverse_reduced_system(A_schur: np.ndarray,
 
 
 
-def sendback_inverted_reduced_system(G_schur: np.ndarray,
-                                     G : np.ndarray,
-                                     l_start_blockrow: list,
-                                     l_partitions_blocksizes: list,
-                                     blocksize: int):
+def sendback_inverted_reduced_system(
+    G_schur: np.ndarray,
+    G : np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> None:
     """ Send back part of the inverted reduced system to their respective
     original processes.
     
@@ -544,10 +561,12 @@ def sendback_inverted_reduced_system(G_schur: np.ndarray,
 
 
 
-def receiveback_inverted_reduced_system(G : np.ndarray,
-                                        l_start_blockrow: list,
-                                        l_partitions_blocksizes: list,
-                                        blocksize: int):
+def receiveback_inverted_reduced_system(
+    G : np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> None:
     """ Processes receive their respective part of the inverted reduced system
     and store it in the suited part of the G (full inverse) matrix.
     
@@ -625,13 +644,15 @@ def receiveback_inverted_reduced_system(G : np.ndarray,
     
 
 
-def produce_schur(A: np.ndarray, 
-                  L: np.ndarray,
-                  U: np.ndarray,
-                  G: np.ndarray,
-                  l_start_blockrow: list,
-                  l_partitions_blocksizes: list,
-                  blocksize: int):
+def produce_schur(
+    A: np.ndarray, 
+    L: np.ndarray,
+    U: np.ndarray,
+    G: np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> None:
     """ Proceed to the parallel Schur production of the matrix A.
     
     Parameters
@@ -669,13 +690,15 @@ def produce_schur(A: np.ndarray,
 
 
 
-def produce_schur_topleftcorner(A: np.ndarray,
-                                L: np.ndarray,
-                                U: np.ndarray,
-                                G: np.ndarray,
-                                start_blockrow: int,
-                                partition_blocksize: int,
-                                blocksize: int):
+def produce_schur_topleftcorner(
+    A: np.ndarray,
+    L: np.ndarray,
+    U: np.ndarray,
+    G: np.ndarray,
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> None:
     """ Produce the upper left part of the full inverse.
     
     Parameters
@@ -715,13 +738,15 @@ def produce_schur_topleftcorner(A: np.ndarray,
 
 
 
-def produce_schur_bottomrightcorner(A: np.ndarray,
-                                    L: np.ndarray,
-                                    U: np.ndarray,
-                                    G: np.ndarray,
-                                    start_blockrow: int,
-                                    partition_blocksize: int,
-                                    blocksize: int):
+def produce_schur_bottomrightcorner(
+    A: np.ndarray,
+    L: np.ndarray,
+    U: np.ndarray,
+    G: np.ndarray,
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> None:
     """ Produce the lower right part of the full inverse.
     
     Parameters
@@ -761,13 +786,15 @@ def produce_schur_bottomrightcorner(A: np.ndarray,
 
 
 
-def produce_schur_central(A: np.ndarray,
-                          L: np.ndarray,
-                          U: np.ndarray,
-                          G: np.ndarray,
-                          start_blockrow: int,
-                          partition_blocksize: int,
-                          blocksize: int):
+def produce_schur_central(
+    A: np.ndarray,
+    L: np.ndarray,
+    U: np.ndarray,
+    G: np.ndarray,
+    start_blockrow: int,
+    partition_blocksize: int,
+    blocksize: int
+) -> None:
     """ Produce one of the central parts of the full inverse.
     
     Parameters
@@ -872,10 +899,12 @@ def produce_schur_central(A: np.ndarray,
 
 
 
-def aggregate_results(G: np.ndarray,
-                      l_start_blockrow: list,
-                      l_partitions_blocksizes: list,
-                      blocksize: int):
+def aggregate_results(
+    G: np.ndarray,
+    l_start_blockrow: list,
+    l_partitions_blocksizes: list,
+    blocksize: int
+) -> None:
     """ Aggregate results from all processes into the global matrix G on rank 0.
     
     Parameters
@@ -912,3 +941,38 @@ def aggregate_results(G: np.ndarray,
         
         comm.send(G[start_rowindex:stop_rowindex, :], dest=0, tag=0)
         
+
+
+if __name__ == "__main__":
+    comm = MPI.COMM_WORLD
+    comm_size = comm.Get_size()
+    comm_rank = comm.Get_rank()
+
+    isComplex = False
+    is_symmetric = False
+    seed = 63
+
+    matrice_size = 9
+    blocksize    = 1
+    nblocks      = matrice_size // blocksize
+    bandwidth    = np.ceil(blocksize/2)
+    
+    if nblocks >= 3*comm_size:
+        A = utils.matu.generateBandedDiagonalMatrix(matrice_size, bandwidth, isComplex, is_symmetric, seed)
+        
+        A_refsol = np.linalg.inv(A)
+        A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
+
+        A_psr = psr_seqsolve(A, blocksize)
+        A_psr_bloc_diag, A_psr_bloc_upper, A_psr_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_psr, blocksize)
+        
+        """ import matplotlib.pyplot as plt
+        plt.matshow(A_psr)
+        plt.matshow(A_refsol)
+        plt.show() """
+        
+        
+        if comm_rank == 0:
+            assert np.allclose(A_refsol_bloc_diag, A_psr_bloc_diag)\
+                and np.allclose(A_refsol_bloc_upper, A_psr_bloc_upper)\
+                and np.allclose(A_refsol_bloc_lower, A_psr_bloc_lower)

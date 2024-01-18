@@ -10,15 +10,18 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 
 import numpy as np
 
-from quasi.bsparse._base import bsparse
+import bsparse as bsp
+
+
+import matplotlib.pyplot as plt
 
 
 
 def rgf(
-    A: bsparse,
+    A: bsp,
     sym_mat: bool = False,
     save_off_diag: bool = True,
-) -> bsparse:
+) -> bsp:
     """ RGF algorithm performing block-tridiagonal selected inversion on the 
     input matrix. Act from upper left to lower right.
 
@@ -41,25 +44,28 @@ def rgf(
     G = A.copy() * np.nan
     
     # 0. Inverse of the first block
-    G.blocks[0, 0] = np.linalg.inv(A.blocks[0, 0])
-
+    G[0, 0] = np.linalg.inv(A[0, 0])
+    
     # 1. Forward substitution (performed left to right)
-    for i in range(1, A.blockorder, 1):
-        G.blocks[i, i] = np.linalg.inv(A.blocks[i, i] - A.blocks[i, i-1] @ G.blocks[i-1, i-1] @ A.blocks[i-1, i])
+    for i in range(1, A.bshape[0], 1):
+        G[i, i] = np.linalg.inv(A[i, i] - A[i, i-1] @ G[i-1, i-1] @ A[i-1, i])
 
     # 2. Backward substitution (performed right to left)
-    for i in range(A.blockorder-2, -1, -1): 
-        g_ii = G.blocks[i, i]
-        G_lowerfactor = G.blocks[i+1, i+1] @ A.blocks[i+1, i] @ g_ii   
+    for i in range(A.bshape[0]-2, -1, -1): 
+        g_ii = G[i, i]
+        G_lowerfactor = G[i+1, i+1] @ A[i+1, i] @ g_ii   
         
         if save_off_diag:
-            G.blocks[i+1, i] = -G_lowerfactor
-            if sym_mat:
-                G.blocks[i, i+1] = G.blocks[i+1, i].T
+            G[i+1, i] = -G_lowerfactor
+            if sym_mat == False:
+                G[i, i+1] = -g_ii @ A[i, i+1] @ G[i+1, i+1]
+            """ if sym_mat:
+                G[i, i+1] = G[i+1, i].T
             else:
-                G.blocks[i, i+1] = -g_ii @ A.blocks[i, i+1] @ G.blocks[i+1, i+1]
+                G[i, i+1] = -g_ii @ A[i, i+1] @ G[i+1, i+1] """
             
-        G.blocks[i, i]   =  g_ii + g_ii @ A.blocks[i, i+1] @ G_lowerfactor
+        G[i, i]   =  g_ii + g_ii @ A[i, i+1] @ G_lowerfactor
 
     return G
+        
         

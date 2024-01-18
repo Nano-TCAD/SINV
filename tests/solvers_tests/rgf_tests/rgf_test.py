@@ -6,10 +6,14 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 from sinv.algorithms import rgf
-from sinv.utils import matu
+from sinv.utils import testu
+from sinv.utils import rlcu
 
-from quasi.bsparse import bdia, bsr
-from quasi.bsparse._base import bsparse
+#from quasi.bsparse import bdia, bsr
+#from quasi.bsparse._base import bsparse
+
+import bsparse as bsp
+
 
 import numpy as np
 import pytest
@@ -38,58 +42,51 @@ SEED = 63
 | Test 12 |   128x128    |     32    |    4    |
 ================================================ """
 @pytest.mark.mpi_skip()
-@pytest.mark.parametrize("bsparse_type", [bdia, bsr])
 @pytest.mark.parametrize("is_complex", [False, True])
+# @pytest.mark.parametrize("is_symmetric", [False])
 @pytest.mark.parametrize("is_symmetric", [False, True])
 @pytest.mark.parametrize(
-    "matrix_size, blocksize",
+    "n_blocks, blocksize",
     [
-        (1, 1), 
-        (2, 2),
-        (3, 3),
         (2, 1),
-        (4, 2),
-        (6, 3),
+        (2, 2),
+        (2, 3),
         (3, 1),
-        (6, 2),
-        (9, 3),
-        (128, 8),
-        (128, 16),
-        (128, 32),
+        (3, 2),
+        (3, 3),
+        (16, 8),
+        (8, 16),
+        (4, 32),
     ]
 )
-def test_rgf_bsparse(
-    bsparse_type: bsparse, 
+def test_rgf_BDIA(
     is_complex: bool,
     is_symmetric: bool,
-    matrix_size: int,
+    n_blocks: int,
     blocksize: int
 ):
-    """ Test the RGF algorithm on a bsparse matrix. """
+    """ Test the RGF algorithm on a bsparse.BDIA matrix. """
     
-    n_blocks = matrix_size // blocksize
-    sub_mat_size = min(matrix_size, 2*blocksize)
-    n_sub_mat = max(1, n_blocks - 1)        
-    overlap = blocksize    
-        
-    A = bsparse_type.diag(
-        [matu.generateRandomNumpyMat(sub_mat_size, is_complex, is_symmetric, SEED) 
-        for _ in range(n_sub_mat)], 
-        blocksize, overlap
-    )
+    diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks = testu.create_block_tridiagonal_matrix(n_blocks, blocksize, is_complex, is_symmetric)
     
-    X_refsol = np.linalg.inv(A.toarray())
-    X_rgf = rgf.rgf(A, is_symmetric)
+    bsparse_matrix = rlcu.block_tridiagonal_to_BDIA(diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks, blocksize, is_symmetric)
+    
+    X_refsol = np.linalg.inv(bsparse_matrix.toarray())
+    X_refsol = testu.cut_dense_to_block_tridiagonal(X_refsol, blocksize)
+    
+    X_rgf = rgf.rgf(bsparse_matrix, is_symmetric)
     
     # Check main diagonal
-    for i in range(X_rgf.blockorder):
+    for i in range(X_rgf.bshape[0]):
         ii = slice(i*blocksize, (i+1)*blocksize)
-        asser = np.allclose(X_rgf.blocks[i, i], X_refsol[ii, ii])
+        asser = np.allclose(X_rgf[i, i], X_refsol[ii, ii])
         
     # Check off-diagonals
-    for i in range(X_rgf.blockorder - 1):
+    for i in range(X_rgf.bshape[0] - 1):
         ii = slice(i * blocksize, (i + 1) * blocksize)
         jj = slice((i + 1) * blocksize, (i + 2) * blocksize)
-        assert np.allclose(X_rgf.blocks[i + 1, i], X_refsol[jj, ii])
-        assert np.allclose(X_rgf.blocks[i, i + 1], X_refsol[ii, jj])
+        assert np.allclose(X_rgf[i + 1, i], X_refsol[jj, ii])
+        assert np.allclose(X_rgf[i, i + 1], X_refsol[ii, jj])
+    
+    #assert np.allclose(X_rgf.toarray(), X_refsol)
 

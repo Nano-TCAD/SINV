@@ -6,7 +6,7 @@ Copyright 2024 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
+from scipy.sparse import csr_matrix
 
 from read_load_convert_utils import read_block_tridiagonal_matrix
 
@@ -78,4 +78,3 @@ def save_block_tridigonal_matrix(
     """
     
     np.savez(file_path, diagonal_blocks=diagonal_blocks, upper_diagonal_blocks=upper_diagonal_blocks, lower_diagonal_blocks=lower_diagonal_blocks)
-

@@ -6,7 +6,7 @@ Copyright 2024 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 import numpy as np
-
+import bsparse as bsp
 
 
 def read_block_tridiagonal_matrix(
@@ -104,31 +104,45 @@ def read_local_block_tridiagonal_partition(
     return diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
 
 
-def read_csr_matrix(
-    file_path: str,
-    n_blocks: int,
-    blocksize: int,
-    is_complex: bool,
-) -> [np.ndarray, np.ndarray, np.ndarray]:
-    pass
-
-
-def read_local_csr_partition(
-    file_path: str,
-    start_blockrow: int,
-    partition_size: int,
-    include_bridges_blocks: bool,
-    n_blocks: int,
-    blocksize: int,
-    is_complex: bool,
-) -> [np.ndarray, np.ndarray, np.ndarray]:
-    pass
-
-
-""" def block_tridiagonal_to_bsparse(
+def block_tridiagonal_to_bsparse(
     diagonal_blocks: np.ndarray,
     upper_diagonal_blocks: np.ndarray,
     lower_diagonal_blocks: np.ndarray,
     blocksize: int,
-) -> bsparse:
-    pass """
+) -> bsp.BDIA:
+    """ Convert a block tridiagonal matrix to a bsparse.BDIA matrix.
+
+    Parameters
+    ----------
+    diagonal_blocks : np.ndarray
+        The diagonal blocks of the block tridiagonal matrix.
+    upper_diagonal_blocks : np.ndarray
+        The upper diagonal blocks of the block tridiagonal matrix.
+    lower_diagonal_blocks : np.ndarray 
+        The lower diagonal blocks of the block tridiagonal matrix.
+    blocksize : int 
+        The size of each block in the block tridiagonal matrix.
+
+    Returns
+    -------
+    bsparse_matrix : bdia 
+        The bsparse matrix representation of the block tridiagonal matrix.
+    """
+    
+    n_blocks = diagonal_blocks.shape[0] // blocksize
+    
+    reordered_diagonal_blocks = np.zeros((n_blocks, blocksize, blocksize))
+    reordered_upper_diagonal_blocks = np.zeros((n_blocks-1, blocksize, blocksize))
+    reordered_lower_diagonal_blocks = np.zeros((n_blocks-1, blocksize, blocksize))
+    
+    for i in range(n_blocks):
+        reordered_diagonal_blocks[i] = diagonal_blocks[i*blocksize:(i+1)*blocksize]
+        if i < n_blocks-1:
+            reordered_upper_diagonal_blocks[i] = upper_diagonal_blocks[i*blocksize:(i+1)*blocksize]
+            reordered_lower_diagonal_blocks[i] = lower_diagonal_blocks[i*blocksize:(i+1)*blocksize]
+        
+    offsets = [0, 1, -1]    
+    
+    bsparse_matrix = bsp.BDIA(offsets, [reordered_diagonal_blocks, reordered_upper_diagonal_blocks, reordered_lower_diagonal_blocks])
+    
+    return bsparse_matrix

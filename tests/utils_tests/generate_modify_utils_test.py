@@ -114,3 +114,5 @@ def test_zero_out_dense_to_block_tridiagonal(
         for j in range(i+2, n_blocks):
             assert np.any(tridiag_cut_dense_matrix[i*blocksize:(i+1)*blocksize, j*blocksize:(j+1)*blocksize] == np.zeros((blocksize, blocksize)))
             assert np.any(tridiag_cut_dense_matrix[j*blocksize:(j+1)*blocksize,i*blocksize:(i+1)*blocksize] == np.zeros((blocksize, blocksize)))
+            
+            

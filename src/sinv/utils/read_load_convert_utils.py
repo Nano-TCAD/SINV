@@ -10,31 +10,39 @@ import bsparse as bsp
 
 
 def save_block_tridigonal_matrix(
+    file_path: str,
     diagonal_blocks: np.ndarray,
     upper_diagonal_blocks: np.ndarray,
     lower_diagonal_blocks: np.ndarray,
-    file_path: str,
+    is_symmetric: bool = False,
 ) -> None:
-    """ Save a block tridiagonal matrix to a file.
+    """ 
+    Save a block tridiagonal matrix to a file.
 
     Parameters
     ----------
+    file_path : str
+        Path to the file where to save the matrix.
     diagonal_blocks : np.ndarray
         The diagonal blocks of the matrix.
     upper_diagonal_blocks : np.ndarray
         The upper diagonal blocks of the matrix.
     lower_diagonal_blocks : np.ndarray
         The lower diagonal blocks of the matrix.
-    file_path : str
-        Path to the file where to save the matrix.
+    is_symmetric : bool, optional
+        Whether the matrix is symmetric or not. The default is False.
     
     """
     
-    np.savez(file_path, diagonal_blocks=diagonal_blocks, upper_diagonal_blocks=upper_diagonal_blocks, lower_diagonal_blocks=lower_diagonal_blocks)
+    if is_symmetric:
+        np.savez(file_path, diagonal_blocks=diagonal_blocks, upper_diagonal_blocks=upper_diagonal_blocks)
+    else:
+        np.savez(file_path, diagonal_blocks=diagonal_blocks, upper_diagonal_blocks=upper_diagonal_blocks, lower_diagonal_blocks=lower_diagonal_blocks)
 
 
 def read_block_tridiagonal_matrix(
     file_path: str,
+    is_symmetric: bool = False,
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
     """ Read a block tridiagonal matrix stored in .npz format. First stored array 
     should contain the diagonal blocks, second array the upper diagonal blocks 
@@ -44,6 +52,8 @@ def read_block_tridiagonal_matrix(
     ----------
     file_path : str
         Path to the file where the matrix is stored.
+    is_symmetric : bool, optional
+        Whether the matrix is symmetric or not. The default is False.
         
     Returns
     -------
@@ -58,13 +68,23 @@ def read_block_tridiagonal_matrix(
         
     matrix = np.load(file_path)
     
-    diagonal_blocks = matrix[matrix.files[0]]
-    upper_diagonal_blocks = matrix[matrix.files[1]]
-    lower_diagonal_blocks = matrix[matrix.files[2]]
-    
+    if is_symmetric:
+        diagonal_blocks = matrix[matrix.files[0]]
+        upper_diagonal_blocks = matrix[matrix.files[1]]
+        lower_diagonal_blocks = np.zeros_like(upper_diagonal_blocks)
+        
+        n_blocks = diagonal_blocks.shape[0]
+        for i in range(n_blocks-1):
+            lower_diagonal_blocks[i, :, :] = upper_diagonal_blocks[i, :, :].T
+        
+    else:
+        diagonal_blocks = matrix[matrix.files[0]]
+        upper_diagonal_blocks = matrix[matrix.files[1]]
+        lower_diagonal_blocks = matrix[matrix.files[2]]
+        
     return diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
-
-
+        
+        
 def read_local_block_tridiagonal_partition(
     file_path: str,
     start_blockrow: int,

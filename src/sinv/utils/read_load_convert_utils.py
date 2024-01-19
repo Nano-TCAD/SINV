@@ -9,6 +9,30 @@ import numpy as np
 import bsparse as bsp
 
 
+def save_block_tridigonal_matrix(
+    diagonal_blocks: np.ndarray,
+    upper_diagonal_blocks: np.ndarray,
+    lower_diagonal_blocks: np.ndarray,
+    file_path: str,
+) -> None:
+    """ Save a block tridiagonal matrix to a file.
+
+    Parameters
+    ----------
+    diagonal_blocks : np.ndarray
+        The diagonal blocks of the matrix.
+    upper_diagonal_blocks : np.ndarray
+        The upper diagonal blocks of the matrix.
+    lower_diagonal_blocks : np.ndarray
+        The lower diagonal blocks of the matrix.
+    file_path : str
+        Path to the file where to save the matrix.
+    
+    """
+    
+    np.savez(file_path, diagonal_blocks=diagonal_blocks, upper_diagonal_blocks=upper_diagonal_blocks, lower_diagonal_blocks=lower_diagonal_blocks)
+
+
 def read_block_tridiagonal_matrix(
     file_path: str,
 ) -> [np.ndarray, np.ndarray, np.ndarray]:

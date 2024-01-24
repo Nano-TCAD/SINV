@@ -1,5 +1,8 @@
 # Customs
 .vscode/
+*.pdf
+*.png
+*.npz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -129,6 +129,9 @@ def read_local_block_tridiagonal_partition(
 
     off_diagonal_number_of_blocks = partition_size - 1 
     
+    # If we include the bridge blocks, we need to read one more blockrow above
+    # with respect to the partition position (ie. first and last partition respectively
+    # doesn't have upper/lower bridge blocks)
     start_upper_blockrow = start_blockrow
     start_lower_blockrow = start_blockrow
     
@@ -152,7 +155,6 @@ def block_tridiagonal_to_BDIA(
     diagonal_blocks: np.ndarray,
     upper_diagonal_blocks: np.ndarray,
     lower_diagonal_blocks: np.ndarray,
-    blocksize: int,
     symmetry: str = None,
 ) -> bsp.BDIA:
     """ Convert a block tridiagonal matrix to a bsparse.BDIA matrix.
@@ -179,13 +181,20 @@ def block_tridiagonal_to_BDIA(
         If the given symmetry is not supported. It should either be 'symmetric'
         or 'hermitian'.
     """
-        
-    offsets = [0, 1, -1]    
+    bsparse_matrix: bsp.BDIA
     
-    
-    if symmetry != 'symmetric' or symmetry != 'hermitian':
-        raise ValueError("The given symmetry is not supported.")
-        
-    bsparse_matrix = bsp.BDIA(offsets, [diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks], symmetry=symmetry)
-    
+    if symmetry == None:
+        offsets = [0, 1, -1]    
+        bsparse_matrix = bsp.BDIA(offsets, [diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks], symmetry=symmetry)
+    elif symmetry in ("symmetric", "hermitian"):
+        offsets = [0, 1]    
+        bsparse_matrix = bsp.BDIA(offsets, [diagonal_blocks, upper_diagonal_blocks], symmetry=symmetry)
+    else:
+        raise ValueError("Invalid symmetry.")
+     
     return bsparse_matrix
+
+
+
+
+    

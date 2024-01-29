@@ -6,7 +6,8 @@ Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
 from os import environ
-environ['OMP_NUM_THREADS'] = '1'
+
+environ["OMP_NUM_THREADS"] = "1"
 
 from sinv.algorithms import bcr_p
 from sinv import utils
@@ -16,7 +17,6 @@ import pytest
 from mpi4py import MPI
 
 SEED = 63
-
 
 
 """ Uniform blocksize tests cases 
@@ -37,6 +37,8 @@ SEED = 63
 | Test 8  |   128x128    |    16     |    8    |
 | Test 9  |   128x128    |    32     |    4    |
 ================================================ """
+
+
 @pytest.mark.mpi(min_size=2)
 @pytest.mark.parametrize("is_complex", [False, True])
 @pytest.mark.parametrize("is_symmetric", [False, True])
@@ -52,32 +54,34 @@ SEED = 63
         (256, 8),
         (240, 10),
         (144, 12),
-    ]
+    ],
 )
-def test_bcrp(
-    is_complex: bool,
-    is_symmetric: bool,
-    matrix_size: int,
-    blocksize: int
-):
-    """ Test the BCR-P algorithm. """
+def test_bcrp(is_complex: bool, is_symmetric: bool, matrix_size: int, blocksize: int):
+    """Test the BCR-P algorithm."""
     comm = MPI.COMM_WORLD
     comm_rank = comm.Get_rank()
 
-    bandwidth    = np.ceil(blocksize/2)
-    
-    A = utils.matu.generateBandedDiagonalMatrix(matrix_size, bandwidth, is_complex, is_symmetric, SEED)
-    
+    bandwidth = np.ceil(blocksize / 2)
+
+    A = utils.matu.generateBandedDiagonalMatrix(
+        matrix_size, bandwidth, is_complex, is_symmetric, SEED
+    )
+
     A_refsol = np.linalg.inv(A)
-    A_refsol_bloc_diag, A_refsol_bloc_upper, A_refsol_bloc_lower = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
+    (
+        A_refsol_bloc_diag,
+        A_refsol_bloc_upper,
+        A_refsol_bloc_lower,
+    ) = utils.matu.convertDenseToBlkTridiag(A_refsol, blocksize)
 
     G_bcr_p = bcr_p.bcr_parallel(A, blocksize)
-    G_bcr_p_bloc_diag, G_bcr_p_bloc_upper, G_bcr_p_bloc_lower = utils.matu.convertDenseToBlkTridiag(G_bcr_p, blocksize)
-    
+    (
+        G_bcr_p_bloc_diag,
+        G_bcr_p_bloc_upper,
+        G_bcr_p_bloc_lower,
+    ) = utils.matu.convertDenseToBlkTridiag(G_bcr_p, blocksize)
+
     if comm_rank == 0:
         assert np.allclose(A_refsol_bloc_diag, G_bcr_p_bloc_diag)
         assert np.allclose(A_refsol_bloc_upper, G_bcr_p_bloc_upper)
         assert np.allclose(A_refsol_bloc_lower, G_bcr_p_bloc_lower)
-        
-        
-        

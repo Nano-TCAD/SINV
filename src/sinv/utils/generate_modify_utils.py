@@ -16,8 +16,8 @@ def create_block_tridiagonal_matrix(
     is_diagonally_dominant: bool = True,
     seed: int = None,
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
-    """ Create a random block tridiagonal matrix.
-    
+    """Create a random block tridiagonal matrix.
+
     Parameters
     ----------
     n_blocks : int
@@ -42,48 +42,64 @@ def create_block_tridiagonal_matrix(
     lower_diagonal_blocks : np.ndarray
         The lower diagonal blocks of the matrix.
     """
-    
+
     if seed is not None:
         np.random.seed(seed)
-        
+
     dtype = np.float64
     if is_complex:
-        dtype = np.complex128    
-        
+        dtype = np.complex128
+
     diagonal_blocks = np.zeros((n_blocks, blocksize, blocksize), dtype=dtype)
-    upper_diagonal_blocks = np.zeros((n_blocks-1, blocksize, blocksize), dtype=dtype)
-    lower_diagonal_blocks = np.zeros((n_blocks-1, blocksize, blocksize), dtype=dtype)
-    
+    upper_diagonal_blocks = np.zeros((n_blocks - 1, blocksize, blocksize), dtype=dtype)
+    lower_diagonal_blocks = np.zeros((n_blocks - 1, blocksize, blocksize), dtype=dtype)
+
     for i in range(n_blocks):
         diagonal_blocks[i, :, :] = np.random.rand(blocksize, blocksize)
-        
+
         if is_complex:
-            diagonal_blocks[i, :, :] = diagonal_blocks[i, :, :] + 1j * np.random.rand(blocksize, blocksize)
-        
+            diagonal_blocks[i, :, :] = diagonal_blocks[i, :, :] + 1j * np.random.rand(
+                blocksize, blocksize
+            )
+
         if is_symmetric:
-            diagonal_blocks[i, :, :] = diagonal_blocks[i, :, :] + diagonal_blocks[i, :, :].T
-        
-        if i < n_blocks-1:
+            diagonal_blocks[i, :, :] = (
+                diagonal_blocks[i, :, :] + diagonal_blocks[i, :, :].T
+            )
+
+        if i < n_blocks - 1:
             upper_diagonal_blocks[i, :, :] = np.random.rand(blocksize, blocksize)
             lower_diagonal_blocks[i, :, :] = np.random.rand(blocksize, blocksize)
-            
+
             if is_complex:
-                upper_diagonal_blocks[i, :, :] = upper_diagonal_blocks[i, :, :] + 1j * np.random.rand(blocksize, blocksize)
-                lower_diagonal_blocks[i, :, :] = lower_diagonal_blocks[i, :, :] + 1j * np.random.rand(blocksize, blocksize)
-        
+                upper_diagonal_blocks[i, :, :] = upper_diagonal_blocks[
+                    i, :, :
+                ] + 1j * np.random.rand(blocksize, blocksize)
+                lower_diagonal_blocks[i, :, :] = lower_diagonal_blocks[
+                    i, :, :
+                ] + 1j * np.random.rand(blocksize, blocksize)
+
             if is_symmetric:
-                upper_diagonal_blocks[i, :, :] = upper_diagonal_blocks[i, :, :] + upper_diagonal_blocks[i, :, :].T
+                upper_diagonal_blocks[i, :, :] = (
+                    upper_diagonal_blocks[i, :, :] + upper_diagonal_blocks[i, :, :].T
+                )
                 lower_diagonal_blocks[i, :, :] = upper_diagonal_blocks[i, :, :].T
-    
+
     if is_diagonally_dominant:
-        diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks = make_block_tridiagonal_matrix_diagonally_dominant(diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks)
+        (
+            diagonal_blocks,
+            upper_diagonal_blocks,
+            lower_diagonal_blocks,
+        ) = make_block_tridiagonal_matrix_diagonally_dominant(
+            diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
+        )
 
     return diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
 
 
 def make_block_tridiagonal_matrix_diagonally_dominant(
-    diagonal_blocks: int, 
-    upper_diagonal_blocks: int, 
+    diagonal_blocks: int,
+    upper_diagonal_blocks: int,
     lower_diagonal_blocks: int,
     strictly_diagonally_dominant: bool = True,
 ) -> [np.ndarray, np.ndarray, np.ndarray]:
@@ -114,28 +130,28 @@ def make_block_tridiagonal_matrix_diagonally_dominant(
     """
     n_blocks = diagonal_blocks.shape[0]
     blocksize = diagonal_blocks.shape[1]
-    
+
     for i in range(n_blocks):
         for j in range(blocksize):
             row_sum = np.sum(np.abs(diagonal_blocks[i, j, :]))
-            if i < n_blocks-1:
+            if i < n_blocks - 1:
                 row_sum += np.sum(np.abs(upper_diagonal_blocks[i, j, :]))
             if i > 0:
-                row_sum += np.sum(np.abs(lower_diagonal_blocks[i-1, j, :]))
-            
+                row_sum += np.sum(np.abs(lower_diagonal_blocks[i - 1, j, :]))
+
             if strictly_diagonally_dominant:
                 diagonal_blocks[i, j, j] = row_sum
             else:
                 diagonal_blocks[i, j, j] = row_sum - np.abs(diagonal_blocks[i, j, j])
-                
+
     return diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
-                
+
 
 def zero_out_dense_to_block_tridiagonal(
     dense_matrix: np.ndarray,
     blocksize: int,
 ) -> np.ndarray:
-    """ Cut a dense matrix to a block tridiagonal matrix.
+    """Cut a dense matrix to a block tridiagonal matrix.
 
     Parameters
     ----------
@@ -167,7 +183,9 @@ def zero_out_dense_to_block_tridiagonal(
     for i in range(n_blocks):
         for j in range(n_blocks):
             if abs(i - j) > 1:
-                dense_matrix[i * blocksize:(i + 1) * blocksize, j * blocksize:(j + 1) * blocksize] = 0
+                dense_matrix[
+                    i * blocksize : (i + 1) * blocksize,
+                    j * blocksize : (j + 1) * blocksize,
+                ] = 0
 
     return dense_matrix
-

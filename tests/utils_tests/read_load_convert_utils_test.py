@@ -129,6 +129,14 @@ def test_block_tridiagonal_to_BDIA(
     "is_symmetric", 
     [
         pytest.param(False, id="non-symmetric"),
+        pytest.param(True, id="symmetric")
+    ]
+)
+@pytest.mark.parametrize(
+    "include_bridges_blocks", 
+    [
+        pytest.param(False, id="no bridges blocks"),
+        pytest.param(True, id="with bridges blocks")
     ]
 )
 def test_read_local_block_tridiagonal_partition(
@@ -137,6 +145,7 @@ def test_read_local_block_tridiagonal_partition(
     blocksize: int,
     is_complex: bool,
     is_symmetric: bool,
+    include_bridges_blocks: bool,
 ):
     SEED = 63 
     
@@ -147,8 +156,22 @@ def test_read_local_block_tridiagonal_partition(
     for i in range(n_partitions):
         start_blockrow, partition_size, end_blockrow = partu.get_local_partition_indices(i, n_partitions, n_blocks)
         
-        local_diagonal_blocks, local_upper_diagonal_blocks, local_lower_diagonal_blocks = rlcu.read_local_block_tridiagonal_partition("test_matrix.npz", start_blockrow, partition_size, blocksize)
+        local_diagonal_blocks, local_upper_diagonal_blocks, local_lower_diagonal_blocks = rlcu.read_local_block_tridiagonal_partition("test_matrix.npz", start_blockrow, partition_size, is_symmetric=is_symmetric, include_bridges_blocks=include_bridges_blocks)
         
-        assert np.allclose(local_diagonal_blocks, diagonal_blocks[start_blockrow:end_blockrow, :, :])
-        #assert np.allclose(local_upper_diagonal_blocks, upper_diagonal_blocks[start_blockrow:end_blockrow-1, :, :])
-        #assert np.allclose(local_lower_diagonal_blocks, lower_diagonal_blocks[start_blockrow:end_blockrow-1, :, :])
+        if include_bridges_blocks:
+            assert np.allclose(local_diagonal_blocks, diagonal_blocks[start_blockrow:end_blockrow, :, :])
+            
+            start_upper_blockrow = max(0, start_blockrow-1)
+            start_lower_blockrow = max(0, start_blockrow-1)
+            
+            stop_upper_blockrow = min(start_blockrow + partition_size, n_blocks)
+            stop_lower_blockrow = min(start_blockrow + partition_size, n_blocks)
+
+            assert np.allclose(local_upper_diagonal_blocks, upper_diagonal_blocks[start_upper_blockrow:stop_upper_blockrow, :, :])
+            assert np.allclose(local_lower_diagonal_blocks, lower_diagonal_blocks[start_lower_blockrow:stop_lower_blockrow, :, :])
+        else:
+            assert np.allclose(local_diagonal_blocks, diagonal_blocks[start_blockrow:end_blockrow, :, :])
+            assert np.allclose(local_upper_diagonal_blocks, upper_diagonal_blocks[start_blockrow:end_blockrow-1, :, :])
+            assert np.allclose(local_lower_diagonal_blocks, lower_diagonal_blocks[start_blockrow:end_blockrow-1, :, :])
+        
+        

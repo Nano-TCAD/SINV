@@ -22,8 +22,8 @@ def get_partitions_indices(
     n_partitions : int
         Total number of partitions.
     total_size : int
-        Total size of the global matrix. Equal to the sum of the sizes of all
-        partitions.
+        Total number of blocks in the global matrix. Equal to the sum of the sizes of
+        all partitions.
     partitions_distribution : list, optional
         Distribution of the partitions sizes, in percentage. The default is None
         and a uniform distribution is assumed.

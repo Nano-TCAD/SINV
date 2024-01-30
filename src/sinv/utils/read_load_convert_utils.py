@@ -175,6 +175,26 @@ def read_local_block_tridiagonal_partition(
     return diagonal_blocks, upper_diagonal_blocks, lower_diagonal_blocks
 
 
+def slice_partition(
+    A: bsp,
+    start_blockrow: int,
+    partition_size: int,
+    include_bridges_blocks: bool = False,
+) -> bsp:
+
+    top_blockrow = start_blockrow
+    bottom_blockrow = start_blockrow + partition_size
+
+    if include_bridges_blocks:
+        top_blockrow = max(0, start_blockrow - 1)
+        bottom_blockrow = min(start_blockrow + partition_size + 1, A.bshape[0])
+
+    return A[
+        top_blockrow:bottom_blockrow,
+        top_blockrow:bottom_blockrow,
+    ]
+
+
 def block_tridiagonal_to_BDIA(
     diagonal_blocks: np.ndarray,
     upper_diagonal_blocks: np.ndarray,

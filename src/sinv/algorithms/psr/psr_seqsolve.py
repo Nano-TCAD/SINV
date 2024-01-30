@@ -4,7 +4,7 @@
 
 @reference: https://doi.org/10.1016/j.jcp.2009.03.035
 
-Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2023-2024 ETH Zurich. All rights reserved.
 """
 
 from sinv import utils
@@ -375,9 +375,9 @@ def aggregate_reduced_system(
         start_colindice = 2 * (process_i - 1) * blocksize
         stop_colindice = start_colindice + 4 * blocksize
 
-        A_schur[
-            start_rowindice:stop_rowindice, start_colindice:stop_colindice
-        ] = comm.recv(source=process_i, tag=0)
+        A_schur[start_rowindice:stop_rowindice, start_colindice:stop_colindice] = (
+            comm.recv(source=process_i, tag=0)
+        )
 
     # Finally, A_schur will aggregate the Schur complement row of the last
     # process.

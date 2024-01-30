@@ -10,7 +10,7 @@ Pairwise algorithm:
 @reference: https://doi.org/10.1007/978-3-319-78024-5_55
 @reference: https://doi.org/10.1002/cpe.4918
 
-Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2023-2024 ETH Zurich. All rights reserved.
 """
 
 from sinv.algorithms.pdiv import pdiv_utils as pdiv_u

@@ -5,7 +5,7 @@
 @reference: https://doi.org/10.1016/j.jcp.2009.03.035
 @reference: https://doi.org/10.1017/CBO9780511812583
 
-Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2023-2024 ETH Zurich. All rights reserved.
 """
 
 from sinv import utils

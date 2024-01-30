@@ -2,7 +2,7 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2024-01
 
-Copyright 2024 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2024 ETH Zurich. All rights reserved.
 """
 
 import numpy as np

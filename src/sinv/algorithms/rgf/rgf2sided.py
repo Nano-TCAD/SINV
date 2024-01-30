@@ -7,7 +7,7 @@ Based on initial idea and work from: Anders Winka (awinka@iis.ee.ethz.ch)
 @reference: https://doi.org/10.1063/1.1432117
 @reference: https://doi.org/10.1007/s10825-013-0458-7
 
-Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2023-2024 ETH Zurich. All rights reserved.
 """
 
 import numpy as np
@@ -54,82 +54,46 @@ def rgf2sided(
 
     if comm_rank == 0:
         (
-            G_diagblk[
-                0:nblocks_2,
-            ],
-            G_upperblk[
-                0:nblocks_2,
-            ],
-            G_lowerblk[
-                0:nblocks_2,
-            ],
+            G_diagblk[0:nblocks_2,],
+            G_upperblk[0:nblocks_2,],
+            G_lowerblk[0:nblocks_2,],
         ) = rgf2sided_upperprocess(
-            A_bloc_diag[
-                0:nblocks_2,
-            ],
-            A_bloc_upper[
-                0:nblocks_2,
-            ],
-            A_bloc_lower[
-                0:nblocks_2,
-            ],
+            A_bloc_diag[0:nblocks_2,],
+            A_bloc_upper[0:nblocks_2,],
+            A_bloc_lower[0:nblocks_2,],
             sym_mat,
             save_off_diag,
         )
 
-        G_diagblk[
-            nblocks_2:,
-        ] = comm.recv(source=1, tag=0)
-        G_upperblk[
-            nblocks_2:,
-        ] = comm.recv(source=1, tag=1)
-        G_lowerblk[
-            nblocks_2:,
-        ] = comm.recv(source=1, tag=2)
+        G_diagblk[nblocks_2:,] = comm.recv(source=1, tag=0)
+        G_upperblk[nblocks_2:,] = comm.recv(source=1, tag=1)
+        G_lowerblk[nblocks_2:,] = comm.recv(source=1, tag=2)
 
     elif comm_rank == 1:
         (
-            G_diagblk[
-                nblocks_2:,
-            ],
-            G_upperblk[
-                nblocks_2 - 1 :,
-            ],
-            G_lowerblk[
-                nblocks_2 - 1 :,
-            ],
+            G_diagblk[nblocks_2:,],
+            G_upperblk[nblocks_2 - 1 :,],
+            G_lowerblk[nblocks_2 - 1 :,],
         ) = rgf2sided_lowerprocess(
-            A_bloc_diag[
-                nblocks_2:,
-            ],
-            A_bloc_upper[
-                nblocks_2 - 1 :,
-            ],
-            A_bloc_lower[
-                nblocks_2 - 1 :,
-            ],
+            A_bloc_diag[nblocks_2:,],
+            A_bloc_upper[nblocks_2 - 1 :,],
+            A_bloc_lower[nblocks_2 - 1 :,],
             sym_mat,
             save_off_diag,
         )
 
         comm.send(
-            G_diagblk[
-                nblocks_2:,
-            ],
+            G_diagblk[nblocks_2:,],
             dest=0,
             tag=0,
         )
         comm.send(
-            G_upperblk[
-                nblocks_2:,
-            ],
+            G_upperblk[nblocks_2:,],
             dest=0,
             tag=1,
         )
         comm.send(
-            G_lowerblk[
-                nblocks_2:,
-            ],
+            G_lowerblk[nblocks_2:,],
             dest=0,
             tag=2,
         )
@@ -178,142 +142,73 @@ def rgf2sided_upperprocess(
     G_lowerblk_leftprocess = np.zeros_like(A_lowerblk_leftprocess)
 
     # Initialisation of g
-    G_diagblk_leftprocess[0,] = np.linalg.inv(
-        A_diagblk_leftprocess[
-            0,
-        ]
-    )
+    G_diagblk_leftprocess[0,] = np.linalg.inv(A_diagblk_leftprocess[0,])
 
     # Forward substitution
     for i in range(1, nblocks):
         G_diagblk_leftprocess[i,] = np.linalg.inv(
-            A_diagblk_leftprocess[
-                i,
-            ]
-            - A_lowerblk_leftprocess[
-                i - 1,
-            ]
-            @ G_diagblk_leftprocess[
-                i - 1,
-            ]
-            @ A_upperblk_leftprocess[
-                i - 1,
-            ]
+            A_diagblk_leftprocess[i,]
+            - A_lowerblk_leftprocess[i - 1,]
+            @ G_diagblk_leftprocess[i - 1,]
+            @ A_upperblk_leftprocess[i - 1,]
         )
 
     # Communicate the left connected block and receive the right connected block
     comm.send(
-        G_diagblk_leftprocess[
-            nblocks - 1,
-        ],
+        G_diagblk_leftprocess[nblocks - 1,],
         dest=1,
         tag=0,
     )
-    G_diagblk_leftprocess[
-        nblocks,
-    ] = comm.recv(source=1, tag=0)
+    G_diagblk_leftprocess[nblocks,] = comm.recv(source=1, tag=0)
 
     # Connection from both sides of the full G
     G_diagblk_leftprocess[nblocks - 1,] = np.linalg.inv(
-        A_diagblk_leftprocess[
-            nblocks - 1,
-        ]
-        - A_lowerblk_leftprocess[
-            nblocks - 2,
-        ]
-        @ G_diagblk_leftprocess[
-            nblocks - 2,
-        ]
-        @ A_upperblk_leftprocess[
-            nblocks - 2,
-        ]
-        - A_upperblk_leftprocess[
-            nblocks - 1,
-        ]
-        @ G_diagblk_leftprocess[
-            nblocks,
-        ]
-        @ A_lowerblk_leftprocess[
-            nblocks - 1,
-        ]
+        A_diagblk_leftprocess[nblocks - 1,]
+        - A_lowerblk_leftprocess[nblocks - 2,]
+        @ G_diagblk_leftprocess[nblocks - 2,]
+        @ A_upperblk_leftprocess[nblocks - 2,]
+        - A_upperblk_leftprocess[nblocks - 1,]
+        @ G_diagblk_leftprocess[nblocks,]
+        @ A_lowerblk_leftprocess[nblocks - 1,]
     )
 
     # Compute the shared off-diagonal upper block
     G_lowerblk_leftprocess[nblocks - 1,] = (
-        -G_diagblk_leftprocess[
-            nblocks,
-        ]
-        @ A_lowerblk_leftprocess[
-            nblocks - 1,
-        ]
-        @ G_diagblk_leftprocess[
-            nblocks - 1,
-        ]
+        -G_diagblk_leftprocess[nblocks,]
+        @ A_lowerblk_leftprocess[nblocks - 1,]
+        @ G_diagblk_leftprocess[nblocks - 1,]
     )
     if sym_mat:
-        G_upperblk_leftprocess[nblocks - 1,] = G_lowerblk_leftprocess[
-            nblocks - 1,
-        ].T
+        G_upperblk_leftprocess[nblocks - 1,] = G_lowerblk_leftprocess[nblocks - 1,].T
     else:
         G_upperblk_leftprocess[nblocks - 1,] = (
-            -G_diagblk_leftprocess[
-                nblocks - 1,
-            ]
-            @ A_upperblk_leftprocess[
-                nblocks - 1,
-            ]
-            @ G_diagblk_leftprocess[
-                nblocks,
-            ]
+            -G_diagblk_leftprocess[nblocks - 1,]
+            @ A_upperblk_leftprocess[nblocks - 1,]
+            @ G_diagblk_leftprocess[nblocks,]
         )
 
     # Backward substitution
     for i in range(nblocks - 2, -1, -1):
-        g_ii = G_diagblk_leftprocess[
-            i,
-        ]
+        g_ii = G_diagblk_leftprocess[i,]
         G_lowerfactor = (
-            G_diagblk_leftprocess[
-                i + 1,
-            ]
-            @ A_lowerblk_leftprocess[
-                i,
-            ]
-            @ g_ii
+            G_diagblk_leftprocess[i + 1,] @ A_lowerblk_leftprocess[i,] @ g_ii
         )
 
         if save_off_diag:
-            G_lowerblk_leftprocess[
-                i,
-            ] = -G_lowerfactor
+            G_lowerblk_leftprocess[i,] = -G_lowerfactor
             if sym_mat:
-                G_upperblk_leftprocess[i,] = G_lowerblk_leftprocess[
-                    i,
-                ].T
+                G_upperblk_leftprocess[i,] = G_lowerblk_leftprocess[i,].T
             else:
                 G_upperblk_leftprocess[i,] = (
-                    -g_ii
-                    @ A_upperblk_leftprocess[
-                        i,
-                    ]
-                    @ G_diagblk_leftprocess[
-                        i + 1,
-                    ]
+                    -g_ii @ A_upperblk_leftprocess[i,] @ G_diagblk_leftprocess[i + 1,]
                 )
 
         G_diagblk_leftprocess[i,] = (
-            g_ii
-            + g_ii
-            @ A_upperblk_leftprocess[
-                i,
-            ]
-            @ G_lowerfactor
+            g_ii + g_ii @ A_upperblk_leftprocess[i,] @ G_lowerfactor
         )
 
     return (
-        G_diagblk_leftprocess[
-            :nblocks,
-        ],
+        G_diagblk_leftprocess[:nblocks,],
         G_upperblk_leftprocess,
         G_lowerblk_leftprocess,
     )
@@ -360,142 +255,71 @@ def rgf2sided_lowerprocess(
     G_lowerblk_rightprocess = np.zeros_like(A_lowerbk_rightprocess)
 
     # Initialisation of g
-    G_diagblk_rightprocess[-1,] = np.linalg.inv(
-        A_diagblk_rightprocess[
-            -1,
-        ]
-    )
+    G_diagblk_rightprocess[-1,] = np.linalg.inv(A_diagblk_rightprocess[-1,])
 
     # Forward substitution
     for i in range(nblocks - 1, 0, -1):
         G_diagblk_rightprocess[i,] = np.linalg.inv(
-            A_diagblk_rightprocess[
-                i - 1,
-            ]
-            - A_upperblk_rightprocess[
-                i,
-            ]
-            @ G_diagblk_rightprocess[
-                i + 1,
-            ]
-            @ A_lowerbk_rightprocess[
-                i,
-            ]
+            A_diagblk_rightprocess[i - 1,]
+            - A_upperblk_rightprocess[i,]
+            @ G_diagblk_rightprocess[i + 1,]
+            @ A_lowerbk_rightprocess[i,]
         )
 
     # Communicate the right connected block and receive the left connected block
-    G_diagblk_rightprocess[
-        0,
-    ] = comm.recv(source=0, tag=0)
+    G_diagblk_rightprocess[0,] = comm.recv(source=0, tag=0)
     comm.send(
-        G_diagblk_rightprocess[
-            1,
-        ],
+        G_diagblk_rightprocess[1,],
         dest=0,
         tag=0,
     )
 
     # Connection from both sides of the full G
     G_diagblk_rightprocess[1,] = np.linalg.inv(
-        A_diagblk_rightprocess[
-            0,
-        ]
-        - A_lowerbk_rightprocess[
-            0,
-        ]
-        @ G_diagblk_rightprocess[
-            0,
-        ]
-        @ A_upperblk_rightprocess[
-            0,
-        ]
-        - A_upperblk_rightprocess[
-            1,
-        ]
-        @ G_diagblk_rightprocess[
-            2,
-        ]
-        @ A_lowerbk_rightprocess[
-            1,
-        ]
+        A_diagblk_rightprocess[0,]
+        - A_lowerbk_rightprocess[0,]
+        @ G_diagblk_rightprocess[0,]
+        @ A_upperblk_rightprocess[0,]
+        - A_upperblk_rightprocess[1,]
+        @ G_diagblk_rightprocess[2,]
+        @ A_lowerbk_rightprocess[1,]
     )
 
     # Compute the shared off-diagonal upper block
     G_lowerblk_rightprocess[0,] = (
-        G_diagblk_rightprocess[
-            1,
-        ]
-        @ A_lowerbk_rightprocess[
-            0,
-        ]
-        @ G_diagblk_rightprocess[
-            0,
-        ]
+        G_diagblk_rightprocess[1,]
+        @ A_lowerbk_rightprocess[0,]
+        @ G_diagblk_rightprocess[0,]
     )
     if sym_mat:
-        G_upperblk_rightprocess[0,] = G_lowerblk_rightprocess[
-            0,
-        ].T
+        G_upperblk_rightprocess[0,] = G_lowerblk_rightprocess[0,].T
     else:
         G_upperblk_rightprocess[0,] = (
-            G_diagblk_rightprocess[
-                0,
-            ]
-            @ A_upperblk_rightprocess[
-                0,
-            ]
-            @ G_diagblk_rightprocess[
-                1,
-            ]
+            G_diagblk_rightprocess[0,]
+            @ A_upperblk_rightprocess[0,]
+            @ G_diagblk_rightprocess[1,]
         )
 
     # Backward substitution
     for i in range(1, nblocks):
-        g_ii = G_diagblk_rightprocess[
-            i + 1,
-        ]
-        G_lowerfactor = (
-            g_ii
-            @ A_lowerbk_rightprocess[
-                i,
-            ]
-            @ G_diagblk_rightprocess[
-                i,
-            ]
-        )
+        g_ii = G_diagblk_rightprocess[i + 1,]
+        G_lowerfactor = g_ii @ A_lowerbk_rightprocess[i,] @ G_diagblk_rightprocess[i,]
 
         if save_off_diag:
-            G_lowerblk_rightprocess[
-                i,
-            ] = -G_lowerfactor
+            G_lowerblk_rightprocess[i,] = -G_lowerfactor
             if sym_mat:
-                G_upperblk_rightprocess[i,] = G_lowerblk_rightprocess[
-                    i,
-                ].T
+                G_upperblk_rightprocess[i,] = G_lowerblk_rightprocess[i,].T
             else:
                 G_upperblk_rightprocess[i,] = (
-                    -G_diagblk_rightprocess[
-                        i,
-                    ]
-                    @ A_upperblk_rightprocess[
-                        i,
-                    ]
-                    @ g_ii
+                    -G_diagblk_rightprocess[i,] @ A_upperblk_rightprocess[i,] @ g_ii
                 )
 
         G_diagblk_rightprocess[i + 1,] = (
-            g_ii
-            + G_lowerfactor
-            @ A_upperblk_rightprocess[
-                i,
-            ]
-            @ g_ii
+            g_ii + G_lowerfactor @ A_upperblk_rightprocess[i,] @ g_ii
         )
 
     return (
-        G_diagblk_rightprocess[
-            1:,
-        ],
+        G_diagblk_rightprocess[1:,],
         G_upperblk_rightprocess,
         G_lowerblk_rightprocess,
     )

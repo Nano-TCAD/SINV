@@ -2,7 +2,7 @@
 @author: Vincent Maillou (vmaillou@iis.ee.ethz.ch)
 @date: 2023-05
 
-Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
+Copyright 2023-2024 ETH Zurich. All rights reserved.
 """
 
 import numpy as np
@@ -137,9 +137,9 @@ def convertDenseToBlkTridiag(
     A_bloc_lower = np.zeros((nblocks - 1, blocksize, blocksize), dtype=A.dtype)
 
     for i in range(nblocks):
-        A_bloc_diag[
-            i,
-        ] = A[i * blocksize : (i + 1) * blocksize, i * blocksize : (i + 1) * blocksize]
+        A_bloc_diag[i,] = A[
+            i * blocksize : (i + 1) * blocksize, i * blocksize : (i + 1) * blocksize
+        ]
         if i < nblocks - 1:
             A_bloc_upper[i,] = A[
                 i * blocksize : (i + 1) * blocksize,
@@ -180,11 +180,9 @@ def convertBlkTridiagToDense(
     A = np.zeros((nblocks * blocksize, nblocks * blocksize), dtype=A_diagblk.dtype)
 
     for i in range(nblocks):
-        A[
-            i * blocksize : (i + 1) * blocksize, i * blocksize : (i + 1) * blocksize
-        ] = A_diagblk[
-            i,
-        ]
+        A[i * blocksize : (i + 1) * blocksize, i * blocksize : (i + 1) * blocksize] = (
+            A_diagblk[i,]
+        )
         if i < nblocks - 1:
             A[
                 i * blocksize : (i + 1) * blocksize,

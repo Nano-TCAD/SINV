@@ -8,12 +8,9 @@
 Copyright 2023 ETH Zurich and the QuaTrEx authors. All rights reserved.
 """
 
-import numpy as np
-
 import bsparse as bsp
 
-
-import matplotlib.pyplot as plt
+import numpy as np
 
 
 def rgf(
@@ -58,10 +55,6 @@ def rgf(
             G[i + 1, i] = -G_lowerfactor
             if sym_mat == False:
                 G[i, i + 1] = -g_ii @ A[i, i + 1] @ G[i + 1, i + 1]
-            """ if sym_mat:
-                G[i, i+1] = G[i+1, i].T
-            else:
-                G[i, i+1] = -g_ii @ A[i, i+1] @ G[i+1, i+1] """
 
         G[i, i] = g_ii + g_ii @ A[i, i + 1] @ G_lowerfactor
 

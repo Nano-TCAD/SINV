@@ -195,10 +195,10 @@ def aggregate_partitions(
         return None
 
 
+# TODO: MOVE TO TESTING SECTION
 from sinv.utils import gmu
 from sinv.utils import rlcu
 from sinv.utils import partu
-
 
 if __name__ == "__main__":
     n_blocks = 10
